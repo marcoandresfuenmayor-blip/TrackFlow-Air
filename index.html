@@ -848,33 +848,60 @@ function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
 
-  // ── AWB NUMBER ── formato 369-10233506
-  var awbMatch = clean.match(/\b(\d{3})\s*-\s*(\d{7,8})\b/) || clean.match(/\b(\d{3})\s*\|\s*\w+\s*\|\s*(\d{6,8})\b/);
-  if (awbMatch) result.awb = awbMatch[1] + '-' + awbMatch[2];
-
-  // ── AEROLÍNEA / CARRIER ── "Issued by ATLAS AIR" o "By First Carrier ... ATLAS AIR"
-  var airlineMatch = clean.match(/Issued\s*by\s+([A-Z][A-Z\s]{2,30}?)(?:\s+Copies|\s+Not\s*negotiable)/i)
-    || clean.match(/By\s*First\s*Carrier[^A-Z]*?\b([A-Z]{2,4}\s+[A-Z]{2,15})\b/);
+  // ── AEROLÍNEA / CARRIER ── múltiples estrategias de respaldo
+  var airlineMatch = clean.match(/Issued\s*by\s+([A-Z][A-Z\s]{2,30}?)(?:\s+Copies|\s+Not\s*negotiable|\s+AIR\s*WAYBILL)/i)
+    || clean.match(/By\s*First\s*Carrier[^A-Z]*?\b([A-Z]{2,4}\s+[A-Z]{2,15})\b/)
+    || clean.match(/\b(ATLAS\s*AIR|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA|IBERIA|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i);
   if (airlineMatch) result.airline = airlineMatch[1].trim();
 
-  // ── ORIGEN ── código de 3 letras al inicio del AWB "369 | UIO | 10233506", o "Airport of Departure"
+  // ── ORIGEN ── varias estrategias
   var originMatch = clean.match(/^\d{3}\s*\|\s*([A-Z]{3})\s*\|/)
-    || clean.match(/Airport\s*of\s*Departure[^A-Z]*?\b([A-Z]{3})\b/i);
-  if (originMatch) result.origin = originMatch[1].toUpperCase();
+    || clean.match(/MARISCAL\s*SUCRE/i) ? 'UIO' : null;
+  if (!originMatch) {
+    var om2 = clean.match(/Airport\s*of\s*Departure[^A-Z]*?\b([A-Z]{3})\b/i);
+    if (om2) originMatch = om2[1];
+  } else if (typeof originMatch !== 'string') {
+    originMatch = originMatch[1];
+  }
+  if (originMatch) result.origin = (typeof originMatch === 'string' ? originMatch : originMatch[1]).toUpperCase();
+  // Detección por nombre de ciudad/aeropuerto conocido
+  if (!result.origin) {
+    if (/QUITO|MARISCAL\s*SUCRE/i.test(clean)) result.origin = 'UIO';
+    else if (/MEDELL[IÍ]N/i.test(clean)) result.origin = 'MED';
+    else if (/BOGOT[AÁ]/i.test(clean)) result.origin = 'BOG';
+    else if (/GUATEMALA/i.test(clean)) result.origin = 'GUAT';
+  }
 
-  // ── DESTINO ── columna "To" tras la tabla de ruta, o "Airport of Destination"
+  // ── DESTINO ── varias estrategias + detección por ciudad
   var destMatch = clean.match(/Airport\s*of\s*Destination\s+([A-Z]{3,15})/i)
     || clean.match(/\bTo\s+By\s*First\s*Carrier[^A-Z]*?\b([A-Z]{3})\b/i);
   if (destMatch) {
     var d = destMatch[1].trim().toUpperCase();
-    var cityToCode = {'MIAMI':'MIA','MIA':'MIA','NEW YORK':'JFK','LOS ANGELES':'LAX','CHICAGO':'ORD','AMSTERDAM':'AMS','MADRID':'MAD','PANAMA CITY':'PTY'};
+    var cityToCode = {'MIAMI':'MIA','MIA':'MIA','NEW YORK':'JFK','LOS ANGELES':'LAX','CHICAGO':'ORD','AMSTERDAM':'AMS','MADRID':'MAD','PANAMA CITY':'PTY','PANAMA':'PTY'};
     result.dest = cityToCode[d] || (d.length===3?d:'');
   }
+  if (!result.dest) {
+    if (/MIAMI/i.test(clean)) result.dest = 'MIA';
+    else if (/NEW\s*YORK|\bJFK\b/i.test(clean)) result.dest = 'JFK';
+    else if (/LOS\s*ANGELES|\bLAX\b/i.test(clean)) result.dest = 'LAX';
+    else if (/CHICAGO|\bORD\b/i.test(clean)) result.dest = 'ORD';
+    else if (/AMSTERDAM/i.test(clean)) result.dest = 'AMS';
+    else if (/MADRID/i.test(clean)) result.dest = 'MAD';
+    else if (/PANAMA/i.test(clean)) result.dest = 'PTY';
+  }
 
-  // ── FLIGHT NUMBER / FECHA ── "Requested Flight/Date" → "5Y 0036-30" significa vuelo 0036, día 30
-  var flightMatch = clean.match(/Requested\s*Flight\/?Date\D*?([A-Z0-9]{2})\s*(\d{3,4})-(\d{1,2})/i)
-    || clean.match(/\b([A-Z]{2})\s*(\d{3,4})\s*-\s*(\d{1,2})\b/);
-  if (flightMatch) result.flightnum = flightMatch[1] + flightMatch[2];
+  // ── FLIGHT NUMBER ── varias estrategias en cascada
+  var flightMatch = clean.match(/Flight\/?Date\D{0,5}?([A-Z0-9]{1,2})\s*(\d{3,4})\s*-\s*(\d{1,2})\b/i)
+    || clean.match(/\b([A-Z])(\d)\s*(\d{4})\s*-\s*(\d{1,2})\b/)
+    || clean.match(/\b([A-Z]{1,2})\s*(\d{3,4})\s*-\s*(\d{1,2})\b/);
+  if (flightMatch) {
+    if (flightMatch.length === 5) result.flightnum = flightMatch[1] + flightMatch[2] + flightMatch[3];
+    else result.flightnum = flightMatch[1] + flightMatch[2];
+  }
+
+  // ── AWB NUMBER ── debe ir después de origen, lo dejamos arriba pero reforzamos
+  var awbMatch = clean.match(/\b(\d{3})\s*-\s*(\d{7,8})\b/) || clean.match(/\b(\d{3})\s*\|\s*\w+\s*\|\s*(\d{6,8})\b/);
+  if (awbMatch) result.awb = awbMatch[1] + '-' + awbMatch[2];
 
   // ── AGENCIA DE CARGA ── "Issuing Carrier's Agent Name and City" seguido del nombre
   var agencyMatch = clean.match(/Issuing\s*Carrier's?\s*Agent\s*Name\s*and\s*City\s+([A-Z][A-Z0-9\s\+\.,&]{3,40}?)(?:\s+Troncal|\s+Accounting|\s+\d{3,}|\s+Agent's)/i);
@@ -903,24 +930,51 @@ function extractAWBFields(text) {
     result.declaredValue = parseFloat(declaredMatch[1].replace(',', '.'));
   }
 
-  // ── TABLA PRINCIPAL DE CARGA ──
-  // Estructura real: [Pieces] [GrossWeight] k [RateClass code, 2 letras] [ChargeableWeight] [Rate 1.20] [Total]
-  var tableMatch = clean.match(/(\d{1,5})\s+(\d{2,6}(?:\.\d+)?)\s*k\w?\s+([A-Z]{2})\s+(\d{2,6}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{1,6}\.\d{2})/i);
+  // ── TABLA PRINCIPAL DE CARGA — estrategia robusta que no depende de espaciado exacto ──
+  var tableMatch = clean.match(/(\d{2,4})\s+(\d{3,5}(?:\.\d+)?)\s*k\w?\s+([A-Z]{2})\s+(\d{3,5}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,6}\.\d{2})/i);
   if (tableMatch) {
     result.boxes_conf = parseInt(tableMatch[1]);
     result.gross_weight = parseFloat(tableMatch[2]);
     result.chargeable_weight = parseFloat(tableMatch[4]);
     result.rate = parseFloat(tableMatch[5]);
     result.weight_charge = parseFloat(tableMatch[6]);
-  } else {
-    var piecesMatch = clean.match(/(\d+)\s*PIECES/i) || clean.match(/No\.?\s*of\s*Pieces\D{0,10}?(\d+)/i);
+  }
+
+  // Estrategia 2: piezas (siempre disponible con "PIECES" o "No. of Pieces")
+  if (!result.boxes_conf) {
+    var piecesMatch = clean.match(/(\d+)\s*PIECES/i) || clean.match(/No\.?\s*of\s*Pieces\D{0,15}?(\d{1,5})\b/i) || clean.match(/RCP\D{0,10}?(\d{1,5})\b/i);
     if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
-    var grossMatch = clean.match(/Gross\s*Weight\D{0,10}?(\d+[\.,]?\d*)/i);
+  }
+
+  // Estrategia 3: peso bruto — buscar número seguido de "k" (kg) en cualquier parte del documento
+  if (!result.gross_weight) {
+    var grossMatch = clean.match(/Gross\s*Weight[^0-9]{0,20}?(\d{2,6}(?:\.\d+)?)\s*k/i)
+      || clean.match(/(\d{2,6}(?:\.\d+)?)\s*k\b(?!\s*g)/i);
     if (grossMatch) result.gross_weight = parseFloat(grossMatch[1].replace(',', '.'));
-    var chargeMatch = clean.match(/Chargeable\s*Weight\D{0,10}?(\d+[\.,]?\d*)/i);
+  }
+
+  // Estrategia 4: peso facturable — saltar el encabezado de tabla, usar el dato de la fila real
+  if (!result.chargeable_weight) {
+    var chargeMatch = clean.match(/Chargeable\s*Weight\s+Rate\s+Charge\s+Total[^\d]*\d+\s+\d+(?:\.\d+)?\s*k\w?\s+[A-Z]{2}\s+(\d{2,6}(?:\.\d+)?)/i)
+      || clean.match(/Chargeable\s*Weight\D{0,8}?(\d{2,6}(?:\.\d+)?)\b/i);
     if (chargeMatch) result.chargeable_weight = parseFloat(chargeMatch[1].replace(',', '.'));
-    var rateMatch = clean.match(/Rate\D{0,15}?(\d{1,3}\.\d{2})\b/i);
+  }
+  if (!result.chargeable_weight && result.gross_weight) result.chargeable_weight = result.gross_weight;
+
+  // Estrategia 5: tarifa — primero busca cerca de "Rate", si no, toma el único decimal X.XX del documento (caso típico: solo aparece una vez)
+  if (!result.rate) {
+    var rateMatch = clean.match(/Rate\s*\/?\s*Charge[^0-9]{0,15}?(\d{1,3}\.\d{2})\b/i)
+      || clean.match(/\bRate(?!\s*Class)\D{0,20}?(\d{1,3}\.\d{2})\b/i);
     if (rateMatch) result.rate = parseFloat(rateMatch[1]);
+    else {
+      var allDecimals = clean.match(/(?<![\d.])(\d{1,2}\.\d{2})(?![\d.])/g);
+      if (allDecimals && allDecimals.length === 1) result.rate = parseFloat(allDecimals[0]);
+    }
+  }
+
+  // Estrategia 6: cargo por peso (weight charge) — calculado si no se detectó directamente
+  if (!result.weight_charge && result.rate && result.chargeable_weight) {
+    result.weight_charge = parseFloat((result.rate * result.chargeable_weight).toFixed(2));
   }
 
   // ── MERCANCÍA / COMMODITY ── texto tras "Nature and Quantity of Goods", busca palabras clave conocidas
