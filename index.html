@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TrackFlow Air — Jet Fresh Flowers Distributors</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -286,6 +287,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       </div>
       <div class="sb-btns">
         <button class="sb-action-btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+        <button class="sb-action-btn" onclick="exportExcel()" style="background:rgba(34,163,81,.18);"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar Excel (con filtros)</button>
         <button class="sb-action-btn logout" onclick="signOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión</button>
       </div>
     </div>
@@ -413,6 +415,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <a href="https://jetfreshflowers.sharepoint.com/sites/TrackFlow" target="_blank" class="btn pr" style="text-align:center;text-decoration:none;display:block;margin-top:4px;">Abrir en SharePoint ↗</a>
               <button class="btn" onclick="forceSyncAll()">🔄 Sincronizar ahora</button>
               <button class="btn" onclick="exportCSV()">Exportar vuelos CSV</button>
+              <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
             </div>
           </div>
           <div class="ss" style="grid-column:span 2;">
@@ -766,51 +769,110 @@ async function handleAWBUpload(e) {
   var stat = document.getElementById('awb-status');
   var txt = document.getElementById('awb-zone-txt');
   txt.textContent = 'Procesando ' + file.name + '…';
-  stat.textContent = 'Enviando a Claude IA para extracción…';
+  stat.textContent = 'Extrayendo texto del PDF (gratis, sin IA)…';
   stat.className = 'upload-status ok';
-  if (!CFG.claudeKey) {
-    stat.textContent = '⚠ Agrega tu Claude API Key en Configuración para usar esta función.';
+
+  if (file.type.startsWith('image/')) {
+    stat.textContent = '⚠ Las imágenes requieren IA (Claude). Sube un PDF para extracción gratuita, o agrega tu Claude API Key en Configuración para procesar imágenes.';
     stat.className = 'upload-status err';
     txt.textContent = 'Clic para subir AWB PDF / Imagen';
     e.target.value = ''; return;
   }
+
   var reader = new FileReader();
   reader.onload = async function(ev) {
-    var b64 = ev.target.result.split(',')[1];
     try {
-      var isImg = file.type.startsWith('image/');
-      var msgContent = isImg
-        ? [{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Extrae del documento AWB: número de piezas/cajas, peso bruto (kg), peso facturable (kg), tarifa por kg, cargo por peso total, cargo MAA, cargo AWC, cargo MYC (por unidad y total), cargo ESC (por unidad y total), total prepagado. Responde SOLO con JSON válido con estas claves: boxes_conf, gross_weight, chargeable_weight, rate, weight_charge, maa, awc, myc, esc, total_prepaid. Solo números, sin unidades.'}]
-        : [{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extrae del documento AWB: número de piezas/cajas, peso bruto (kg), peso facturable (kg), tarifa por kg, cargo por peso, MAA, AWC, MYC, ESC, total prepagado. Responde SOLO con JSON válido: boxes_conf, gross_weight, chargeable_weight, rate, weight_charge, maa, awc, myc, esc, total_prepaid.'}];
-      var res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.claudeKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: msgContent }] })
-      });
-      var data = await res.json();
-      var text = (data.content && data.content[0] && data.content[0].text) || '';
-      var parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
-      if (parsed.boxes_conf) sv('f-bconf', parsed.boxes_conf);
-      if (parsed.gross_weight) sv('f-weight', parsed.gross_weight);
-      if (parsed.chargeable_weight) sv('f-cweight', parsed.chargeable_weight);
-      if (parsed.rate) sv('f-rate', parsed.rate);
-      if (parsed.weight_charge) sv('f-wcharge', parsed.weight_charge);
-      if (parsed.maa) sv('f-maa', parsed.maa);
-      if (parsed.awc) sv('f-awc', parsed.awc);
-      if (parsed.myc) sv('f-myc', parsed.myc);
-      if (parsed.esc) sv('f-esc', parsed.esc);
+      var typedArray = new Uint8Array(ev.target.result);
+      var pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+      var fullText = '';
+      for (var i = 1; i <= pdf.numPages; i++) {
+        var page = await pdf.getPage(i);
+        var content = await page.getTextContent();
+        fullText += content.items.map(function(it){ return it.str; }).join(' ') + '\n';
+      }
+      var parsed = extractAWBFields(fullText);
+      var filledCount = 0;
+      if (parsed.boxes_conf) { sv('f-bconf', parsed.boxes_conf); filledCount++; }
+      if (parsed.gross_weight) { sv('f-weight', parsed.gross_weight); filledCount++; }
+      if (parsed.chargeable_weight) { sv('f-cweight', parsed.chargeable_weight); filledCount++; }
+      if (parsed.rate) { sv('f-rate', parsed.rate); filledCount++; }
+      if (parsed.weight_charge) { sv('f-wcharge', parsed.weight_charge); filledCount++; }
+      if (parsed.maa) { sv('f-maa', parsed.maa); filledCount++; }
+      if (parsed.awc) { sv('f-awc', parsed.awc); filledCount++; }
+      if (parsed.myc) { sv('f-myc', parsed.myc); filledCount++; }
+      if (parsed.esc) { sv('f-esc', parsed.esc); filledCount++; }
+      if (parsed.total_prepaid) { sv('f-totalpaid', parsed.total_prepaid); filledCount++; }
+      if (parsed.awb) { sv('f-awb', parsed.awb); filledCount++; }
       calcAll();
-      stat.textContent = '✓ Datos del AWB extraídos y rellenados correctamente desde ' + file.name;
-      stat.className = 'upload-status ok';
-      txt.textContent = 'AWB cargado: ' + file.name;
+      if (filledCount > 0) {
+        stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)';
+        stat.className = 'upload-status ok';
+        txt.textContent = 'AWB cargado: ' + file.name;
+      } else {
+        stat.textContent = '⚠ No se detectaron campos automáticamente. El formato puede ser diferente — completa manualmente, o usa Claude IA (Configuración) para PDFs complejos.';
+        stat.className = 'upload-status err';
+        txt.textContent = 'Clic para subir AWB PDF / Imagen';
+      }
     } catch(err) {
-      stat.textContent = 'No se pudo extraer automáticamente — completa los campos manualmente. (' + (err.message||'error') + ')';
+      stat.textContent = 'No se pudo leer el PDF — completa los campos manualmente. (' + (err.message||'error') + ')';
       stat.className = 'upload-status err';
       txt.textContent = 'Clic para subir AWB PDF / Imagen';
     }
     e.target.value = '';
   };
-  reader.readAsDataURL(file);
+  reader.readAsArrayBuffer(file);
+}
+
+// ══ EXTRACCIÓN GRATUITA DE CAMPOS AWB (sin IA) — basado en patrones del formato estándar AWB ══
+function extractAWBFields(text) {
+  var result = {};
+  var clean = text.replace(/\s+/g, ' ');
+
+  // AWB number: formato 369-10232961 o similar prefijo-número
+  var awbMatch = clean.match(/\b(\d{3}-\d{7,8})\b/);
+  if (awbMatch) result.awb = awbMatch[1];
+
+  // Boxes/Pieces: "No. of Pieces" seguido de número, o patrón "236" cerca de "PCS"
+  var piecesMatch = clean.match(/(\d+)\s*(?:PCS\.?|pieces|piezas)/i) || clean.match(/No\.?\s*of\s*Pieces\D*(\d+)/i);
+  if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
+
+  // Gross weight: número seguido de "K" o "Kg" cerca del inicio de tabla
+  var grossMatch = clean.match(/Gross\s*Weight\D*?(\d+[\.,]?\d*)\s*K/i) || clean.match(/(\d{3,5})\s*[Kk]g?\b/);
+  if (grossMatch) result.gross_weight = parseFloat(grossMatch[1].replace(',', '.'));
+
+  // Chargeable weight
+  var chargeMatch = clean.match(/Chargeable\s*Weight\D*?(\d+[\.,]?\d*)/i);
+  if (chargeMatch) result.chargeable_weight = parseFloat(chargeMatch[1].replace(',', '.'));
+
+  // Rate: número con formato decimal tipo 1.20 cerca de "Rate"
+  var rateMatch = clean.match(/Rate\D{0,15}?(\d+\.\d{2})\b/i);
+  if (rateMatch) result.rate = parseFloat(rateMatch[1]);
+
+  // Weight charge: el primer "Total" grande de la tabla principal
+  var wchargeMatch = clean.match(/(\d{3,6}\.\d{2})\s*(?:FB|AV\.CW)/);
+  if (wchargeMatch) result.weight_charge = parseFloat(wchargeMatch[1]);
+
+  // MAA charge
+  var maaMatch = clean.match(/MAA\s*US\$?\s*(\d+\.\d{3})/i);
+  if (maaMatch) result.maa = parseFloat(maaMatch[1]);
+
+  // AWC charge
+  var awcMatch = clean.match(/AWC\s*US\$?\s*(\d+\.\d{3})/i);
+  if (awcMatch) result.awc = parseFloat(awcMatch[1]);
+
+  // MYC charge (per unit rate, before the = sign)
+  var mycMatch = clean.match(/MYC\s*US\$?\s*(\d+\.\d{3})/i);
+  if (mycMatch) result.myc = parseFloat(mycMatch[1]);
+
+  // ESC charge
+  var escMatch = clean.match(/ESC\s*US\$?\s*(\d+\.\d{3})/i);
+  if (escMatch) result.esc = parseFloat(escMatch[1]);
+
+  // Total Prepaid
+  var totalMatch = clean.match(/Total\s*Prepaid\D*?(\d+[\.,]\d{1,2})/i);
+  if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
+
+  return result;
 }
 
 // ══ POD UPLOAD TO ONEDRIVE ══
@@ -853,14 +915,34 @@ async function checkLive(num, flightId) {
     document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;"><strong>Agrega tu AviationStack API Key</strong> en Configuración para ver el estado en vivo.<br><br>1. Ve a <strong>aviationstack.com</strong><br>2. Regístrate gratis (500 consultas/mes)<br>3. Copia tu API Key<br>4. Pégala en Configuración → AviationStack API Key</div>';
     return;
   }
+  var cleanNum = num.replace(/\s/g,'');
+  // El plan gratuito de AviationStack solo permite HTTP, no HTTPS — usamos un proxy CORS para evitar el bloqueo del navegador
+  var directUrl = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&flight_iata=' + cleanNum;
+  var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(directUrl);
   try {
-    var res = await fetch('https://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&flight_iata=' + num.replace(/\s/g,''));
+    var res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     var data = await res.json();
+    if (data.error) {
+      var errMsg = (data.error.info || data.error.message || JSON.stringify(data.error));
+      document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;"><strong>Error de AviationStack:</strong><br>' + esc(errMsg) + '<br><br>Verifica que tu API Key sea correcta en Configuración.</div>';
+      return;
+    }
     var d = (data.data && data.data[0]) || null;
     liveCache[num] = d;
     renderLive(num, d, flightId);
   } catch(err) {
-    document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">Error al consultar AviationStack: ' + err.message + '</div>';
+    // Fallback: intentar con un segundo proxy CORS
+    try {
+      var proxyUrl2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
+      var res2 = await fetch(proxyUrl2);
+      var data2 = await res2.json();
+      var d2 = (data2.data && data2.data[0]) || null;
+      liveCache[num] = d2;
+      renderLive(num, d2, flightId);
+    } catch(err2) {
+      document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">No se pudo conectar con AviationStack.<br><br><strong>Posibles causas:</strong><br>1. El vuelo no está activo ahora mismo (AviationStack solo muestra vuelos en curso, no históricos en el plan gratuito)<br>2. La API Key es incorrecta<br>3. Límite de 500 consultas/mes alcanzado<br><br>Verifica tu key en <strong>aviationstack.com → My Account</strong></div>';
+    }
   }
 }
 
@@ -1299,6 +1381,50 @@ function exportCSV(){
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='jff-vuelos-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
 }
 
+// ══ EXPORT EXCEL (.xlsx) — con filtros automáticos ══
+function exportExcel(){
+  if(!DB.flights.length){toast('Sin vuelos para exportar.','err');return;}
+  if (typeof XLSX === 'undefined') {
+    loadSheetJS(function(){ exportExcel(); });
+    return;
+  }
+  var headers=['Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','AWB #','Cajas Enviadas','Cajas Confirmadas','Cajas Faltantes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Mercancía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Remitente','Consignatario','Creado Por','Modificado','POD','Notas'];
+  var rows=DB.flights.map(function(f){
+    return [f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,
+      f.confst==='confirmed'?'Confirmado':f.confst==='partial'?'Parcial':'Sin confirmar',
+      f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':'Pendiente',
+      parseFloat(f.weight)||'', parseFloat(f.cweight)||'', f.ctype, f.handling, f.commodity, f.hs,
+      parseFloat(f.rate)||'', parseFloat(f.rateExp)||'', parseFloat(f.wcharge)||'',
+      parseFloat(f.maa)||'', parseFloat(f.awc)||'', parseFloat(f.myc)||'', parseFloat(f.esc)||'',
+      parseFloat(f.ochagent)||'', parseFloat(f.ochcarrier)||'', parseFloat(f.totalpaid)||'', parseFloat(f.totalcoll)||'',
+      f.sname, f.consignee, f.createdby, f.modifiedAt, f.podName||'', f.notes
+    ];
+  });
+  var wsData = [headers].concat(rows);
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  // Auto-width columns
+  var colWidths = headers.map(function(h,i){
+    var maxLen = h.length;
+    rows.forEach(function(r){ var v=String(r[i]||''); if(v.length>maxLen) maxLen=v.length; });
+    return { wch: Math.min(maxLen+2, 40) };
+  });
+  ws['!cols'] = colWidths;
+  // Enable autofilter on header row
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({s:{r:0,c:0},e:{r:wsData.length-1,c:headers.length-1}}) };
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vuelos');
+  XLSX.writeFile(wb, 'jff-vuelos-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel descargado con filtros activos','ok');
+}
+
+function loadSheetJS(callback){
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = callback;
+  s.onerror = function(){ toast('No se pudo cargar la librería de Excel. Verifica tu conexión.','err'); };
+  document.head.appendChild(s);
+}
+
 // ══ LANGUAGE ══
 function setLang(l,btn){lang=l;document.querySelectorAll('.lang-btns .lb').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');}
 
@@ -1311,6 +1437,9 @@ function loadLocalFallback_unused(){}
 // ══ INIT ══
 window.onload = function() {
   loadLocalCFG();
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
   var script = document.createElement('script');
   script.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
   script.onload = function() { initMSAL(); };
