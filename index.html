@@ -1025,12 +1025,22 @@ function extractAWBFields(text) {
   var valMatch = clean.match(/Valuation\s*Charge\s+(\d+\.\d{1,2})\s+\d+\.\d{1,2}/i);
   if (valMatch && parseFloat(valMatch[1]) > 0) result.valcharge = parseFloat(valMatch[1]);
 
-  // ── Total Prepaid / Total Collect ──
-  var totalMatch = clean.match(/Total\s*Prepaid\D{0,10}?(\d+[\.,]\d{1,2})/i);
-  if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
-
-  var collectMatch = clean.match(/Total\s*Collect\D{0,10}?(\d+[\.,]\d{1,2})/i);
-  if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
+  // ── Total Prepaid / Total Collect ── el formato real suele ser "Total Prepaid Total Collect X.X Y.Y"
+  var totalBothMatch = clean.match(/Total\s*Prepaid\s*Total\s*Collect\D{0,5}?(\d+[\.,]\d{1,2})\s+(\d+[\.,]\d{1,2})/i);
+  if (totalBothMatch) {
+    result.total_prepaid = parseFloat(totalBothMatch[1].replace(',', '.'));
+    result.total_collect = parseFloat(totalBothMatch[2].replace(',', '.'));
+  } else {
+    var totalMatch = clean.match(/Total\s*Prepaid\D{0,10}?(\d+[\.,]\d{1,2})/i);
+    if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
+    var collectMatch = clean.match(/Total\s*Collect\D{0,10}?(\d+[\.,]\d{1,2})/i);
+    if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
+  }
+  // Última red de seguridad: si no se detectó, calcular sumando cargo de peso + otros agente + otros carrier + impuestos
+  if (!result.total_prepaid && result.weight_charge) {
+    var sumTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0) + (result.tax||0) + (result.valcharge||0);
+    if (sumTotal > 0) result.total_prepaid = parseFloat(sumTotal.toFixed(2));
+  }
 
   // ── FECHA Y LUGAR DE EMISIÓN ── "Tuesday, 30 Jun 2026 QUITO ECUADOR"
   var dateMatch = clean.match(/(\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4})\s+([A-Z]{3,15})/);
