@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TrackFlow Air — Jet Fresh Flowers Distributors</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -712,9 +714,14 @@ async function initApp() {
   loadLocalCFG();
   loadLocalFallback();
   setSyncStatus('ok', 'Sesión activa ✓');
+  autoUpdateAllStatuses();
   renderDash();
   updateBadges();
   populateConsignees();
+  // Recalcular estados automáticamente cada 60 segundos
+  if (!window._statusInterval) {
+    window._statusInterval = setInterval(autoUpdateAllStatuses, 60000);
+  }
 }
 
 // ══ STORAGE — localStorage (funciona sin permisos de admin) ══
@@ -792,6 +799,11 @@ async function handleAWBUpload(e) {
         fullText += content.items.map(function(it){ return it.str; }).join(' ') + '\n';
       }
       var parsed = extractAWBFields(fullText);
+      console.log('=== TEXTO CRUDO EXTRAÍDO DEL PDF ===');
+      console.log(fullText);
+      console.log('=== CAMPOS DETECTADOS ===');
+      console.log(parsed);
+      window._lastAWBText = fullText; // disponible para depuración manual en consola
       var filledCount = 0;
       if (parsed.boxes_conf) { sv('f-bconf', parsed.boxes_conf); filledCount++; }
       if (parsed.gross_weight) { sv('f-weight', parsed.gross_weight); filledCount++; }
@@ -824,6 +836,15 @@ async function handleAWBUpload(e) {
       if (parsed.agencyPhone) { sv('f-agphone', parsed.agencyPhone); filledCount++; }
       if (parsed.agencyEmail) { sv('f-agemail', parsed.agencyEmail); filledCount++; }
       calcAll();
+      // Panel de depuración: muestra el texto crudo y los campos detectados
+      var debugBox = document.getElementById('awb-debug-box');
+      if (!debugBox) {
+        debugBox = document.createElement('div');
+        debugBox.id = 'awb-debug-box';
+        debugBox.style.cssText = 'margin-top:10px;background:#0A2A14;color:#B7DFC8;border-radius:8px;padding:12px;font-family:monospace;font-size:10px;max-height:240px;overflow-y:auto;white-space:pre-wrap;';
+        document.getElementById('awb-status').parentNode.appendChild(debugBox);
+      }
+      debugBox.innerHTML = '<strong style="color:#fff;">TEXTO EXTRAÍDO DEL PDF (para diagnóstico):</strong>\n\n' + esc(fullText.substring(0, 3000)) + (fullText.length>3000?'\n\n...(truncado)':'') + '\n\n<strong style="color:#fff;">CAMPOS DETECTADOS:</strong>\n' + esc(JSON.stringify(parsed, null, 2));
       if (filledCount > 0) {
         stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)';
         stat.className = 'upload-status ok';
@@ -848,10 +869,9 @@ function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
 
-  // ── AEROLÍNEA / CARRIER ── múltiples estrategias de respaldo
-  var airlineMatch = clean.match(/Issued\s*by\s+([A-Z][A-Z\s]{2,30}?)(?:\s+Copies|\s+Not\s*negotiable|\s+AIR\s*WAYBILL)/i)
-    || clean.match(/By\s*First\s*Carrier[^A-Z]*?\b([A-Z]{2,4}\s+[A-Z]{2,15})\b/)
-    || clean.match(/\b(ATLAS\s*AIR|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA|IBERIA|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i);
+  // ── AEROLÍNEA / CARRIER ── para con palabras que indican dirección física
+  var airlineMatch = clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i)
+    || clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|IBERIA|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i);
   if (airlineMatch) result.airline = airlineMatch[1].trim();
 
   // ── ORIGEN ── varias estrategias
@@ -872,9 +892,9 @@ function extractAWBFields(text) {
     else if (/GUATEMALA/i.test(clean)) result.origin = 'GUAT';
   }
 
-  // ── DESTINO ── varias estrategias + detección por ciudad
-  var destMatch = clean.match(/Airport\s*of\s*Destination\s+([A-Z]{3,15})/i)
-    || clean.match(/\bTo\s+By\s*First\s*Carrier[^A-Z]*?\b([A-Z]{3})\b/i);
+  // ── DESTINO ── captura ciudad antes de "Requested" o "Amount"
+  var destMatch = clean.match(/Airport\s*of\s*Destination\s+([A-Z][A-Z\s]{1,14}?)(?:\s+Requested|\s+Amount|\s+INSURANCE)/i)
+    || clean.match(/Airport\s*of\s*Destination\s+([A-Z]{3,15})/i);
   if (destMatch) {
     var d = destMatch[1].trim().toUpperCase();
     var cityToCode = {'MIAMI':'MIA','MIA':'MIA','NEW YORK':'JFK','LOS ANGELES':'LAX','CHICAGO':'ORD','AMSTERDAM':'AMS','MADRID':'MAD','PANAMA CITY':'PTY','PANAMA':'PTY'};
@@ -890,13 +910,15 @@ function extractAWBFields(text) {
     else if (/PANAMA/i.test(clean)) result.dest = 'PTY';
   }
 
-  // ── FLIGHT NUMBER ── varias estrategias en cascada
-  var flightMatch = clean.match(/Flight\/?Date\D{0,5}?([A-Z0-9]{1,2})\s*(\d{3,4})\s*-\s*(\d{1,2})\b/i)
-    || clean.match(/\b([A-Z])(\d)\s*(\d{4})\s*-\s*(\d{1,2})\b/)
-    || clean.match(/\b([A-Z]{1,2})\s*(\d{3,4})\s*-\s*(\d{1,2})\b/);
+  // ── FLIGHT NUMBER ── 3 formatos: M38506/02 | 5Y 0036-30 | 5Y0036-30
+  var flightMatch = clean.match(/Flight[\/\s]*Date\s+([A-Z]\d{4,6})\s*\/\s*\d/i)     // M38506/02
+    || clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s+(\d{3,5})\s*-\s*\d/i)            // 5Y 0036-30
+    || clean.match(/Flight[\/\s]*Date\s+([A-Z]{1,2})(\d{3,5})\s*-\s*\d/i)            // 5Y0036-30
+    || clean.match(/([A-Z]\d{4,6})\s*\/\s*\d{1,2}/);                                  // M38506/02 sin "Flight/Date"
   if (flightMatch) {
-    if (flightMatch.length === 5) result.flightnum = flightMatch[1] + flightMatch[2] + flightMatch[3];
-    else result.flightnum = flightMatch[1] + flightMatch[2];
+    result.flightnum = flightMatch[2]
+      ? flightMatch[1] + flightMatch[2]   // dos grupos: prefijo + número
+      : flightMatch[1];                   // un grupo: número completo
   }
 
   // ── AWB NUMBER ── debe ir después de origen, lo dejamos arriba pero reforzamos
@@ -930,8 +952,8 @@ function extractAWBFields(text) {
     result.declaredValue = parseFloat(declaredMatch[1].replace(',', '.'));
   }
 
-  // ── TABLA PRINCIPAL DE CARGA — estrategia robusta que no depende de espaciado exacto ──
-  var tableMatch = clean.match(/(\d{2,4})\s+(\d{3,5}(?:\.\d+)?)\s*k\w?\s+([A-Z]{2})\s+(\d{3,5}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,6}\.\d{2})/i);
+  // ── TABLA PRINCIPAL DE CARGA — Rate Class puede ser 1 o 2 letras (Q, CN, etc.) ──
+  var tableMatch = clean.match(/(\d{2,4})\s+(\d{3,5}(?:\.\d+)?)\s*K\s+([A-Z]{1,2})\s+(\d{3,5}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,6}\.\d{2})/i);
   if (tableMatch) {
     result.boxes_conf = parseInt(tableMatch[1]);
     result.gross_weight = parseFloat(tableMatch[2]);
@@ -940,9 +962,11 @@ function extractAWBFields(text) {
     result.weight_charge = parseFloat(tableMatch[6]);
   }
 
-  // Estrategia 2: piezas (siempre disponible con "PIECES" o "No. of Pieces")
+  // Estrategia 2: piezas — "PCS: 98" en descripción, o "PIECES", o "No. of Pieces"
   if (!result.boxes_conf) {
-    var piecesMatch = clean.match(/(\d+)\s*PIECES/i) || clean.match(/No\.?\s*of\s*Pieces\D{0,15}?(\d{1,5})\b/i) || clean.match(/RCP\D{0,10}?(\d{1,5})\b/i);
+    var piecesMatch = clean.match(/PCS:\s*(\d+)/i)
+      || clean.match(/(\d+)\s*PIECES/i)
+      || clean.match(/No\.?\s*Of?\s*Pieces\D{0,15}?(\d{1,5})\b/i);
     if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
   }
 
@@ -1081,86 +1105,267 @@ async function handlePODUpload(e) {
 }
 
 // ══ LIVE FLIGHT STATUS (AviationStack) ══
+// ══ CÁLCULO AUTOMÁTICO DE ESTADO DEL VUELO (basado en ETD/ETA vs hora actual) ══
+// Lógica:
+//  - Aún no pasa el ETD → Programado (pending)
+//  - Pasó el ETD pero no hay salida real registrada Y estamos cerca del ETD → En tránsito (asumimos que despegó)
+//  - Pasó el ETD y no ha despegado (con datos live) → Retrasado en salida
+//  - Volando entre ETD y ETA → En tránsito
+//  - Llegó ≤2h después del ETA → Arribado (delivered)
+//  - Llegó >3h después del ETA → Demorado (delayed)
+function computeAutoStatus(f, liveData) {
+  var now = new Date();
+  var etd = f.etd ? new Date(f.etd) : null;
+  var eta = f.eta ? new Date(f.eta) : null;
+  if (!etd) return { status: f.status || 'pending', label: 'Sin ETD', color: 'pending' };
+
+  var MS_H = 3600000;
+
+  // Si tenemos datos en vivo, usarlos con prioridad
+  if (liveData) {
+    var ls = liveData.flight_status;
+    var actualDep = liveData.departure && liveData.departure.actual ? new Date(liveData.departure.actual) : null;
+    var actualArr = liveData.arrival && liveData.arrival.actual ? new Date(liveData.arrival.actual) : null;
+
+    // Ya aterrizó
+    if (ls === 'landed' || ls === 'arrived' || actualArr) {
+      if (actualArr && eta) {
+        var lateH = (actualArr - eta) / MS_H;
+        if (lateH > 3) return { status: 'delayed', label: 'DEMORADO (llegó ' + Math.round(lateH*10)/10 + 'h tarde)', color: 'late' };
+        if (lateH <= 2) return { status: 'delivered', label: 'ARRIBADO (a tiempo)', color: 'delivered' };
+        return { status: 'delivered', label: 'ARRIBADO (' + Math.round(lateH*10)/10 + 'h tarde)', color: 'warn' };
+      }
+      return { status: 'delivered', label: 'ARRIBADO', color: 'delivered' };
+    }
+    // Está volando
+    if (ls === 'active' || (actualDep && !actualArr)) {
+      return { status: 'transit', label: 'EN TRÁNSITO (volando)', color: 'transit' };
+    }
+    // No ha despegado pero ya pasó el ETD → retraso en salida
+    if (ls === 'scheduled' && now > etd && !actualDep) {
+      var lateDepH = (now - etd) / MS_H;
+      return { status: 'delayed', label: 'RETRASADO (no despega, ' + Math.round(lateDepH*10)/10 + 'h de retraso)', color: 'late' };
+    }
+  }
+
+  // Sin datos en vivo — cálculo puro por horario
+  if (now < etd) {
+    return { status: 'pending', label: 'PROGRAMADO (aún no despega)', color: 'pending' };
+  }
+  // Pasó el ETD
+  if (eta) {
+    if (now >= etd && now <= eta) {
+      return { status: 'transit', label: 'EN TRÁNSITO (en ruta)', color: 'transit' };
+    }
+    // Pasó el ETA
+    var pastEtaH = (now - eta) / MS_H;
+    if (pastEtaH <= 2) {
+      return { status: 'delivered', label: 'ARRIBADO (llegada estimada, a tiempo)', color: 'delivered' };
+    }
+    if (pastEtaH > 3) {
+      return { status: 'delayed', label: 'DEMORADO (' + Math.round(pastEtaH*10)/10 + 'h después del ETA)', color: 'late' };
+    }
+    // Entre 2h y 3h después del ETA
+    return { status: 'transit', label: 'EN TRÁNSITO (retraso leve, ' + Math.round(pastEtaH*10)/10 + 'h)', color: 'warn' };
+  }
+  // Pasó ETD sin ETA definido
+  return { status: 'transit', label: 'EN TRÁNSITO (despegó)', color: 'transit' };
+}
+
+// Actualiza automáticamente el estado de todos los vuelos según la hora actual
+function autoUpdateAllStatuses() {
+  var changed = false;
+  DB.flights.forEach(function(f) {
+    if (f.status === 'delivered' && f.manualDelivered) return; // no tocar si fue marcado manualmente entregado
+    var auto = computeAutoStatus(f, null);
+    if (auto.status !== f.status) {
+      f.status = auto.status;
+      f.modifiedAt = nowStr();
+      changed = true;
+    }
+  });
+  if (changed) { persistDB(); renderScreen(screen); updateBadges(); }
+}
+
 async function checkLive(num, flightId) {
+  var f = DB.flights.find(function(x){ return x.id === flightId; });
   document.getElementById('live-title').textContent = '✈ ' + num + ' — Estado en Vivo';
-  document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Consultando AviationStack en tiempo real…</div>';
   document.getElementById('modal-live').classList.add('open');
+
+  // PRIMERO: calcular y mostrar el estado automático inmediatamente (siempre funciona, sin API)
+  var autoStatus = computeAutoStatus(f, null);
+  // Aplicar el estado automático al vuelo
+  if (f && autoStatus.status !== f.status) {
+    f.status = autoStatus.status;
+    f.modifiedAt = nowStr();
+    saveFlight_SP(f).then(function(){ renderScreen(screen); });
+  }
+
+  var autoBox = '<div style="background:' + statusBgColor(autoStatus.color) + ';border-radius:8px;padding:12px 14px;margin-bottom:14px;">'
+    + '<div style="font-size:11px;font-weight:700;color:' + statusTxColor(autoStatus.color) + ';text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estado automático (calculado por horario)</div>'
+    + '<div style="font-size:15px;font-weight:800;color:' + statusTxColor(autoStatus.color) + ';">' + autoStatus.label + '</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:6px;">ETD: ' + fmtD(f&&f.etd) + '  ·  ETA: ' + fmtD(f&&f.eta) + '  ·  Ahora: ' + fmtD(new Date().toISOString()) + '</div>'
+    + '</div>';
+
+  // SEGUNDO: intentar enriquecer con datos en vivo de AviationStack (opcional)
   if (!CFG.aviationKey) {
-    document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;"><strong>Agrega tu AviationStack API Key</strong> en Configuración para ver el estado en vivo.<br><br>1. Ve a <strong>aviationstack.com</strong><br>2. Regístrate gratis (500 consultas/mes)<br>3. Copia tu API Key<br>4. Pégala en Configuración → AviationStack API Key</div>';
+    document.getElementById('live-body').innerHTML = autoBox
+      + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula automáticamente con el ETD/ETA registrado. Para datos GPS en vivo (posición, altitud, velocidad real), agrega tu <strong>AviationStack API Key</strong> gratuita en Configuración.</div>';
     return;
   }
+
+  document.getElementById('live-body').innerHTML = autoBox
+    + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Buscando datos GPS en vivo…</div>';
+
   var cleanNum = num.replace(/\s/g,'');
-  // El plan gratuito de AviationStack solo permite HTTP, no HTTPS — usamos un proxy CORS para evitar el bloqueo del navegador
   var directUrl = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&flight_iata=' + cleanNum;
   var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(directUrl);
   try {
     var res = await fetch(proxyUrl);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var data = await res.json();
-    if (data.error) {
-      var errMsg = (data.error.info || data.error.message || JSON.stringify(data.error));
-      document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;"><strong>Error de AviationStack:</strong><br>' + esc(errMsg) + '<br><br>Verifica que tu API Key sea correcta en Configuración.</div>';
-      return;
-    }
     var d = (data.data && data.data[0]) || null;
     liveCache[num] = d;
-    renderLive(num, d, flightId);
+    renderLive(num, d, flightId, autoBox);
   } catch(err) {
-    // Fallback: intentar con un segundo proxy CORS
     try {
       var proxyUrl2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
       var res2 = await fetch(proxyUrl2);
       var data2 = await res2.json();
       var d2 = (data2.data && data2.data[0]) || null;
-      liveCache[num] = d2;
-      renderLive(num, d2, flightId);
+      renderLive(num, d2, flightId, autoBox);
     } catch(err2) {
-      document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">No se pudo conectar con AviationStack.<br><br><strong>Posibles causas:</strong><br>1. El vuelo no está activo ahora mismo (AviationStack solo muestra vuelos en curso, no históricos en el plan gratuito)<br>2. La API Key es incorrecta<br>3. Límite de 500 consultas/mes alcanzado<br><br>Verifica tu key en <strong>aviationstack.com → My Account</strong></div>';
+      document.getElementById('live-body').innerHTML = autoBox
+        + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No se pudieron obtener datos GPS en vivo (el vuelo puede no estar activo en este momento en AviationStack, o se alcanzó el límite mensual gratuito).</div>';
     }
   }
 }
 
-function renderLive(num, d, flightId) {
+function statusBgColor(c) {
+  return {pending:'#FEF3C7', transit:'#E8F5EE', delivered:'#D1FAE5', warn:'#FEF3C7', late:'#FEE2E2'}[c] || '#F3F4F6';
+}
+function statusTxColor(c) {
+  return {pending:'#92400E', transit:'#1B7A3E', delivered:'#065F46', warn:'#92400E', late:'#991B1B'}[c] || '#374151';
+}
+
+// Coordenadas de aeropuertos (lat, lon) para el mapa
+var AIRPORT_COORDS = {
+  'UIO': [-0.1292, -78.3575, 'Quito'],
+  'MED': [6.1645, -75.4231, 'Medellín'],
+  'BOG': [4.7016, -74.1469, 'Bogotá'],
+  'GUAT': [14.5833, -90.5275, 'Guatemala City'],
+  'MIA': [25.7959, -80.2870, 'Miami'],
+  'JFK': [40.6413, -73.7781, 'New York JFK'],
+  'LAX': [33.9416, -118.4085, 'Los Angeles'],
+  'ORD': [41.9742, -87.9073, 'Chicago'],
+  'AMS': [52.3105, 4.7683, 'Amsterdam'],
+  'MAD': [40.4983, -3.5676, 'Madrid'],
+  'PTY': [9.0714, -79.3835, 'Panama City']
+};
+var _liveMap = null;
+
+function renderFlightMap(f, d) {
+  // Espera a que el DOM tenga el contenedor del mapa
+  setTimeout(function() {
+    var mapEl = document.getElementById('flight-map');
+    if (!mapEl || typeof L === 'undefined') return;
+    // Limpiar mapa anterior
+    if (_liveMap) { _liveMap.remove(); _liveMap = null; }
+
+    var origin = f && AIRPORT_COORDS[f.origin];
+    var dest = f && AIRPORT_COORDS[f.dest];
+    var planePos = (d && d.live && d.live.latitude && d.live.longitude)
+      ? [parseFloat(d.live.latitude), parseFloat(d.live.longitude)] : null;
+
+    // Centro inicial del mapa
+    var center = planePos || origin || dest || [15, -78];
+    _liveMap = L.map('flight-map', { zoomControl: true, attributionControl: false }).setView(center, 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10 }).addTo(_liveMap);
+
+    var bounds = [];
+
+    // Marcador origen (verde)
+    if (origin) {
+      L.circleMarker([origin[0], origin[1]], { radius: 8, color: '#1B7A3E', fillColor: '#22A351', fillOpacity: 1, weight: 2 })
+        .addTo(_liveMap).bindPopup('<b>Origen:</b> ' + origin[2] + ' (' + f.origin + ')');
+      bounds.push([origin[0], origin[1]]);
+    }
+    // Marcador destino (rojo)
+    if (dest) {
+      L.circleMarker([dest[0], dest[1]], { radius: 8, color: '#DC2626', fillColor: '#EF4444', fillOpacity: 1, weight: 2 })
+        .addTo(_liveMap).bindPopup('<b>Destino:</b> ' + dest[2] + ' (' + f.dest + ')');
+      bounds.push([dest[0], dest[1]]);
+    }
+    // Línea de ruta origen→destino (punteada)
+    if (origin && dest) {
+      L.polyline([[origin[0], origin[1]], [dest[0], dest[1]]], { color: '#1B7A3E', weight: 2, dashArray: '6, 8', opacity: 0.6 }).addTo(_liveMap);
+    }
+    // Avión en posición GPS real (icono avión)
+    if (planePos) {
+      var planeIcon = L.divIcon({
+        html: '<div style="font-size:26px;transform:rotate(' + ((d.live.direction||0)-45) + 'deg);">✈️</div>',
+        className: 'plane-icon', iconSize: [30, 30], iconAnchor: [15, 15]
+      });
+      L.marker(planePos, { icon: planeIcon }).addTo(_liveMap)
+        .bindPopup('<b>✈ ' + esc(f?f.num:'') + '</b><br>Altitud: ' + Math.round(d.live.altitude||0) + ' m<br>Velocidad: ' + Math.round(d.live.speed_horizontal||0) + ' km/h').openPopup();
+      bounds.push(planePos);
+    }
+    // Ajustar zoom para ver todo
+    if (bounds.length > 1) _liveMap.fitBounds(bounds, { padding: [40, 40] });
+    else if (bounds.length === 1) _liveMap.setView(bounds[0], 5);
+    // Forzar recálculo de tamaño (Leaflet dentro de modal)
+    setTimeout(function(){ if(_liveMap) _liveMap.invalidateSize(); }, 100);
+  }, 150);
+}
+
+function renderLive(num, d, flightId, autoBox) {
+  autoBox = autoBox || '';
+  var f = DB.flights.find(function(x){ return x.id === flightId; });
+  var hasGPS = d && d.live && d.live.latitude && d.live.longitude;
+
   if (!d) {
-    document.getElementById('live-body').innerHTML = '<div class="ai-bubble" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">No se encontraron datos para <strong>' + esc(num) + '</strong>. El vuelo puede no estar activo en este momento.</div>';
+    // Sin datos live, pero igual mostramos mapa con ruta origen→destino
+    var mapSection = (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest]))
+      ? '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:14px 0 8px;">Ruta del vuelo</div><div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);"></div>'
+      : '';
+    document.getElementById('live-body').innerHTML = autoBox
+      + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No hay datos GPS en vivo para <strong>' + esc(num) + '</strong> en este momento (el vuelo puede no estar volando ahora). Se muestra la ruta programada.</div>'
+      + mapSection;
+    if (mapSection) renderFlightMap(f, null);
     return;
   }
-  var f = DB.flights.find(function(x){ return x.id === flightId; });
-  var scc = d.flight_status || 'scheduled';
-  var statusColors = {active:'#D1FAE5',landed:'#DBEAFE',scheduled:'#FEF3C7',cancelled:'#FEE2E2'};
-  var statusTextColors = {active:'#065F46',landed:'#1E40AF',scheduled:'#92400E',cancelled:'#991B1B'};
-  var etaCompare = '';
-  if (f && f.eta && d.arrival && d.arrival.estimated) {
-    var liveETA = new Date(d.arrival.estimated);
-    var storedETA = new Date(f.eta);
-    var diffMin = (liveETA - storedETA) / 60000;
-    if (Math.abs(diffMin) > 180) etaCompare = '<div style="background:#FEE2E2;color:#991B1B;border-radius:var(--r);padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:12px;">⚠ DEMORADO: ETA en vivo es ' + (diffMin>0?'+':'') + Math.round(diffMin) + ' min vs tu ETA registrada — proceso RETRASADO (umbral >3h)</div>';
-    else if (Math.abs(diffMin) > 120) etaCompare = '<div style="background:#FEF3C7;color:#92400E;border-radius:var(--r);padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:12px;">⚠ ADVERTENCIA: ETA en vivo difiere ' + (diffMin>0?'+':'') + Math.round(diffMin) + ' min vs ETA registrada (umbral >2h)</div>';
-    else etaCompare = '<div style="background:#D1FAE5;color:#065F46;border-radius:var(--r);padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:12px;">✓ A TIEMPO: ETA en vivo coincide con ETA registrada (dentro de 2h)</div>';
+  // Recalcular estado usando los datos en vivo (más preciso)
+  var autoStatus = computeAutoStatus(f, d);
+  if (f && autoStatus.status !== f.status) {
+    f.status = autoStatus.status; f.modifiedAt = nowStr();
+    saveFlight_SP(f).then(function(){ renderScreen(screen); });
   }
+  var scc = d.flight_status || 'scheduled';
   var ground = d.live && d.live.is_ground;
-  var html = etaCompare + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;padding:5px 14px;border-radius:20px;background:' + (statusColors[scc]||'#F3F4F6') + ';color:' + (statusTextColors[scc]||'#374151') + ';">' + scc.toUpperCase() + '</span><span style="font-size:12px;color:var(--t2);">' + (ground?'🛬 En tierra':'✈ En vuelo') + (d.live&&!ground?' · '+Math.round(d.live.altitude)+' ft · '+Math.round(d.live.speed_horizontal)+' km/h':'') + '</span></div>';
+  var html = autoBox + '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Datos GPS en vivo (AviationStack)</div>';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:#E8F5EE;color:#1B7A3E;">' + scc.toUpperCase() + '</span><span style="font-size:12px;color:var(--t2);">' + (ground?'🛬 En tierra':'✈ En vuelo') + (d.live&&!ground?' · '+Math.round(d.live.altitude)+' m · '+Math.round(d.live.speed_horizontal)+' km/h':'') + '</span></div>';
+  // Mapa
+  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
+    html += '<div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px;"></div>';
+  }
   html += '<div class="lv-grid">';
   var cells = [
-    ['Vuelo', esc(num)],
     ['Aerolínea', esc((d.airline&&d.airline.name)||'—')],
-    ['Aeropuerto salida', esc((d.departure&&d.departure.airport)||'—') + ' (' + esc((d.departure&&d.departure.iata)||'') + ')'],
-    ['Aeropuerto llegada', esc((d.arrival&&d.arrival.airport)||'—') + ' (' + esc((d.arrival&&d.arrival.iata)||'') + ')'],
+    ['Aeropuerto salida', esc((d.departure&&d.departure.airport)||'—')],
+    ['Aeropuerto llegada', esc((d.arrival&&d.arrival.airport)||'—')],
     ['Salida programada', fmtD(d.departure&&d.departure.scheduled)],
-    ['Llegada programada', fmtD(d.arrival&&d.arrival.scheduled)],
     ['Salida real', d.departure&&d.departure.actual ? fmtD(d.departure.actual) : '—'],
     ['Llegada estimada', fmtD(d.arrival&&d.arrival.estimated)],
-    ['Demora salida', d.departure&&d.departure.delay ? '<span style="color:var(--red)">+'+d.departure.delay+' min</span>' : '<span style="color:var(--green2)">A tiempo</span>'],
+    ['Llegada real', d.arrival&&d.arrival.actual ? fmtD(d.arrival.actual) : '<span style="color:var(--t3)">Aún no aterriza</span>'],
     ['Demora llegada', d.arrival&&d.arrival.delay ? '<span style="color:var(--red)">+'+d.arrival.delay+' min</span>' : '<span style="color:var(--green2)">A tiempo</span>'],
-    ['Llegada real', d.arrival&&d.arrival.actual ? fmtD(d.arrival.actual) : '<span style="color:var(--t3)">Aún no ha aterrizdo</span>'],
-    ['Posición GPS', d.live ? parseFloat(d.live.latitude).toFixed(3) + ', ' + parseFloat(d.live.longitude).toFixed(3) : '—']
+    ['Posición GPS', hasGPS ? parseFloat(d.live.latitude).toFixed(3) + ', ' + parseFloat(d.live.longitude).toFixed(3) : '—']
   ];
   cells.forEach(function(c) { html += '<div class="lv-cell"><div class="lk">'+c[0]+'</div><div class="lv">'+c[1]+'</div></div>'; });
-  html += '</div><div style="margin-top:10px;font-size:10px;color:var(--t3);">⚡ Datos de AviationStack · Actualizado ' + new Date().toLocaleTimeString('es-EC') + '</div>';
+  html += '</div><div style="margin-top:10px;font-size:10px;color:var(--t3);">⚡ Actualizado ' + new Date().toLocaleTimeString('es-EC') + '</div>';
   document.getElementById('live-body').innerHTML = html;
-  if ((scc==='landed'||scc==='arrived') && f && f.status !== 'delivered') {
-    f.status = 'delivered'; f.modifiedAt = nowStr();
-    saveFlight_SP(f).then(function(){ renderScreen(screen); toast(num + ' marcado como Entregado (aterrizó)', 'ok'); });
+  // Renderizar el mapa después de insertar el HTML
+  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
+    renderFlightMap(f, d);
   }
 }
 
@@ -1379,6 +1584,9 @@ async function saveFlight() {
     createdAt: editFlId ? ((DB.flights.find(function(x){return x.id===editFlId;})||{}).createdAt||now) : now
   };
   var isEdit = !!editFlId;
+  // Calcular estado automático según ETD/ETA vs hora actual
+  var autoSt = computeAutoStatus(f, null);
+  f.status = autoSt.status;
   if (isEdit) { var idx=DB.flights.findIndex(function(x){return x.id===editFlId;}); if(idx>=0)DB.flights[idx]=f; }
   else { DB.flights.unshift(f); pushNotif('Nuevo envío: '+num+' ('+origin+'→'+dest+') por '+cb, f.confst==='unconfirmed'?'#D97706':'#1B7A3E'); }
   closeModal('new');
