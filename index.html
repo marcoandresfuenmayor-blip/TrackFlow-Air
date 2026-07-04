@@ -968,9 +968,9 @@ function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
 
-  // ── AEROLÍNEA / CARRIER ── para con palabras que indican dirección física
-  var airlineMatch = clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i)
-    || clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|IBERIA|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i);
+  // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
+  var airlineMatch = clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+    || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
   if (airlineMatch) result.airline = airlineMatch[1].trim();
 
   // ── ORIGEN ── varias estrategias
@@ -1009,17 +1009,20 @@ function extractAWBFields(text) {
     else if (/PANAMA/i.test(clean)) result.dest = 'PTY';
   }
 
-  // ── FLIGHT NUMBER ── formatos: 5Y8418/03 | M38506/02 | 5Y 0036-30 | 5Y0036-30
+  // ── FLIGHT NUMBER ── formatos: 5Y8418/03 | M38506/02 | 5Y 0036-30 | 5Y 9271-3 | 5Y0036-30
   var flightMatch = clean.match(/Flight[\/\s]*Date\s+(\d[A-Z]\d{3,5})\s*\/\s*\d/i)   // 5Y8418/03 (dígito+letra+dígitos)
     || clean.match(/Flight[\/\s]*Date\s+([A-Z]\d{4,6})\s*\/\s*\d/i)                   // M38506/02 (letra+dígitos)
     || clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s+(\d{3,5})\s*-\s*\d/i)            // 5Y 0036-30
     || clean.match(/Flight[\/\s]*Date\s+([A-Z]{1,2})(\d{3,5})\s*-\s*\d/i)            // 5Y0036-30
     || clean.match(/(\d[A-Z]\d{3,5})\s*\/\s*\d{1,2}/)                                 // 5Y8418/03 sin etiqueta
-    || clean.match(/([A-Z]\d{4,6})\s*\/\s*\d{1,2}/);                                  // M38506/02 sin etiqueta
+    || clean.match(/([A-Z]\d{4,6})\s*\/\s*\d{1,2}/)                                   // M38506/02 sin etiqueta
+    || clean.match(/\b(\d[A-Z])\s+(\d{3,5})\s*-\s*\d\b/);                             // 5Y 9271-3 sin etiqueta (dígito+letra espacio dígitos-día)
   if (flightMatch) {
-    result.flightnum = flightMatch[2]
+    var fn = flightMatch[2]
       ? flightMatch[1] + flightMatch[2]   // dos grupos: prefijo + número
       : flightMatch[1];                   // un grupo: número completo
+    // Limpiar: sin espacios ni guiones (necesario para el Live Status / AviationStack)
+    result.flightnum = fn.replace(/[\s\-\/]/g, '').toUpperCase();
   }
 
   // ── AWB NUMBER ── debe ir después de origen, lo dejamos arriba pero reforzamos
@@ -1150,21 +1153,33 @@ function extractAWBFields(text) {
   var valMatch = clean.match(/Valuation\s*Charge\s+(\d+\.\d{1,2})\s+\d+\.\d{1,2}/i);
   if (valMatch && parseFloat(valMatch[1]) > 0) result.valcharge = parseFloat(valMatch[1]);
 
-  // ── Total Prepaid / Total Collect ── el formato real suele ser "Total Prepaid Total Collect X.X Y.Y"
+  // ── Total Prepaid / Total Collect ── varios formatos según el layout del PDF
   var totalBothMatch = clean.match(/Total\s*Prepaid\s*Total\s*Collect\D{0,5}?(\d+[\.,]\d{1,2})\s+(\d+[\.,]\d{1,2})/i);
   if (totalBothMatch) {
     result.total_prepaid = parseFloat(totalBothMatch[1].replace(',', '.'));
     result.total_collect = parseFloat(totalBothMatch[2].replace(',', '.'));
   } else {
-    var totalMatch = clean.match(/Total\s*Prepaid\D{0,10}?(\d+[\.,]\d{1,2})/i);
-    if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
-    var collectMatch = clean.match(/Total\s*Collect\D{0,10}?(\d+[\.,]\d{1,2})/i);
-    if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
+    // Formato: "1156.0 0.0 369 UIO 10233344" — el total va justo antes del número AWB repetido
+    var beforeAwb = clean.match(/(\d{3,6}\.\d)\s+0\.0\s+\d{3}\s+[A-Z]{3}\s+\d{7,8}/i);
+    if (beforeAwb) {
+      result.total_prepaid = parseFloat(beforeAwb[1]);
+    } else {
+      var totalMatch = clean.match(/Total\s*Prepaid\D{0,10}?(\d+[\.,]\d{1,2})/i);
+      if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
+      var collectMatch = clean.match(/Total\s*Collect\D{0,10}?(\d+[\.,]\d{1,2})/i);
+      if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
+    }
   }
-  // Última red de seguridad: si no se detectó, calcular sumando cargo de peso + otros agente + otros carrier + impuestos
+  // Red de seguridad 1: si el total detectado es igual al cargo de peso pero hay otros cargos, recalcular
+  // (significa que capturamos el subtotal, no el total real)
+  var computedTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0)
+    + (result.maa||0) + (result.awc||0) + (result.tax||0) + (result.valcharge||0);
+  if (result.total_prepaid && result.weight_charge && result.total_prepaid === result.weight_charge && computedTotal > result.weight_charge) {
+    result.total_prepaid = parseFloat(computedTotal.toFixed(2));
+  }
+  // Red de seguridad 2: si no se detectó, calcular sumando todos los cargos
   if (!result.total_prepaid && result.weight_charge) {
-    var sumTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0) + (result.tax||0) + (result.valcharge||0);
-    if (sumTotal > 0) result.total_prepaid = parseFloat(sumTotal.toFixed(2));
+    if (computedTotal > 0) result.total_prepaid = parseFloat(computedTotal.toFixed(2));
   }
 
   // ── FECHA Y LUGAR DE EMISIÓN ── "Tuesday, 30 Jun 2026 QUITO ECUADOR"
