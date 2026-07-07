@@ -907,7 +907,10 @@ async function handleAWBUpload(e) {
       if (parsed.boxes_conf) { sv('f-bconf', parsed.boxes_conf); filledCount++; }
       if (parsed.gross_weight) { sv('f-weight', parsed.gross_weight); filledCount++; }
       if (parsed.chargeable_weight) { sv('f-cweight', parsed.chargeable_weight); filledCount++; }
-      if (parsed.rate) { sv('f-rate', parsed.rate); filledCount++; }
+      if (parsed.rate !== undefined && parsed.rate !== null && !isNaN(parsed.rate) && parsed.rate > 0) {
+        document.getElementById('f-rate').value = parsed.rate;
+        filledCount++;
+      }
       if (parsed.weight_charge) { sv('f-wcharge', parsed.weight_charge); filledCount++; }
       if (parsed.maa) { sv('f-maa', parsed.maa); filledCount++; }
       if (parsed.awc) { sv('f-awc', parsed.awc); filledCount++; }
@@ -932,8 +935,6 @@ async function handleAWBUpload(e) {
         document.getElementById('tip-agency-detected-txt').textContent = 'Agencia detectada en el PDF: "' + parsed.agencyName + '" — selecciónala en el campo de arriba si ya existe, o créala en Agencias.';
         filledCount++;
       }
-      if (parsed.agencyPhone) { sv('f-agphone', parsed.agencyPhone); filledCount++; }
-      if (parsed.agencyEmail) { sv('f-agemail', parsed.agencyEmail); filledCount++; }
       calcAll();
       // Panel de depuración: muestra el texto crudo y los campos detectados
       var debugBox = document.getElementById('awb-debug-box');
@@ -1033,14 +1034,6 @@ function extractAWBFields(text) {
   var agencyMatch = clean.match(/Issuing\s*Carrier's?\s*Agent\s*Name\s*and\s*City\s+([A-Z][A-Z0-9\s\+\.,&]{3,40}?)(?:\s+Troncal|\s+Accounting|\s+\d{3,}|\s+Agent's)/i);
   if (agencyMatch) result.agencyName = agencyMatch[1].trim();
 
-  // ── TELÉFONO AGENCIA ── "TEL: +593 27200001" formato
-  var phoneMatch = clean.match(/TEL:?\s*(\+?\d[\d\s\-]{6,15}\d)/i);
-  if (phoneMatch) result.agencyPhone = phoneMatch[1].trim();
-
-  // ── EMAIL AGENCIA ── cualquier email visible
-  var emailMatch = clean.match(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
-  if (emailMatch) result.agencyEmail = emailMatch[1];
-
   // ── CONSIGNATARIO ── nombre tras "Consignee's Name and Address ... Account Number"
   var consigneeMatch = clean.match(/Consignee's\s*Name\s*and\s*Address\s+Consignee's\s*Account\s*Number\s+([A-Z][A-Z0-9\s\.,&]{5,50}?)\s+EORI/i)
     || clean.match(/Consignee's\s*Name\s*and\s*Address\s+([A-Z][A-Z0-9\s\.,&]{5,50}?)(?:\s+EORI|\s+\d{3,5}\s*NW|\s+Issuing)/i);
@@ -1089,7 +1082,7 @@ function extractAWBFields(text) {
   }
   if (!result.chargeable_weight && result.gross_weight) result.chargeable_weight = result.gross_weight;
 
-  // Estrategia 5: tarifa — primero busca cerca de "Rate", si no, toma el único decimal X.XX del documento (caso típico: solo aparece una vez)
+  // Estrategia 5: tarifa — varias estrategias en cascada
   if (!result.rate) {
     var rateMatch = clean.match(/Rate\s*\/?\s*Charge[^0-9]{0,15}?(\d{1,3}\.\d{2})\b/i)
       || clean.match(/\bRate(?!\s*Class)\D{0,20}?(\d{1,3}\.\d{2})\b/i);
@@ -1098,6 +1091,11 @@ function extractAWBFields(text) {
       var allDecimals = clean.match(/(?<![\d.])(\d{1,2}\.\d{2})(?![\d.])/g);
       if (allDecimals && allDecimals.length === 1) result.rate = parseFloat(allDecimals[0]);
     }
+  }
+  // Estrategia 5b: si aún no hay tarifa pero tenemos cargo de peso y peso facturable, calcularla (tarifa = cargo ÷ peso)
+  if ((!result.rate || result.rate <= 0) && result.weight_charge && result.chargeable_weight) {
+    var calcRate = result.weight_charge / result.chargeable_weight;
+    if (calcRate > 0 && calcRate < 100) result.rate = parseFloat(calcRate.toFixed(2));
   }
 
   // Estrategia 6: cargo por peso (weight charge) — calculado si no se detectó directamente
