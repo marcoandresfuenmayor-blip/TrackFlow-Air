@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrackFlow Air — Jet Fresh Flowers Distributors</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+:root{
+  --navy:#0A2A14;--green:#1B7A3E;--green2:#22A351;--lightgreen:#E8F5EE;--midgreen:#B7DFC8;
+  --amber:#D97706;--amberbg:#FEF3C7;--ambertxt:#92400E;
+  --red:#DC2626;--redbg:#FEE2E2;--redtxt:#991B1B;
+  --surf:#FFFFFF;--bg:#F2F7F4;--border:#C8DFD2;--border2:#A8CCBA;
+  --t1:#0A2A14;--t2:#2D5C3E;--t3:#7BA08A;
+  --r:8px;--rlg:12px;--sh:0 1px 3px rgba(0,0,0,.08);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px;}
+
+/* LOGIN SCREEN */
+.login-screen{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:24px;}
+.login-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);padding:40px;max-width:400px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+.login-logo{width:70px;height:70px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+.login-logo svg{width:44px;height:44px;}
+.login-title{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--t3);margin-bottom:28px;line-height:1.5;}
+.login-btn{width:100%;padding:12px;border-radius:var(--r);border:none;background:var(--green);color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font);transition:background .12s;}
+.login-btn:hover{background:var(--navy);}
+.login-btn svg{width:20px;height:20px;}
+.login-note{font-size:11px;color:var(--t3);margin-top:14px;line-height:1.5;}
+
+/* APP LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sb{width:220px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;height:100vh;}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid rgba(255,255,255,.1);}
+.logo-circle{width:36px;height:36px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-circle svg{width:24px;height:24px;}
+.sb-name{font-size:11px;font-weight:700;color:#fff;line-height:1.25;}
+.sb-sub{font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;}
+.sb-nav{padding:10px 8px;flex:1;overflow-y:auto;}
+.sb-sec{font-size:9px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;padding:10px 8px 4px;}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);font-size:12px;color:rgba(255,255,255,.65);cursor:pointer;margin-bottom:1px;transition:all .12s;}
+.ni:hover{background:rgba(255,255,255,.08);color:#fff;}
+.ni.active{background:var(--green2);color:#fff;font-weight:600;}
+.ni svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;}
+.nbadge.g{background:var(--green2);}
+.sb-foot{padding:10px 12px 14px;border-top:1px solid rgba(255,255,255,.1);}
+.user-info{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.user-av{width:28px;height:28px;border-radius:50%;background:var(--green2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.user-name{font-size:11px;color:rgba(255,255,255,.8);font-weight:500;}
+.user-role{font-size:9px;color:rgba(255,255,255,.4);}
+.lang-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.lang-lbl{font-size:10px;color:rgba(255,255,255,.4);}
+.lang-btns{display:flex;gap:3px;}
+.lb{padding:3px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.2);background:transparent;font-size:10px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.5);transition:all .12s;}
+.lb.on{background:var(--green2);color:#fff;border-color:var(--green2);}
+.sb-btns{display:flex;flex-direction:column;gap:6px;}
+.sb-action-btn{width:100%;padding:7px;border-radius:var(--r);border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);font-size:11px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.8);font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s;}
+.sb-action-btn:hover{background:rgba(255,255,255,.14);}
+.sb-action-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.sb-action-btn.logout{border-color:rgba(220,38,38,.4);color:rgba(255,100,100,.8);}
+.sb-action-btn.logout:hover{background:rgba(220,38,38,.2);}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:52px;padding:0 18px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:var(--sh);}
+.tb-title{font-size:14px;font-weight:700;color:var(--t1);flex-shrink:0;min-width:120px;}
+.srch{flex:1;display:flex;align-items:center;gap:7px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:0 11px;height:32px;}
+.srch input{background:transparent;border:none;outline:none;font-size:12px;color:var(--t1);flex:1;font-family:var(--font);}
+.srch input::placeholder{color:var(--t3);}
+.srch svg{width:14px;height:14px;stroke:var(--t3);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;}
+.tb-btn{height:32px;padding:0 14px;border-radius:var(--r);border:none;background:var(--green);font-size:12px;font-weight:600;cursor:pointer;color:#fff;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .12s;}
+.tb-btn:hover{background:var(--navy);}
+.tb-btn svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.sync-status{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.sync-status.ok{background:#D1FAE5;color:#065F46;}
+.sync-status.syncing{background:var(--amberbg);color:var(--ambertxt);}
+.sync-status.err{background:#FEE2E2;color:#991B1B;}
+.sync-dot{width:6px;height:6px;border-radius:50%;}
+.sync-dot.ok{background:#10B981;}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+.content{flex:1;overflow-y:auto;padding:16px 18px;}
+.screen{display:none;flex-direction:column;gap:14px;}
+.screen.active{display:flex;}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;box-shadow:var(--sh);}
+.ch{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F6FBF8;}
+.ct{font-size:12px;font-weight:700;color:var(--t1);}
+.ca{display:flex;align-items:center;gap:6px;}
+.sg{display:grid;gap:10px;}
+.sg5{grid-template-columns:repeat(5,minmax(0,1fr));}
+.sg4{grid-template-columns:repeat(4,minmax(0,1fr));}
+.sc{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);padding:13px 15px;box-shadow:var(--sh);}
+.sl{font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.sv{font-size:22px;font-weight:800;color:var(--t1);line-height:1;}
+.ss{font-size:10px;margin-top:5px;font-weight:500;}
+.up{color:var(--green2);}.dn{color:var(--red);}.neu{color:var(--t3);}
+.alert-card{background:#FFF8E1;border:1px solid #F59E0B;border-radius:var(--rlg);padding:12px 15px;display:none;}
+.alert-card.show{display:block;}
+.alert-title{font-size:12px;font-weight:700;color:#92400E;margin-bottom:6px;}
+.alert-item{font-size:11px;color:#78350F;padding:4px 0;border-bottom:1px solid #FDE68A;}
+.alert-item:last-child{border-bottom:none;}
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:#F6FBF8;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{background:var(--lightgreen);}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--t1);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
+.erow td{text-align:center;padding:28px;color:var(--t3);}
+.pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.pill.transit{background:var(--lightgreen);color:var(--navy);}
+.pill.delivered{background:#D1FAE5;color:#065F46;}
+.pill.delayed{background:#FEE2E2;color:#991B1B;}
+.pill.pending{background:var(--amberbg);color:var(--ambertxt);}
+.pill.confirmed{background:#D1FAE5;color:#065F46;}
+.pill.partial{background:var(--amberbg);color:var(--ambertxt);}
+.pill.unconfirmed{background:#FEE2E2;color:#991B1B;}
+.pill.ontime{background:#D1FAE5;color:#065F46;}
+.pill.warn{background:var(--amberbg);color:var(--ambertxt);}
+.pill.late{background:#FEE2E2;color:#991B1B;}
+.fs{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);padding:15px 17px;box-shadow:var(--sh);}
+.ft{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;padding-bottom:9px;border-bottom:2px solid var(--lightgreen);}
+.fg{display:grid;gap:10px;}
+.fg.c2{grid-template-columns:1fr 1fr;}
+.fg.c3{grid-template-columns:1fr 1fr 1fr;}
+.fg.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field.s2{grid-column:span 2;}
+.field.s3{grid-column:span 3;}
+.field.s4{grid-column:span 4;}
+.field label{font-size:11px;font-weight:600;color:var(--t2);}
+.req{color:var(--red);}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:12px;color:var(--t1);font-family:var(--font);outline:none;transition:border-color .12s,background .12s;width:100%;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green2);background:#fff;}
+.field input::placeholder{color:var(--t3);}
+.field input[readonly]{color:var(--t3);}
+.field input.calc{color:#065F46;font-weight:700;background:#D1FAE5;}
+.field input.rate-alert{border-color:var(--red)!important;background:#FEE2E2!important;}
+.field textarea{resize:vertical;min-height:60px;line-height:1.5;}
+.hint{font-size:10px;color:var(--t3);}
+.ai-tip{display:none;align-items:flex-start;gap:8px;background:var(--lightgreen);border:1px solid var(--midgreen);border-radius:var(--r);padding:8px 11px;font-size:11px;color:var(--navy);line-height:1.5;margin-top:8px;}
+.ai-tip svg{width:13px;height:13px;flex-shrink:0;margin-top:1px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;transition:all .12s;background:var(--bg);}
+.check-card{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg);cursor:pointer;transition:all .12s;}
+.check-card:hover{border-color:var(--green2);background:var(--lightgreen);}
+.check-card input[type=checkbox]{width:18px;height:18px;margin-top:1px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.check-card.on{border-color:var(--green);background:var(--lightgreen);}
+.check-title{font-size:12px;font-weight:700;color:var(--t1);}
+.check-sub{font-size:10px;color:var(--t3);margin-top:2px;line-height:1.4;}
+.upload-zone:hover{border-color:var(--green2);background:var(--lightgreen);}
+.upload-zone svg{width:22px;height:22px;stroke:var(--t3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 6px;}
+.upload-zone p{font-size:11px;color:var(--t3);}
+.upload-status{font-size:11px;padding:6px 10px;border-radius:var(--r);margin-top:6px;display:none;}
+.upload-status.ok{background:#D1FAE5;color:#065F46;display:block;}
+.upload-status.err{background:#FEE2E2;color:#991B1B;display:block;}
+.btn-row{display:flex;gap:7px;justify-content:flex-end;margin-top:8px;}
+.btn{padding:7px 16px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--t2);font-family:var(--font);transition:all .12s;}
+.btn:hover{background:var(--bg);}
+.btn.pr{background:var(--green);color:#fff;border-color:var(--green);}
+.btn.pr:hover{background:var(--navy);}
+.btn.danger{background:#FEE2E2;color:#991B1B;border-color:#FEE2E2;}
+.btn.danger:hover{background:var(--red);color:#fff;}
+.btn.sm{padding:5px 11px;font-size:11px;}
+.btn.xs{padding:3px 8px;font-size:10px;}
+.ftab{font-size:11px;padding:3px 10px;border-radius:20px;color:var(--t2);cursor:pointer;border:1px solid transparent;font-weight:500;transition:all .12s;}
+.ftab.active{background:var(--lightgreen);color:var(--green);border-color:var(--midgreen);}
+.ftab:hover:not(.active){background:var(--bg);}
+.modal-bg{position:fixed;inset:0;background:rgba(5,18,10,.5);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surf);border-radius:var(--rlg);width:94%;max-width:880px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.22);}
+.modal.sm{max-width:500px;}
+.mh{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#F6FBF8;}
+.mt{font-size:14px;font-weight:700;color:var(--t1);}
+.mc{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;line-height:1;}
+.mb{overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
+.mf{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);}
+.drow:last-child{border-bottom:none;}
+.dk{font-size:11px;color:var(--t3);font-weight:500;min-width:150px;}
+.dv{font-size:12px;font-weight:600;color:var(--t1);text-align:right;word-break:break-all;}
+.dsec{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 4px;padding-top:8px;border-top:2px solid var(--lightgreen);}
+.ni-item{display:flex;gap:10px;padding:12px 15px;border-bottom:1px solid var(--border);}
+.ni-item:last-child{border-bottom:none;}
+.ni-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.ni-s{font-size:11px;color:var(--t2);line-height:1.5;}
+.ni-ts{font-size:10px;color:var(--t3);margin-top:3px;}
+.ai-bubble{background:var(--lightgreen);border:1px solid var(--midgreen);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--navy);line-height:1.65;white-space:pre-wrap;}
+.dp span{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;animation:dp 1.1s ease-in-out infinite;}
+.dp span:nth-child(2){animation-delay:.18s;}
+.dp span:nth-child(3){animation-delay:.36s;}
+@keyframes dp{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+.qbtn{font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surf);cursor:pointer;color:var(--t2);font-family:var(--font);font-weight:500;transition:all .12s;}
+.qbtn:hover{background:var(--lightgreen);border-color:var(--midgreen);color:var(--green);}
+.rb-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.rb-lbl{width:120px;font-size:11px;color:var(--t2);font-weight:600;flex-shrink:0;font-family:var(--mono);}
+.rb-track{flex:1;background:var(--bg);border-radius:20px;height:8px;overflow:hidden;}
+.rb-fill{height:100%;border-radius:20px;}
+.rb-val{font-size:12px;font-weight:700;width:38px;text-align:right;flex-shrink:0;}
+.lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.lv-cell{padding:9px 0;border-bottom:1px solid var(--border);}
+.lv-cell:nth-child(odd){padding-right:20px;border-right:1px solid var(--border);}
+.lv-cell:nth-child(even){padding-left:20px;}
+.lk{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.lv{font-size:13px;font-weight:600;color:var(--t1);}
+.toast{position:fixed;bottom:22px;right:22px;padding:10px 18px;border-radius:var(--r);font-size:12px;font-weight:600;z-index:999;opacity:0;transform:translateY(6px);transition:all .22s;pointer-events:none;color:#fff;}
+.toast.ok{background:#065F46;}.toast.err{background:#991B1B;}
+.toast.show{opacity:1;transform:translateY(0);}
+.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ss{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);padding:15px 17px;box-shadow:var(--sh);}
+.ss-t{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.ag-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.ag-row:last-child{border-bottom:none;}
+.chat-bubble{padding:9px 12px;border-radius:var(--r);font-size:12px;line-height:1.6;max-width:80%;white-space:pre-wrap;}
+.chat-bubble.user{background:var(--lightgreen);color:var(--navy);}
+.chat-bubble.ai{background:#F8FAFB;border:1px solid var(--border);color:var(--t1);}
+.onedrive-link{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600;text-decoration:none;font-size:11px;}
+.onedrive-link:hover{text-decoration:underline;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="40" rx="14" ry="7" fill="rgba(255,255,255,.2)"/>
+        <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="rgba(255,255,255,.5)"/>
+        <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".8"/>
+        <circle cx="30" cy="15" r="4" fill="#fff"/>
+        <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="login-title">TrackFlow Air</div>
+    <div class="login-sub">Jet Fresh Flowers Distributors<br>Sistema de Gestión de Carga Aérea</div>
+    <button class="login-btn" onclick="signIn()">
+      <svg viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+        <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
+        <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
+        <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+      </svg>
+      Iniciar sesión con Microsoft
+    </button>
+    <div class="login-note">Usa tu cuenta de Jet Fresh Flowers Distributors.<br>La primera vez pedirá permiso — acepta para continuar.</div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until logged in) -->
+<div id="app" class="app" style="display:none;">
+  <aside class="sb">
+    <div class="sb-logo">
+      <div class="logo-circle">
+        <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="28" fill="#1B7A3E"/>
+          <ellipse cx="30" cy="38" rx="14" ry="8" fill="#fff" opacity=".2"/>
+          <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="#22A351"/>
+          <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".6"/>
+          <circle cx="30" cy="15" r="4" fill="#fff"/>
+          <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div><div class="sb-name">Jet Fresh Flowers</div><div class="sb-sub">Distributors</div></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec">Operaciones</div>
+      <div class="ni active" id="nav-dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Dashboard</span><span class="nbadge" id="badge-alert" style="display:none">!</span></div>
+      <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
+      <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
+      <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
+      <div class="ni" id="nav-predictions" onclick="go('predictions')"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Predicciones IA</span></div>
+      <div class="ni" id="nav-assistant" onclick="go('assistant')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Asistente IA</span></div>
+      <div class="ni" id="nav-notifications" onclick="go('notifications')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notificaciones</span><span class="nbadge" id="badge-notif">0</span></div>
+      <div class="sb-sec" style="margin-top:6px;">Config</div>
+      <div class="ni" id="nav-settings" onclick="go('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Configuración</span></div>
+    </nav>
+    <div class="sb-foot">
+      <div class="user-info">
+        <div class="user-av" id="user-av">JF</div>
+        <div><div class="user-name" id="user-name">Cargando...</div><div class="user-role">Jet Fresh Flowers</div></div>
+      </div>
+      <div class="lang-row">
+        <span class="lang-lbl">Idioma</span>
+        <div class="lang-btns"><button class="lb" onclick="setLang('en',this)">EN</button><button class="lb on" onclick="setLang('es',this)">ES</button></div>
+      </div>
+      <div class="sb-btns">
+        <button class="sb-action-btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+        <button class="sb-action-btn" onclick="exportExcel()" style="background:rgba(34,163,81,.18);"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar Excel (con filtros)</button>
+        <button class="sb-action-btn logout" onclick="signOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="tb-title" id="pg-title">Dashboard</span>
+      <div class="srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" onkeydown="if(event.key==='Enter')doSearch()"></div>
+      <button class="tb-btn" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
+      <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
+    </div>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div class="screen active" id="s-dashboard">
+        <div class="sg sg5">
+          <div class="sc"><div class="sl">Total Vuelos</div><div class="sv" id="st-fl">0</div><div class="ss neu" id="st-fl-s">—</div></div>
+          <div class="sc"><div class="sl">Cajas Confirmadas</div><div class="sv" id="st-conf">0</div><div class="ss up" id="st-conf-s">—</div></div>
+          <div class="sc"><div class="sl">Faltantes / Pendiente</div><div class="sv" id="st-miss">0</div><div class="ss dn" id="st-miss-s">—</div></div>
+          <div class="sc"><div class="sl">Alertas de Tarifa</div><div class="sv" id="st-rate-alerts" style="color:var(--red);">0</div><div class="ss dn">Tarifa ≠ Esperada</div></div>
+          <div class="sc"><div class="sl">Costo Total AWB</div><div class="sv" id="st-cost" style="font-size:17px;">$0</div><div class="ss up" id="st-cost-s">—</div></div>
+        </div>
+        <div class="alert-card" id="rate-alert-card"><div class="alert-title">⚠ Diferencias de Tarifa — la tarifa real difiere de la esperada</div><div id="rate-alert-list"></div></div>
+        <div class="card">
+          <div class="ch"><span class="ct">Búsqueda IA — Claude</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
+          <div style="padding:12px 15px;display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="qbtn" onclick="aiAsk('Lista todos los vuelos con cajas sin confirmar y la acción recomendada para cada uno')">Cajas sin confirmar</button>
+              <button class="qbtn" onclick="aiAsk('¿Cuáles vuelos están demorados y cuáles son las posibles causas?')">Vuelos demorados</button>
+              <button class="qbtn" onclick="aiAsk('Ranking de agencias de carga por tasa de confirmación y volumen total')">Ranking agencias</button>
+              <button class="qbtn" onclick="aiAsk('Muestra el costo total AWB y el desglose por vuelo con todos los cargos')">Resumen de costos</button>
+              <button class="qbtn" onclick="aiAsk('Muestra todas las diferencias entre tarifa real y esperada con el impacto en dinero')">Diferencias de tarifa</button>
+            </div>
+            <div id="ai-result" class="ai-bubble">Pregúntame sobre tus vuelos, agencias, guías AWB, costos o estado de carga.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Vuelos Recientes</span>
+            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="dashF(this,'all')">Todos</span><span class="ftab" onclick="dashF(this,'transit')">En tránsito</span><span class="ftab" onclick="dashF(this,'pending')">Pendiente</span><span class="ftab" onclick="dashF(this,'delivered')">Entregado</span></div></div>
+          </div>
+          <div class="tw"><table><thead><tr><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>AWB #</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Estado ETA</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- FLIGHTS -->
+      <div class="screen" id="s-flights">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Todos los Vuelos</span>
+            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="flF(this,'all')">Todos</span><span class="ftab" onclick="flF(this,'transit')">Tránsito</span><span class="ftab" onclick="flF(this,'pending')">Pendiente</span><span class="ftab" onclick="flF(this,'delivered')">Entregado</span></div><button class="btn sm pr" onclick="openModal('new')">+ Nuevo</button></div>
+          </div>
+          <div class="tw"><table><thead><tr><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>AWB #</th><th>Enviadas</th><th>Conf.</th><th>Falt.</th><th>Est.Conf</th><th>Estado</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- AGENCIES -->
+      <div class="screen" id="s-agencies">
+        <div class="card">
+          <div class="ch"><span class="ct">Agencias de Carga</span><button class="btn sm pr" onclick="openModal('agency')">+ Agregar Agencia</button></div>
+          <div class="tw"><table><thead><tr><th>Agencia</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Vuelos</th><th>Total Cajas</th><th>Tasa Conf.</th><th>Total Facturado</th><th></th></tr></thead><tbody id="agencies-tbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- PREDICTIONS -->
+      <div class="screen" id="s-predictions">
+        <div class="sg sg4">
+          <div class="sc"><div class="sl">Riesgo Promedio</div><div class="sv" id="pr-risk">—</div><div class="ss dn">—</div></div>
+          <div class="sc"><div class="sl">Alto Riesgo</div><div class="sv" id="pr-high">0</div><div class="ss dn">≥60% riesgo</div></div>
+          <div class="sc"><div class="sl">Cajas Sin Confirmar</div><div class="sv" id="pr-unc">0</div><div class="ss dn">—</div></div>
+          <div class="sc"><div class="sl">Tasa Puntualidad</div><div class="sv" id="pr-ot">—</div><div class="ss up">—</div></div>
+        </div>
+        <div class="card"><div class="ch"><span class="ct">Riesgo de Demora por Vuelo</span></div><div style="padding:14px 16px;" id="risk-bars"><div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div></div></div>
+      </div>
+
+      <!-- AI ASSISTANT -->
+      <div class="screen" id="s-assistant">
+        <div class="card">
+          <div class="ch"><span class="ct">Asistente IA de Carga — Claude</span><span style="font-size:10px;color:var(--t3);">Conversación completa · Datos en tiempo real</span></div>
+          <div id="chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:360px;overflow-y:auto;"></div>
+          <div style="padding:10px 15px;border-top:1px solid var(--border);display:flex;gap:8px;">
+            <input id="chat-inp" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:8px 11px;font-size:12px;font-family:var(--font);outline:none;" placeholder="Pregunta sobre vuelos, costos, agencias, códigos HS, cumplimiento…" onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="btn pr" onclick="sendChat()">Enviar</button>
+          </div>
+          <div style="padding:8px 15px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);">
+            <button class="qbtn" onclick="chatQ('Resume todos mis vuelos actuales y señala los problemas')">Resumen vuelos</button>
+            <button class="qbtn" onclick="chatQ('Muestra el desglose de costos AWB por vuelo')">Costos AWB</button>
+            <button class="qbtn" onclick="chatQ('Redacta un email de notificación de demora para la agencia del envío más atrasado')">Email demora</button>
+            <button class="qbtn" onclick="chatQ('Analiza el rendimiento de las agencias y recomienda mejoras')">Análisis agencias</button>
+            <button class="qbtn" onclick="chatQ('Verifica los códigos HS y riesgos de cumplimiento para flores perecederas')">Cumplimiento HS</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="screen" id="s-notifications">
+        <div class="card">
+          <div class="ch"><span class="ct">Notificaciones</span><button class="btn sm" onclick="clearNotifs()">Limpiar todo</button></div>
+          <div id="notif-list"><div class="ni-item"><div class="ni-dot" style="background:var(--green)"></div><div><div class="ni-s">Bienvenido a TrackFlow Air — Jet Fresh Flowers Distributors. Datos sincronizados con SharePoint.</div><div class="ni-ts">Ahora</div></div></div></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="screen" id="s-settings">
+        <div class="set-grid">
+          <div class="ss">
+            <div class="ss-t">API Keys</div>
+            <div class="fg" style="gap:9px;">
+              <div class="field"><label>Claude API Key <span class="req">*</span> <span style="font-size:10px;color:var(--t3);">(console.anthropic.com)</span></label><input id="cfg-claude" type="password" placeholder="sk-ant-..."></div>
+              <div class="field"><label>AviationStack API Key <span style="font-size:10px;color:var(--t3);">(gratis — aviationstack.com)</span></label><input id="cfg-aviation" type="password" placeholder="Tu key gratuita"></div>
+              <div class="field"><label>Consignatarios (separados por coma)</label><input id="cfg-consignees" placeholder="MAS Customs, Delivery Plus, otro…"></div>
+              <button class="btn pr" onclick="saveSettings()">Guardar configuración</button>
+            </div>
+          </div>
+          <div class="ss">
+            <div class="ss-t">SharePoint / OneDrive</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:12px;color:var(--t2);line-height:1.6;">
+                ✅ Base de datos: <strong>SharePoint Lists</strong><br>
+                ✅ Archivos PDF/POD: <strong>OneDrive</strong><br>
+                ✅ Login: <strong>Azure AD (cuenta empresa)</strong><br>
+                ✅ Sync: <strong>Tiempo real automático</strong>
+              </div>
+              <a href="https://jetfreshflowers.sharepoint.com/sites/TrackFlow" target="_blank" class="btn pr" style="text-align:center;text-decoration:none;display:block;margin-top:4px;">Abrir en SharePoint ↗</a>
+              <button class="btn" onclick="forceSyncAll()">🔄 Sincronizar ahora</button>
+              <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 5 vuelos de ejemplo</button>
+              <button class="btn" onclick="exportCSV()">Exportar vuelos CSV</button>
+              <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
+            </div>
+          </div>
+          <div class="ss" style="grid-column:span 2;">
+            <div class="ss-t">Agencias guardadas</div>
+            <div id="set-agencies"><div style="font-size:12px;color:var(--t3);">Sin agencias aún.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEW / EDIT SHIPMENT -->
+<div class="modal-bg" id="modal-new">
+  <div class="modal">
+    <div class="mh"><span class="mt" id="modal-new-title">Nuevo Envío</span><button class="mc" onclick="closeModal('new')">×</button></div>
+    <div class="mb">
+      <!-- AGENCY & AWB -->
+      <div class="fs">
+        <div class="ft">AGENCIA DE CARGA Y GUÍA AÉREA</div>
+        <div class="fg c3">
+          <div class="field"><label>Agencia de carga <span class="req">*</span></label><select id="f-agency" onchange="onAgencyChange(this.value)"><option value="">Seleccionar agencia…</option></select></div>
+          <div class="field"><label>AWB # (Guía aérea)</label><input id="f-awb" placeholder="e.g. 369-10232961"><span class="hint">Formato: prefijo-número</span></div>
+          <div class="field"><label>Contacto agencia</label><input id="f-agcontact" placeholder="Auto-rellenado"></div>
+          <div class="field"><label>Teléfono agencia</label><input id="f-agphone" placeholder="Auto-rellenado"></div>
+          <div class="field"><label>Email agencia</label><input id="f-agemail" type="email" placeholder="Auto-rellenado"></div>
+        </div>
+        <div class="ai-tip" id="tip-agency"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-agency-txt"></span></div>
+      </div>
+      <!-- FLIGHT INFO -->
+      <div class="fs">
+        <div class="ft">INFORMACIÓN DEL VUELO</div>
+        <div class="fg c4">
+          <div class="field"><label>Vuelo # <span class="req">*</span></label><input id="f-num" placeholder="e.g. LA450" oninput="onFlightNum(this.value)"></div>
+          <div class="field"><label>Aerolínea <span class="req">*</span></label><input id="f-airline" placeholder="e.g. LATAM Airlines"></div>
+          <div class="field"><label>Origen <span class="req">*</span></label><select id="f-origin"><option value="UIO">UIO — Quito</option><option value="MED">MED — Medellín</option><option value="BOG">BOG — Bogotá</option><option value="GUAT">GUAT — Guatemala City</option></select></div>
+          <div class="field"><label>Destino <span class="req">*</span></label><select id="f-dest"><option value="MIA">MIA — Miami</option><option value="JFK">JFK — New York</option><option value="LAX">LAX — Los Angeles</option><option value="ORD">ORD — Chicago</option><option value="AMS">AMS — Amsterdam</option><option value="MAD">MAD — Madrid</option><option value="PTY">PTY — Panama City</option></select></div>
+          <div class="field"><label>ETD <span class="req">*</span></label><input type="datetime-local" id="f-etd"></div>
+          <div class="field"><label>ETA</label><input type="datetime-local" id="f-eta"></div>
+          <div class="field"><label>Estado del vuelo</label><select id="f-status"><option value="pending">Pendiente</option><option value="transit">En tránsito</option><option value="delivered">Entregado</option></select></div>
+          <div class="field"><label>Prioridad</label><select id="f-priority"><option value="normal">Normal</option><option value="high">Alta</option><option value="critical">Crítica</option></select></div>
+        </div>
+        <div class="ai-tip" id="tip-airline" onclick="applyAirline()" style="cursor:pointer;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-airline-txt"></span></div>
+      </div>
+      <!-- BOX COUNT & CARGO -->
+      <div class="fs">
+        <div class="ft">CONTEO DE CAJAS Y DETALLES DE CARGA</div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Subir AWB PDF para auto-rellenar campos con IA</label>
+          <div class="upload-zone" onclick="document.getElementById('awb-pdf').click()" id="awb-zone">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <p id="awb-zone-txt">Clic para subir AWB PDF / Imagen</p>
+            <p style="font-size:10px;color:var(--t3);margin-top:3px;">IA extrae: cajas, peso, peso facturable y todos los cargos financieros</p>
+          </div>
+          <input type="file" id="awb-pdf" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleAWBUpload(event)">
+          <div class="upload-status" id="awb-status"></div>
+          <div class="ai-tip" id="tip-agency-detected" style="margin-top:6px;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-agency-detected-txt"></span></div>
+        </div>
+        <div class="fg c4">
+          <div class="field"><label>Cajas enviadas (manual) <span class="req">*</span></label><input id="f-bsent" type="number" min="0" placeholder="Ingresar manualmente" oninput="calcAll()"></div>
+          <div class="field"><label>Cajas confirmadas por agencia</label><input id="f-bconf" type="number" min="0" placeholder="Desde AWB / agencia" oninput="calcAll()"></div>
+          <div class="field"><label>Cajas faltantes</label><input id="f-bmiss" type="number" readonly placeholder="Auto-calculado"></div>
+          <div class="field"><label>Estado confirmación</label><select id="f-confst"><option value="unconfirmed">Sin confirmar</option><option value="partial">Parcial</option><option value="confirmed">Confirmado</option></select></div>
+          <div class="field"><label>Peso bruto (kg)</label><input id="f-weight" type="number" step="0.1" placeholder="Desde AWB" oninput="calcAll()"></div>
+          <div class="field"><label>Peso facturable (kg)</label><input id="f-cweight" type="number" step="0.1" placeholder="Desde AWB" oninput="calcAll()"></div>
+          <div class="field s2"><label>Descripción mercancía</label><select id="f-commodity"><option value="">Seleccionar…</option><option>LINEA RELEASE</option><option>OWN GUIDE</option><option>CONSOL</option></select></div>
+          <div class="field s2"><label>Tipo de carga</label><select id="f-ctype"><option>Perecedero</option><option>Carga general</option><option>Mercancía peligrosa</option><option>Objetos de valor</option><option>Animales vivos</option><option>Courier expreso</option></select></div>
+          <div class="field s2"><label>Manejo especial</label><select id="f-handling"><option>Mantener refrigerado</option><option>Ninguno</option><option>Mantener vertical</option><option>Frágil</option><option>Este lado arriba</option></select></div>
+          <div class="field"><label>Código HS</label><input id="f-hs" placeholder="e.g. 060311/060390"></div>
+        </div>
+        <div class="ai-tip" id="tip-boxes"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-boxes-txt"></span></div>
+      </div>
+      <!-- FINANCIALS -->
+      <div class="fs">
+        <div class="ft">CARGOS FINANCIEROS AWB</div>
+        <div class="fg c4">
+          <div class="field"><label>Tarifa/kg (del AWB)</label><input id="f-rate" type="number" step="0.001" placeholder="Del AWB" oninput="calcAll()"></div>
+          <div class="field"><label>Tarifa esperada/kg <span class="req">*</span></label><input id="f-rate-exp" type="number" step="0.001" placeholder="Ingresar tarifa esperada" oninput="calcAll()"></div>
+          <div class="field"><label>Cargo por peso</label><input id="f-wcharge" type="number" readonly placeholder="Auto-calculado" class="calc"></div>
+          <div class="field"><label>Cargo valuación</label><input id="f-valcharge" type="number" step="0.01" placeholder="0.00" oninput="calcAll()"></div>
+          <div class="field"><label>Impuesto</label><input id="f-tax" type="number" step="0.01" placeholder="0.00" oninput="calcAll()"></div>
+          <div class="field"><label>MAA (USD)</label><input id="f-maa" type="number" step="0.01" placeholder="e.g. 35.00" oninput="calcAll()"></div>
+          <div class="field"><label>AWC (USD)</label><input id="f-awc" type="number" step="0.01" placeholder="e.g. 25.00" oninput="calcAll()"></div>
+          <div class="field"><label>MYC (USD/unidad)</label><input id="f-myc" type="number" step="0.001" placeholder="e.g. 0.350" oninput="calcAll()"></div>
+          <div class="field"><label>ESC (USD/unidad)</label><input id="f-esc" type="number" step="0.001" placeholder="e.g. 0.050" oninput="calcAll()"></div>
+          <div class="field"><label>Otros cargos (agente)</label><input id="f-ochagent" type="number" readonly class="calc"></div>
+          <div class="field"><label>Otros cargos (carrier)</label><input id="f-ochcarrier" type="number" readonly class="calc"></div>
+          <div class="field"><label>TOTAL PREPAGADO (USD)</label><input id="f-totalpaid" type="number" readonly class="calc" style="font-size:14px;font-weight:800;"></div>
+          <div class="field"><label>Total cobrar (USD)</label><input id="f-totalcoll" type="number" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="ai-tip" id="tip-cost"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-cost-txt"></span></div>
+        <div id="rate-mismatch-alert" style="display:none;background:var(--amberbg);color:var(--ambertxt);border:1px solid #F59E0B;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;"></div>
+      </div>
+      <!-- SHIPPER & CONSIGNEE -->
+      <div class="fs">
+        <div class="ft">REMITENTE Y CONSIGNATARIO</div>
+        <div class="fg c2">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:8px;">REMITENTE</div>
+            <div class="fg" style="gap:8px;"><div class="field"><label>Empresa</label><input id="f-sname" value="Jet Fresh Flowers Distributors" readonly style="color:var(--t3);"></div></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:8px;">CONSIGNATARIO</div>
+            <div class="fg" style="gap:8px;"><div class="field"><label>Consignatario <span class="req">*</span></label><select id="f-consignee"><option value="">Seleccionar…</option></select></div></div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Prueba de Entrega (POD) — se guarda en OneDrive</label>
+          <div class="upload-zone" onclick="document.getElementById('pod-file').click()" id="pod-zone">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p id="pod-zone-txt">Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive</p>
+          </div>
+          <input type="file" id="pod-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handlePODUpload(event)">
+          <div class="upload-status" id="pod-status"></div>
+        </div>
+      </div>
+      <!-- CONFIRMACIÓN MANUAL DE ESTADO -->
+      <div class="fs">
+        <div class="ft">CONFIRMACIÓN MANUAL DE ESTADO</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">El estado automático se calcula por horario (ETD/ETA), pero tú tienes la última palabra. Marca aquí cuando confirmes cada hito real:</div>
+        <div class="fg c2">
+          <label class="check-card" id="check-arrived-card">
+            <input type="checkbox" id="f-arrived" onchange="onManualStatusChange()">
+            <div>
+              <div class="check-title">✈ Llegó al aeropuerto de destino</div>
+              <div class="check-sub">Confirmado por la agencia o el broker en destino</div>
+            </div>
+          </label>
+          <label class="check-card" id="check-completed-card">
+            <input type="checkbox" id="f-completed" onchange="onManualStatusChange()">
+            <div>
+              <div class="check-title">✓ Proceso terminado</div>
+              <div class="check-sub">Carga entregada, documentos cerrados, proceso finalizado</div>
+            </div>
+          </label>
+        </div>
+        <div class="fg" style="margin-top:10px;">
+          <div class="field"><label>Fecha/hora de llegada real (opcional)</label><input type="datetime-local" id="f-arrived-time"></div>
+          <div class="field"><label>Observaciones del estado</label><textarea id="f-status-notes" placeholder="Ej: Llegó con 2h de retraso por clima, cajas en buen estado, faltaron 3 cajas, etc." style="min-height:50px;"></textarea></div>
+        </div>
+      </div>
+      <!-- CREATED BY -->
+      <div class="fs">
+        <div class="ft">CREADO POR Y NOTAS</div>
+        <div class="fg c3">
+          <div class="field"><label>Creado por <span class="req">*</span></label><select id="f-createdby"><option value="">Seleccionar…</option><option>Joan</option><option>Marco</option><option>Maria Jose</option></select></div>
+          <div class="field"><label>Referencia interna #</label><input id="f-ref" placeholder="Opcional"></div>
+          <div class="field s3"><label>Notas internas</label><textarea id="f-notes" placeholder="Instrucciones, observaciones…"></textarea></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeModal('new')">Cancelar</button><button class="btn pr" id="save-flight-btn" onclick="saveFlight()">Guardar envío</button></div>
+  </div>
+</div>
+
+<!-- MODAL: AGENCY -->
+<div class="modal-bg" id="modal-agency">
+  <div class="modal sm">
+    <div class="mh"><span class="mt" id="modal-agency-title">Agregar Agencia</span><button class="mc" onclick="closeModal('agency')">×</button></div>
+    <div class="mb"><div class="fg" style="gap:10px;">
+      <div class="field"><label>Nombre agencia <span class="req">*</span></label><input id="ag-name" placeholder="e.g. DHL Express EC"></div>
+      <div class="field"><label>Persona de contacto</label><input id="ag-contact" placeholder="Nombre completo"></div>
+      <div class="field"><label>Teléfono</label><input id="ag-phone" placeholder="+593…"></div>
+      <div class="field"><label>Email</label><input id="ag-email" type="email" placeholder="agencia@email.com"></div>
+      <div class="field"><label>Dirección</label><input id="ag-addr" placeholder="Calle, ciudad, país"></div>
+      <div class="field"><label>Notas</label><textarea id="ag-notes" style="min-height:50px;" placeholder="Info adicional…"></textarea></div>
+    </div></div>
+    <div class="mf"><button class="btn" onclick="closeModal('agency')">Cancelar</button><button class="btn pr" onclick="saveAgency()">Guardar agencia</button></div>
+  </div>
+</div>
+
+<!-- MODAL: DETAIL -->
+<div class="modal-bg" id="modal-detail">
+  <div class="modal" style="max-width:640px;">
+    <div class="mh"><span class="mt" id="detail-title">Detalle Vuelo</span><button class="mc" onclick="closeModal('detail')">×</button></div>
+    <div class="mb" id="detail-body"></div>
+    <div class="mf"><button class="btn danger" id="btn-del">Eliminar</button><button class="btn" onclick="closeModal('detail')">Cerrar</button><button class="btn pr" id="btn-edit">Editar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: LIVE STATUS -->
+<div class="modal-bg" id="modal-live">
+  <div class="modal" style="max-width:620px;">
+    <div class="mh"><span class="mt" id="live-title">Estado en Vivo</span><button class="mc" onclick="closeModal('live')">×</button></div>
+    <div class="mb" id="live-body"></div>
+    <div class="mf"><button class="btn pr" onclick="closeModal('live')">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIGURATION — Jet Fresh Flowers Distributors
+// ══════════════════════════════════════════════════════════
+var TENANT_ID   = '41019810-8a33-4873-a550-419b81c39a45';
+var CLIENT_ID   = '26255b53-9ce5-417f-b2fd-0df367f5e5ab';
+var SP_SITE     = 'jetfreshflowers.sharepoint.com';
+var SP_SITE_PATH= '/sites/TrackFlow';
+var ONEDRIVE_FOLDER = 'TrackFlow-Files';
+
+// ══ MSAL CONFIG ══
+var SCOPES = ['User.Read'];
+var currentUser = null;
+var accessToken = null;
+var spSiteId = null;
+var flightsListId = null;
+var agenciesListId = null;
+
+var msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+    redirectUri: window.location.origin + window.location.pathname
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
+};
+var msalInstance = null;
+
+async function initMSAL() {
+  msalInstance = new msal.PublicClientApplication(msalConfig);
+  await msalInstance.initialize();
+  var accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    currentUser = accounts[0];
+    await initApp();
+  }
+}
+
+async function signIn() {
+  if (!msalInstance) { alert('Cargando librería de autenticación, intenta en 2 segundos...'); return; }
+  try {
+    var result = await msalInstance.loginPopup({ scopes: SCOPES });
+    currentUser = result.account;
+    await initApp();
+  } catch(e) {
+    alert('Error al iniciar sesión: ' + e.message + '\n\nAsegúrate de usar tu cuenta de Jet Fresh Flowers Distributors.');
+  }
+}
+
+async function signOut() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  await msalInstance.logoutPopup();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  currentUser = null; accessToken = null;
+}
+
+async function getToken() {
+  try {
+    var result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    accessToken = result.accessToken;
+    return accessToken;
+  } catch(e) {
+    var result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+    accessToken = result.accessToken;
+    return accessToken;
+  }
+}
+
+// ══ APP STATE ══
+var lang = 'es';
+var screen = 'dashboard';
+var editFlId = null;
+var editAgId = null;
+var dashFlt = 'all';
+var flsFlt = 'all';
+var chatHist = [];
+var liveCache = {};
+var DB = { flights: [], agencies: [] };
+var CFG = { claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus' };
+var pendingPOD = null; // {name, data, type}
+
+function loadLocalCFG() {
+  try { var c = localStorage.getItem('jff_cfg'); if (c) CFG = Object.assign(CFG, JSON.parse(c)); } catch(e) {}
+}
+function saveLocalCFG() {
+  try { localStorage.setItem('jff_cfg', JSON.stringify(CFG)); } catch(e) {}
+}
+
+// ══ AUTH ══
+async function signIn() {
+  try {
+    var result = await msalInstance.loginPopup({ scopes: SCOPES });
+    currentUser = result.account;
+    await initApp();
+  } catch(e) {
+    alert('Error al iniciar sesión: ' + e.message + '\n\nAsegúrate de usar tu cuenta de Jet Fresh Flowers Distributors.');
+  }
+}
+
+async function signOut() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  await msalInstance.logoutPopup();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  currentUser = null; accessToken = null;
+}
+
+async function getToken() {
+  try {
+    var result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    accessToken = result.accessToken;
+    return accessToken;
+  } catch(e) {
+    var result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+    accessToken = result.accessToken;
+    return accessToken;
+  }
+}
+
+async function initApp() {
+  if (!currentUser) return;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  var name = currentUser.name || currentUser.username;
+  document.getElementById('user-name').textContent = name;
+  var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+  document.getElementById('user-av').textContent = initials || 'JF';
+  loadLocalCFG();
+  loadLocalFallback();
+  setSyncStatus('ok', 'Sesión activa ✓');
+  autoUpdateAllStatuses();
+  renderDash();
+  updateBadges();
+  populateConsignees();
+  // Recalcular estados automáticamente cada 60 segundos
+  if (!window._statusInterval) {
+    window._statusInterval = setInterval(autoUpdateAllStatuses, 60000);
+  }
+}
+
+// ══ STORAGE — localStorage (funciona sin permisos de admin) ══
+function persistDB() {
+  try { localStorage.setItem('jff_db', JSON.stringify(DB)); } catch(e) {}
+}
+
+function loadLocalFallback() {
+  try {
+    var d = localStorage.getItem('jff_db') || localStorage.getItem('jff_db_backup');
+    if (d) DB = JSON.parse(d);
+  } catch(e) {}
+}
+
+async function saveFlight_SP(f) {
+  if (!f.id || f.id.startsWith('local_')) f.id = 'local_' + Date.now();
+  persistDB();
+  setSyncStatus('ok', 'Guardado ✓');
+}
+
+async function saveAgency_SP(a) {
+  if (!a.id || a.id.startsWith('local_')) a.id = 'local_ag_' + Date.now();
+  persistDB();
+}
+
+async function deleteFlight_SP(id) {
+  DB.flights = DB.flights.filter(function(x){ return x.id !== id; });
+  persistDB();
+}
+
+async function deleteAgency_SP(id) {
+  DB.agencies = DB.agencies.filter(function(a){ return a.id !== id; });
+  persistDB();
+}
+
+async function forceSyncAll() {
+  loadLocalFallback();
+  renderScreen(screen);
+  updateBadges();
+  toast('Datos cargados correctamente', 'ok');
+}
+
+// ══ CARGAR 5 VUELOS DE DEMOSTRACIÓN ══
+function loadDemoData() {
+  if (DB.flights.length > 0 && !confirm('Ya tienes vuelos guardados. ¿Agregar los 5 vuelos de ejemplo de todos modos?')) return;
+  var now = new Date();
+  function h(hrs) {
+    var d = new Date(now.getTime() + hrs*3600000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0,16);
+  }
+  var demos = [
+    { num:'5Y8418', airline:'ATLAS AIR', origin:'UIO', dest:'MIA', etd:h(-3), eta:h(2),
+      awb:'369-84180032', bsent:240, bconf:240, weight:'1240', cweight:'1520', rateBase:'1.28', myc:'0.340', esc:'0.048',
+      maa:'35', awc:'25', totalpaid:'2510.40', consignee:'MAS Customs', createdby:'Marco', commodity:'CONSOL',
+      notes:'Vuelo 5Y8418/03 — despegó hace 3h, en tránsito hacia Miami' },
+    { num:'5Y0036', airline:'ATLAS AIR', origin:'UIO', dest:'MIA', etd:h(4), eta:h(9),
+      awb:'369-10233506', bsent:216, bconf:216, weight:'1082', cweight:'1367', rateBase:'1.20', myc:'0.350', esc:'0.050',
+      maa:'35', awc:'25', totalpaid:'2247.20', consignee:'MAS Customs', createdby:'Marco', commodity:'CONSOL',
+      notes:'Vuelo programado para más tarde hoy' },
+    { num:'LA450', airline:'LATAM CARGO', origin:'UIO', dest:'JFK', etd:h(-2), eta:h(3),
+      awb:'045-88213470', bsent:180, bconf:175, weight:'890', cweight:'1050', rateBase:'1.35', myc:'0.300', esc:'0.040',
+      maa:'35', awc:'25', totalpaid:'1876.50', consignee:'Delivery Plus', createdby:'Joan', commodity:'LINEA RELEASE',
+      notes:'Despegó hace 2h, volando ahora' },
+    { num:'AV88', airline:'AVIANCA', origin:'BOG', dest:'MIA', etd:h(-6), eta:h(-1),
+      awb:'134-55221890', bsent:95, bconf:95, weight:'520', cweight:'610', rateBase:'1.42', myc:'0.320', esc:'0.045',
+      maa:'35', awc:'25', totalpaid:'1122.80', consignee:'MAS Customs', createdby:'Maria Jose', commodity:'OWN GUIDE',
+      notes:'Llegó hace 1h a Miami' },
+    { num:'M38506', airline:'LAN CARGO SA', origin:'UIO', dest:'MIA', etd:h(-10), eta:h(-4),
+      awb:'145-11633145', bsent:98, bconf:90, weight:'532', cweight:'762', rateBase:'1.58', myc:'0', esc:'0',
+      maa:'0', awc:'43', totalpaid:'1246.96', consignee:'MAS Customs', createdby:'Marco', commodity:'CONSOL',
+      notes:'Llegó con retraso real del mismo día — 8 cajas faltantes' },
+    { num:'KL750', airline:'KLM', origin:'UIO', dest:'AMS', etd:h(-8), eta:h(-3),
+      awb:'074-99887766', bsent:210, bconf:210, weight:'1150', cweight:'1400', rateBase:'1.65', myc:'0.380', esc:'0.055',
+      maa:'35', awc:'25', totalpaid:'2520.00', consignee:'Delivery Plus', createdby:'Joan', commodity:'LINEA RELEASE',
+      arrived:true, completed:true, arrivedTime:h(-2.5), manualDelivered:true,
+      statusNotes:'Llegó 30 min tarde por clima, cajas en perfecto estado. Proceso cerrado.',
+      notes:'Confirmado manualmente — proceso terminado' }
+  ];
+  demos.forEach(function(d, i) {
+    var f = Object.assign({
+      id: 'demo_' + Date.now() + '_' + i,
+      priority:'normal', confst: d.bconf>=d.bsent?'confirmed':(d.bconf>0?'partial':'unconfirmed'),
+      bmiss: Math.max(0, d.bsent - d.bconf),
+      rate: (parseFloat(d.rateBase)||0)+(parseFloat(d.myc)||0)+(parseFloat(d.esc)||0),
+      rateExp:'', ctype:'Perecedero', handling:'Mantener refrigerado',
+      ochagent: ((parseFloat(d.maa)||0)+(parseFloat(d.awc)||0)).toFixed(2),
+      ochcarrier: (((parseFloat(d.myc)||0)+(parseFloat(d.esc)||0))*d.bsent).toFixed(2),
+      wcharge: ((parseFloat(d.rateBase)||0)*(parseFloat(d.cweight)||0)).toFixed(2),
+      valcharge:'', tax:'', totalcoll:'', hs:'060311', ref:'',
+      sname:'Jet Fresh Flowers Distributors',
+      agName:'', agId:'', agcontact:'', agphone:'', agemail:'',
+      arrived:false, completed:false, arrivedTime:'', statusNotes:'',
+      modifiedAt: nowStr(), createdAt: nowStr()
+    }, d);
+    var st = computeAutoStatus(f, null);
+    f.status = st.status;
+    DB.flights.unshift(f);
+  });
+  persistDB();
+  autoUpdateAllStatuses();
+  renderScreen(screen);
+  updateBadges();
+  pushNotif('Se cargaron 5 vuelos de demostración con distintos estados', '#1B7A3E');
+  toast('✓ 5 vuelos de ejemplo cargados', 'ok');
+  go('dashboard');
+}
+
+// ══ POD — guardar en base64 local ══
+async function uploadToOneDrive(fileName, fileData, mimeType) {
+  // Sin permisos de admin, guardamos referencia local
+  return 'local:' + fileName;
+}
+
+// ══ AWB PDF AUTOFILL WITH CLAUDE ══
+async function handleAWBUpload(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var zone = document.getElementById('awb-zone');
+  var stat = document.getElementById('awb-status');
+  var txt = document.getElementById('awb-zone-txt');
+  txt.textContent = 'Procesando ' + file.name + '…';
+  stat.textContent = 'Extrayendo texto del PDF (gratis, sin IA)…';
+  stat.className = 'upload-status ok';
+
+  if (file.type.startsWith('image/')) {
+    stat.textContent = '⚠ Las imágenes requieren IA (Claude). Sube un PDF para extracción gratuita, o agrega tu Claude API Key en Configuración para procesar imágenes.';
+    stat.className = 'upload-status err';
+    txt.textContent = 'Clic para subir AWB PDF / Imagen';
+    e.target.value = ''; return;
+  }
+
+  var reader = new FileReader();
+  reader.onload = async function(ev) {
+    try {
+      var typedArray = new Uint8Array(ev.target.result);
+      var pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+      var fullText = '';
+      for (var i = 1; i <= pdf.numPages; i++) {
+        var page = await pdf.getPage(i);
+        var content = await page.getTextContent();
+        fullText += content.items.map(function(it){ return it.str; }).join(' ') + '\n';
+      }
+      var parsed = extractAWBFields(fullText);
+      console.log('=== TEXTO CRUDO EXTRAÍDO DEL PDF ===');
+      console.log(fullText);
+      console.log('=== CAMPOS DETECTADOS ===');
+      console.log(parsed);
+      window._lastAWBText = fullText; // disponible para depuración manual en consola
+      var filledCount = 0;
+      if (parsed.boxes_conf) { sv('f-bconf', parsed.boxes_conf); filledCount++; }
+      if (parsed.gross_weight) { sv('f-weight', parsed.gross_weight); filledCount++; }
+      if (parsed.chargeable_weight) { sv('f-cweight', parsed.chargeable_weight); filledCount++; }
+      if (parsed.rate !== undefined && parsed.rate !== null && !isNaN(parsed.rate) && parsed.rate > 0) {
+        document.getElementById('f-rate').value = parsed.rate;
+        filledCount++;
+      }
+      if (parsed.weight_charge) { sv('f-wcharge', parsed.weight_charge); filledCount++; }
+      if (parsed.maa) { sv('f-maa', parsed.maa); filledCount++; }
+      if (parsed.awc) { sv('f-awc', parsed.awc); filledCount++; }
+      if (parsed.myc) { sv('f-myc', parsed.myc); filledCount++; }
+      if (parsed.esc) { sv('f-esc', parsed.esc); filledCount++; }
+      if (parsed.total_prepaid) { sv('f-totalpaid', parsed.total_prepaid); filledCount++; }
+      if (parsed.total_collect) { sv('f-totalcoll', parsed.total_collect); filledCount++; }
+      if (parsed.other_agent) { sv('f-ochagent', parsed.other_agent); filledCount++; }
+      if (parsed.other_carrier) { sv('f-ochcarrier', parsed.other_carrier); filledCount++; }
+      if (parsed.tax) { sv('f-tax', parsed.tax); filledCount++; }
+      if (parsed.valcharge) { sv('f-valcharge', parsed.valcharge); filledCount++; }
+      if (parsed.awb) { sv('f-awb', parsed.awb); filledCount++; }
+      if (parsed.airline) { sv('f-airline', parsed.airline); filledCount++; }
+      if (parsed.origin) { sv('f-origin', parsed.origin); filledCount++; }
+      if (parsed.dest) { sv('f-dest', parsed.dest); filledCount++; }
+      if (parsed.flightnum) { sv('f-num', parsed.flightnum); filledCount++; }
+      if (parsed.hs) { sv('f-hs', parsed.hs); filledCount++; }
+      if (parsed.handling) { sv('f-handling', parsed.handling); filledCount++; }
+      if (parsed.commodity) { sv('f-commodity', parsed.commodity); filledCount++; }
+      if (parsed.agencyName) {
+        document.getElementById('tip-agency-detected').style.display = 'flex';
+        document.getElementById('tip-agency-detected-txt').textContent = 'Agencia detectada en el PDF: "' + parsed.agencyName + '" — selecciónala en el campo de arriba si ya existe, o créala en Agencias.';
+        filledCount++;
+      }
+      calcAll();
+      // Panel de depuración: muestra el texto crudo y los campos detectados
+      var debugBox = document.getElementById('awb-debug-box');
+      if (!debugBox) {
+        debugBox = document.createElement('div');
+        debugBox.id = 'awb-debug-box';
+        debugBox.style.cssText = 'margin-top:10px;background:#0A2A14;color:#B7DFC8;border-radius:8px;padding:12px;font-family:monospace;font-size:10px;max-height:240px;overflow-y:auto;white-space:pre-wrap;';
+        document.getElementById('awb-status').parentNode.appendChild(debugBox);
+      }
+      debugBox.innerHTML = '<strong style="color:#fff;">TEXTO EXTRAÍDO DEL PDF (para diagnóstico):</strong>\n\n' + esc(fullText.substring(0, 3000)) + (fullText.length>3000?'\n\n...(truncado)':'') + '\n\n<strong style="color:#fff;">CAMPOS DETECTADOS:</strong>\n' + esc(JSON.stringify(parsed, null, 2));
+      if (filledCount > 0) {
+        stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)';
+        stat.className = 'upload-status ok';
+        txt.textContent = 'AWB cargado: ' + file.name;
+      } else {
+        stat.textContent = '⚠ No se detectaron campos automáticamente. El formato puede ser diferente — completa manualmente, o usa Claude IA (Configuración) para PDFs complejos.';
+        stat.className = 'upload-status err';
+        txt.textContent = 'Clic para subir AWB PDF / Imagen';
+      }
+    } catch(err) {
+      stat.textContent = 'No se pudo leer el PDF — completa los campos manualmente. (' + (err.message||'error') + ')';
+      stat.className = 'upload-status err';
+      txt.textContent = 'Clic para subir AWB PDF / Imagen';
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══ EXTRACCIÓN GRATUITA DE CAMPOS AWB (sin IA) — basado en el formato estándar IATA AWB ══
+function extractAWBFields(text) {
+  var result = {};
+  var clean = text.replace(/\s+/g, ' ').trim();
+
+  // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
+  var airlineMatch = clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+    || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
+  if (airlineMatch) result.airline = airlineMatch[1].trim();
+
+  // ── ORIGEN ── varias estrategias
+  var originMatch = clean.match(/^\d{3}\s*\|\s*([A-Z]{3})\s*\|/)
+    || clean.match(/MARISCAL\s*SUCRE/i) ? 'UIO' : null;
+  if (!originMatch) {
+    var om2 = clean.match(/Airport\s*of\s*Departure[^A-Z]*?\b([A-Z]{3})\b/i);
+    if (om2) originMatch = om2[1];
+  } else if (typeof originMatch !== 'string') {
+    originMatch = originMatch[1];
+  }
+  if (originMatch) result.origin = (typeof originMatch === 'string' ? originMatch : originMatch[1]).toUpperCase();
+  // Detección por nombre de ciudad/aeropuerto conocido
+  if (!result.origin) {
+    if (/QUITO|MARISCAL\s*SUCRE/i.test(clean)) result.origin = 'UIO';
+    else if (/MEDELL[IÍ]N/i.test(clean)) result.origin = 'MED';
+    else if (/BOGOT[AÁ]/i.test(clean)) result.origin = 'BOG';
+    else if (/GUATEMALA/i.test(clean)) result.origin = 'GUAT';
+  }
+
+  // ── DESTINO ── captura ciudad antes de "Requested" o "Amount"
+  var destMatch = clean.match(/Airport\s*of\s*Destination\s+([A-Z][A-Z\s]{1,14}?)(?:\s+Requested|\s+Amount|\s+INSURANCE)/i)
+    || clean.match(/Airport\s*of\s*Destination\s+([A-Z]{3,15})/i);
+  if (destMatch) {
+    var d = destMatch[1].trim().toUpperCase();
+    var cityToCode = {'MIAMI':'MIA','MIA':'MIA','NEW YORK':'JFK','LOS ANGELES':'LAX','CHICAGO':'ORD','AMSTERDAM':'AMS','MADRID':'MAD','PANAMA CITY':'PTY','PANAMA':'PTY'};
+    result.dest = cityToCode[d] || (d.length===3?d:'');
+  }
+  if (!result.dest) {
+    if (/MIAMI/i.test(clean)) result.dest = 'MIA';
+    else if (/NEW\s*YORK|\bJFK\b/i.test(clean)) result.dest = 'JFK';
+    else if (/LOS\s*ANGELES|\bLAX\b/i.test(clean)) result.dest = 'LAX';
+    else if (/CHICAGO|\bORD\b/i.test(clean)) result.dest = 'ORD';
+    else if (/AMSTERDAM/i.test(clean)) result.dest = 'AMS';
+    else if (/MADRID/i.test(clean)) result.dest = 'MAD';
+    else if (/PANAMA/i.test(clean)) result.dest = 'PTY';
+  }
+
+  // ── FLIGHT NUMBER ── formatos: 5Y8418/03 | M38506/02 | 5Y 0036-30 | 5Y 9271-3 | 5Y0036-30
+  var flightMatch = clean.match(/Flight[\/\s]*Date\s+(\d[A-Z]\d{3,5})\s*\/\s*\d/i)   // 5Y8418/03 (dígito+letra+dígitos)
+    || clean.match(/Flight[\/\s]*Date\s+([A-Z]\d{4,6})\s*\/\s*\d/i)                   // M38506/02 (letra+dígitos)
+    || clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s+(\d{3,5})\s*-\s*\d/i)            // 5Y 0036-30
+    || clean.match(/Flight[\/\s]*Date\s+([A-Z]{1,2})(\d{3,5})\s*-\s*\d/i)            // 5Y0036-30
+    || clean.match(/(\d[A-Z]\d{3,5})\s*\/\s*\d{1,2}/)                                 // 5Y8418/03 sin etiqueta
+    || clean.match(/([A-Z]\d{4,6})\s*\/\s*\d{1,2}/)                                   // M38506/02 sin etiqueta
+    || clean.match(/\b(\d[A-Z])\s+(\d{3,5})\s*-\s*\d\b/);                             // 5Y 9271-3 sin etiqueta (dígito+letra espacio dígitos-día)
+  if (flightMatch) {
+    var fn = flightMatch[2]
+      ? flightMatch[1] + flightMatch[2]   // dos grupos: prefijo + número
+      : flightMatch[1];                   // un grupo: número completo
+    // Limpiar: sin espacios ni guiones (necesario para el Live Status / AviationStack)
+    result.flightnum = fn.replace(/[\s\-\/]/g, '').toUpperCase();
+  }
+
+  // ── AWB NUMBER ── debe ir después de origen, lo dejamos arriba pero reforzamos
+  var awbMatch = clean.match(/\b(\d{3})\s*-\s*(\d{7,8})\b/) || clean.match(/\b(\d{3})\s*\|\s*\w+\s*\|\s*(\d{6,8})\b/);
+  if (awbMatch) result.awb = awbMatch[1] + '-' + awbMatch[2];
+
+  // ── AGENCIA DE CARGA ── "Issuing Carrier's Agent Name and City" seguido del nombre
+  var agencyMatch = clean.match(/Issuing\s*Carrier's?\s*Agent\s*Name\s*and\s*City\s+([A-Z][A-Z0-9\s\+\.,&]{3,40}?)(?:\s+Troncal|\s+Accounting|\s+\d{3,}|\s+Agent's)/i);
+  if (agencyMatch) result.agencyName = agencyMatch[1].trim();
+
+  // ── CONSIGNATARIO ── nombre tras "Consignee's Name and Address ... Account Number"
+  var consigneeMatch = clean.match(/Consignee's\s*Name\s*and\s*Address\s+Consignee's\s*Account\s*Number\s+([A-Z][A-Z0-9\s\.,&]{5,50}?)\s+EORI/i)
+    || clean.match(/Consignee's\s*Name\s*and\s*Address\s+([A-Z][A-Z0-9\s\.,&]{5,50}?)(?:\s+EORI|\s+\d{3,5}\s*NW|\s+Issuing)/i);
+  if (consigneeMatch) result.consigneeName = consigneeMatch[1].trim();
+
+  // ── CUSTOMS BROKER ── texto en "Handling Information"
+  var brokerMatch = clean.match(/Handling\s*Information\s+([A-Z][A-Z\s,\.]{5,40}?(?:BROKER|CUSTOMS)[A-Z\s,\.]{0,20}?),/i);
+  if (brokerMatch) result.customsBroker = brokerMatch[1].trim();
+
+  // ── DECLARED VALUE FOR CARRIAGE ── "N.V.D." significa "No Value Declared" = 0
+  var declaredMatch = clean.match(/Declared\s*Value\s*for\s*Carriage\D*?(\d+[\.,]?\d*)/i);
+  if (declaredMatch && !/N\.?V\.?D/i.test(clean.substring(clean.indexOf('Declared Value for Carriage'), clean.indexOf('Declared Value for Carriage')+60))) {
+    result.declaredValue = parseFloat(declaredMatch[1].replace(',', '.'));
+  }
+
+  // ── TABLA PRINCIPAL DE CARGA — Rate Class puede ser 1 o 2 letras (Q, CN, etc.) ──
+  var tableMatch = clean.match(/(\d{2,4})\s+(\d{3,5}(?:\.\d+)?)\s*K\s+([A-Z]{1,2})\s+(\d{3,5}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,6}\.\d{2})/i);
+  if (tableMatch) {
+    result.boxes_conf = parseInt(tableMatch[1]);
+    result.gross_weight = parseFloat(tableMatch[2]);
+    result.chargeable_weight = parseFloat(tableMatch[4]);
+    result.rate = parseFloat(tableMatch[5]);
+    result.weight_charge = parseFloat(tableMatch[6]);
+  }
+
+  // Estrategia 2: piezas — "PCS: 98" en descripción, o "PIECES", o "No. of Pieces"
+  if (!result.boxes_conf) {
+    var piecesMatch = clean.match(/PCS:\s*(\d+)/i)
+      || clean.match(/(\d+)\s*PIECES/i)
+      || clean.match(/No\.?\s*Of?\s*Pieces\D{0,15}?(\d{1,5})\b/i);
+    if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
+  }
+
+  // Estrategia 3: peso bruto — buscar número seguido de "k" (kg) en cualquier parte del documento
+  if (!result.gross_weight) {
+    var grossMatch = clean.match(/Gross\s*Weight[^0-9]{0,20}?(\d{2,6}(?:\.\d+)?)\s*k/i)
+      || clean.match(/(\d{2,6}(?:\.\d+)?)\s*k\b(?!\s*g)/i);
+    if (grossMatch) result.gross_weight = parseFloat(grossMatch[1].replace(',', '.'));
+  }
+
+  // Estrategia 4: peso facturable — saltar el encabezado de tabla, usar el dato de la fila real
+  if (!result.chargeable_weight) {
+    var chargeMatch = clean.match(/Chargeable\s*Weight\s+Rate\s+Charge\s+Total[^\d]*\d+\s+\d+(?:\.\d+)?\s*k\w?\s+[A-Z]{2}\s+(\d{2,6}(?:\.\d+)?)/i)
+      || clean.match(/Chargeable\s*Weight\D{0,8}?(\d{2,6}(?:\.\d+)?)\b/i);
+    if (chargeMatch) result.chargeable_weight = parseFloat(chargeMatch[1].replace(',', '.'));
+  }
+  if (!result.chargeable_weight && result.gross_weight) result.chargeable_weight = result.gross_weight;
+
+  // Estrategia 5: tarifa — varias estrategias en cascada
+  if (!result.rate) {
+    var rateMatch = clean.match(/Rate\s*\/?\s*Charge[^0-9]{0,15}?(\d{1,3}\.\d{2})\b/i)
+      || clean.match(/\bRate(?!\s*Class)\D{0,20}?(\d{1,3}\.\d{2})\b/i);
+    if (rateMatch) result.rate = parseFloat(rateMatch[1]);
+    else {
+      var allDecimals = clean.match(/(?<![\d.])(\d{1,2}\.\d{2})(?![\d.])/g);
+      if (allDecimals && allDecimals.length === 1) result.rate = parseFloat(allDecimals[0]);
+    }
+  }
+  // Estrategia 5b: si aún no hay tarifa pero tenemos cargo de peso y peso facturable, calcularla (tarifa = cargo ÷ peso)
+  if ((!result.rate || result.rate <= 0) && result.weight_charge && result.chargeable_weight) {
+    var calcRate = result.weight_charge / result.chargeable_weight;
+    if (calcRate > 0 && calcRate < 100) result.rate = parseFloat(calcRate.toFixed(2));
+  }
+
+  // Estrategia 6: cargo por peso (weight charge) — calculado si no se detectó directamente
+  if (!result.weight_charge && result.rate && result.chargeable_weight) {
+    result.weight_charge = parseFloat((result.rate * result.chargeable_weight).toFixed(2));
+  }
+
+  // ── MERCANCÍA / COMMODITY ── texto tras "Nature and Quantity of Goods", busca palabras clave conocidas
+  var commodityText = clean.match(/Nature\s*and\s*Quantity\s*of\s*Goods[^A-Z]*?([A-Z][A-Z\s]{5,60})/i);
+  if (commodityText) {
+    var ct = commodityText[1].toUpperCase();
+    if (ct.indexOf('CONSOLIDATED') > -1) result.commodity = 'CONSOL';
+    else if (ct.indexOf('RELEASE') > -1) result.commodity = 'LINEA RELEASE';
+    else if (ct.indexOf('OWN') > -1) result.commodity = 'OWN GUIDE';
+  }
+  // Detectar texto de mercancía libre (flores, rosas, perecederos)
+  var goodsMatch = clean.match(/(PERISHABLES?|ROSAS?|FLOWERS?|PRESERVED\s*ROSES?)/i);
+  if (goodsMatch) result.commodityText = goodsMatch[1];
+
+  // ── HS CODE ── formato 060311/060390 o similar
+  var hsMatch = clean.match(/HS\s*[:\s]*(\d{6}(?:\/\d{6})?)/i);
+  if (hsMatch) result.hs = hsMatch[1];
+
+  // ── HANDLING INSTRUCTIONS ── "PLEASE KEEP UNDER REFRIGERATION"
+  if (/REFRIGERAT/i.test(clean)) result.handling = 'Mantener refrigerado';
+  else if (/FRAGILE/i.test(clean)) result.handling = 'Frágil';
+  else if (/UPRIGHT|THIS\s*SIDE\s*UP/i.test(clean)) result.handling = 'Este lado arriba';
+
+  // ── OTHER CHARGES (formato: "CODIGO US$ valor = total") ──
+  var maaMatch = clean.match(/MAA\s*US\$?\s*(\d+\.\d{1,3})/i);
+  if (maaMatch) result.maa = parseFloat(maaMatch[1]);
+
+  var awcMatch = clean.match(/(?:AWC|MCC)\s*US\$?\s*(\d+\.\d{1,3})/i);
+  if (awcMatch) result.awc = parseFloat(awcMatch[1]);
+
+  var mycMatch = clean.match(/MYC\s*US\$?\s*(\d+\.\d{1,3})/i);
+  if (mycMatch) result.myc = parseFloat(mycMatch[1]);
+
+  var escMatch = clean.match(/ESC\s*US\$?\s*(\d+\.\d{1,3})/i);
+  if (escMatch) result.esc = parseFloat(escMatch[1]);
+
+  // ── Other Charges Due Carrier / Agent ──
+  var carrierMatch = clean.match(/Total\s*Other\s*Charges\s*Due\s*Carrier\D{0,10}?(\d+\.\d{1,2})/i);
+  if (carrierMatch) result.other_carrier = parseFloat(carrierMatch[1]);
+
+  var agentMatch = clean.match(/Total\s*Other\s*Charges\s*Due\s*Agent\D{0,10}?(\d+\.\d{1,2})/i);
+  if (agentMatch) result.other_agent = parseFloat(agentMatch[1]);
+
+  // ── Tax / Valuation Charge ──
+  var taxMatch = clean.match(/Tax\s+(\d+\.\d{1,2})\s+\d+\.\d{1,2}/i);
+  if (taxMatch && parseFloat(taxMatch[1]) > 0) result.tax = parseFloat(taxMatch[1]);
+
+  var valMatch = clean.match(/Valuation\s*Charge\s+(\d+\.\d{1,2})\s+\d+\.\d{1,2}/i);
+  if (valMatch && parseFloat(valMatch[1]) > 0) result.valcharge = parseFloat(valMatch[1]);
+
+  // ── Total Prepaid / Total Collect ── varios formatos según el layout del PDF
+  var totalBothMatch = clean.match(/Total\s*Prepaid\s*Total\s*Collect\D{0,5}?(\d+[\.,]\d{1,2})\s+(\d+[\.,]\d{1,2})/i);
+  if (totalBothMatch) {
+    result.total_prepaid = parseFloat(totalBothMatch[1].replace(',', '.'));
+    result.total_collect = parseFloat(totalBothMatch[2].replace(',', '.'));
+  } else {
+    // Formato: "1156.0 0.0 369 UIO 10233344" — el total va justo antes del número AWB repetido
+    var beforeAwb = clean.match(/(\d{3,6}\.\d)\s+0\.0\s+\d{3}\s+[A-Z]{3}\s+\d{7,8}/i);
+    if (beforeAwb) {
+      result.total_prepaid = parseFloat(beforeAwb[1]);
+    } else {
+      var totalMatch = clean.match(/Total\s*Prepaid\D{0,10}?(\d+[\.,]\d{1,2})/i);
+      if (totalMatch) result.total_prepaid = parseFloat(totalMatch[1].replace(',', '.'));
+      var collectMatch = clean.match(/Total\s*Collect\D{0,10}?(\d+[\.,]\d{1,2})/i);
+      if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
+    }
+  }
+  // Red de seguridad 1: si el total detectado es igual al cargo de peso pero hay otros cargos, recalcular
+  // (significa que capturamos el subtotal, no el total real)
+  var computedTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0)
+    + (result.maa||0) + (result.awc||0) + (result.tax||0) + (result.valcharge||0);
+  if (result.total_prepaid && result.weight_charge && result.total_prepaid === result.weight_charge && computedTotal > result.weight_charge) {
+    result.total_prepaid = parseFloat(computedTotal.toFixed(2));
+  }
+  // Red de seguridad 2: si no se detectó, calcular sumando todos los cargos
+  if (!result.total_prepaid && result.weight_charge) {
+    if (computedTotal > 0) result.total_prepaid = parseFloat(computedTotal.toFixed(2));
+  }
+
+  // ── FECHA Y LUGAR DE EMISIÓN ── "Tuesday, 30 Jun 2026 QUITO ECUADOR"
+  var dateMatch = clean.match(/(\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4})\s+([A-Z]{3,15})/);
+  if (dateMatch) { result.issueDate = dateMatch[1]; result.issuePlace = dateMatch[2]; }
+
+  return result;
+}
+
+// ══ POD UPLOAD TO ONEDRIVE ══
+async function handlePODUpload(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var stat = document.getElementById('pod-status');
+  var txt = document.getElementById('pod-zone-txt');
+  txt.textContent = 'Subiendo ' + file.name + ' a OneDrive…';
+  stat.textContent = 'Subiendo a OneDrive…';
+  stat.className = 'upload-status ok';
+  var reader = new FileReader();
+  reader.onload = async function(ev) {
+    var b64 = ev.target.result.split(',')[1];
+    var binary = atob(b64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    try {
+      var url = await uploadToOneDrive('POD_' + Date.now() + '_' + file.name, bytes.buffer, file.type);
+      pendingPOD = { name: file.name, url: url };
+      stat.textContent = '✓ POD subido a OneDrive: ' + file.name;
+      stat.className = 'upload-status ok';
+      txt.textContent = 'POD adjunto: ' + file.name;
+    } catch(err) {
+      // Fallback: store as base64 locally
+      pendingPOD = { name: file.name, url: ev.target.result, local: true };
+      stat.textContent = '⚠ Guardado localmente (sin conexión a OneDrive): ' + file.name;
+      stat.className = 'upload-status err';
+    }
+    e.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══ LIVE FLIGHT STATUS (AviationStack) ══
+// ══ CÁLCULO AUTOMÁTICO DE ESTADO DEL VUELO (basado en ETD/ETA vs hora actual) ══
+// Lógica:
+//  - Aún no pasa el ETD → Programado (pending)
+//  - Pasó el ETD pero no hay salida real registrada Y estamos cerca del ETD → En tránsito (asumimos que despegó)
+//  - Pasó el ETD y no ha despegado (con datos live) → Retrasado en salida
+//  - Volando entre ETD y ETA → En tránsito
+//  - Llegó ≤2h después del ETA → Arribado (delivered)
+//  - Llegó >3h después del ETA → Demorado (delayed)
+function computeAutoStatus(f, liveData) {
+  // PRIORIDAD 1: Confirmación manual — si el usuario marcó los hitos, esos mandan sobre todo
+  if (f.completed) {
+    return { status: 'delivered', label: 'PROCESO TERMINADO (confirmado manualmente)', color: 'delivered', manual: true };
+  }
+  if (f.arrived) {
+    return { status: 'delivered', label: 'LLEGÓ A DESTINO (confirmado manualmente)', color: 'delivered', manual: true };
+  }
+
+  var now = new Date();
+  var etd = f.etd ? new Date(f.etd) : null;
+  var eta = f.eta ? new Date(f.eta) : null;
+  if (!etd) return { status: f.status || 'pending', label: 'Sin ETD', color: 'pending' };
+
+  var MS_H = 3600000;
+
+  // Si tenemos datos en vivo, usarlos con prioridad
+  if (liveData) {
+    var ls = liveData.flight_status;
+    var actualDep = liveData.departure && liveData.departure.actual ? new Date(liveData.departure.actual) : null;
+    var actualArr = liveData.arrival && liveData.arrival.actual ? new Date(liveData.arrival.actual) : null;
+
+    // Ya aterrizó
+    if (ls === 'landed' || ls === 'arrived' || actualArr) {
+      if (actualArr && eta) {
+        var lateH = (actualArr - eta) / MS_H;
+        if (lateH > 3) return { status: 'delayed', label: 'DEMORADO (llegó ' + Math.round(lateH*10)/10 + 'h tarde)', color: 'late' };
+        if (lateH <= 2) return { status: 'delivered', label: 'ARRIBADO (a tiempo)', color: 'delivered' };
+        return { status: 'delivered', label: 'ARRIBADO (' + Math.round(lateH*10)/10 + 'h tarde)', color: 'warn' };
+      }
+      return { status: 'delivered', label: 'ARRIBADO', color: 'delivered' };
+    }
+    // Está volando
+    if (ls === 'active' || (actualDep && !actualArr)) {
+      return { status: 'transit', label: 'EN TRÁNSITO (volando)', color: 'transit' };
+    }
+    // No ha despegado pero ya pasó el ETD → retraso en salida (solo si es reciente, mismo día)
+    if (ls === 'scheduled' && now > etd && !actualDep) {
+      var lateDepH = (now - etd) / MS_H;
+      if (lateDepH > 12) {
+        // Vuelo antiguo — AviationStack no tiene datos, asumimos completado
+        return { status: 'delivered', label: 'ARRIBADO (vuelo completado)', color: 'delivered' };
+      }
+      return { status: 'delayed', label: 'RETRASADO (no despega, ' + Math.round(lateDepH*10)/10 + 'h de retraso)', color: 'late' };
+    }
+  }
+
+  // Sin datos en vivo — cálculo puro por horario
+  if (now < etd) {
+    return { status: 'pending', label: 'PROGRAMADO (aún no despega)', color: 'pending' };
+  }
+  // Pasó el ETD
+  if (eta) {
+    if (now >= etd && now <= eta) {
+      return { status: 'transit', label: 'EN TRÁNSITO (en ruta)', color: 'transit' };
+    }
+    // Pasó el ETA
+    var pastEtaH = (now - eta) / MS_H;
+    // Si ya pasó más de 12 horas del ETA, el vuelo ya se completó (día(s) anterior(es)) → ARRIBADO
+    // La ventana de "demora" solo aplica el mismo día, cerca del ETA
+    if (pastEtaH > 12) {
+      return { status: 'delivered', label: 'ARRIBADO (vuelo completado)', color: 'delivered' };
+    }
+    if (pastEtaH <= 2) {
+      return { status: 'delivered', label: 'ARRIBADO (llegada estimada, a tiempo)', color: 'delivered' };
+    }
+    if (pastEtaH > 3) {
+      return { status: 'delayed', label: 'DEMORADO (' + Math.round(pastEtaH*10)/10 + 'h después del ETA)', color: 'late' };
+    }
+    // Entre 2h y 3h después del ETA
+    return { status: 'transit', label: 'EN TRÁNSITO (retraso leve, ' + Math.round(pastEtaH*10)/10 + 'h)', color: 'warn' };
+  }
+  // Pasó ETD sin ETA definido — si pasó mucho tiempo, asumimos completado
+  var pastEtdH = (now - etd) / MS_H;
+  if (pastEtdH > 12) {
+    return { status: 'delivered', label: 'ARRIBADO (vuelo completado)', color: 'delivered' };
+  }
+  return { status: 'transit', label: 'EN TRÁNSITO (despegó)', color: 'transit' };
+}
+
+// Actualiza automáticamente el estado de todos los vuelos según la hora actual
+function autoUpdateAllStatuses() {
+  var changed = false;
+  DB.flights.forEach(function(f) {
+    if (f.status === 'delivered' && f.manualDelivered) return; // no tocar si fue marcado manualmente entregado
+    var auto = computeAutoStatus(f, null);
+    if (auto.status !== f.status) {
+      f.status = auto.status;
+      f.modifiedAt = nowStr();
+      changed = true;
+    }
+  });
+  if (changed) { persistDB(); renderScreen(screen); updateBadges(); }
+}
+
+async function checkLive(num, flightId) {
+  var f = DB.flights.find(function(x){ return x.id === flightId; });
+  document.getElementById('live-title').textContent = '✈ ' + num + ' — Estado en Vivo';
+  document.getElementById('modal-live').classList.add('open');
+
+  // PRIMERO: calcular y mostrar el estado automático inmediatamente (siempre funciona, sin API)
+  var autoStatus = computeAutoStatus(f, null);
+  // Aplicar el estado automático al vuelo
+  if (f && autoStatus.status !== f.status) {
+    f.status = autoStatus.status;
+    f.modifiedAt = nowStr();
+    saveFlight_SP(f).then(function(){ renderScreen(screen); });
+  }
+
+  var autoBox = '<div style="background:' + statusBgColor(autoStatus.color) + ';border-radius:8px;padding:12px 14px;margin-bottom:14px;">'
+    + '<div style="font-size:11px;font-weight:700;color:' + statusTxColor(autoStatus.color) + ';text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estado automático (calculado por horario)</div>'
+    + '<div style="font-size:15px;font-weight:800;color:' + statusTxColor(autoStatus.color) + ';">' + autoStatus.label + '</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:6px;">ETD: ' + fmtD(f&&f.etd) + '  ·  ETA: ' + fmtD(f&&f.eta) + '  ·  Ahora: ' + fmtD(new Date().toISOString()) + '</div>'
+    + '</div>';
+
+  // SEGUNDO: intentar enriquecer con datos en vivo de AviationStack (opcional)
+  if (!CFG.aviationKey) {
+    document.getElementById('live-body').innerHTML = autoBox
+      + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula automáticamente con el ETD/ETA registrado. Para datos GPS en vivo (posición, altitud, velocidad real), agrega tu <strong>AviationStack API Key</strong> gratuita en Configuración.</div>';
+    return;
+  }
+
+  document.getElementById('live-body').innerHTML = autoBox
+    + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Buscando datos GPS en vivo…</div>';
+
+  var cleanNum = num.replace(/\s/g,'');
+  var directUrl = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&flight_iata=' + cleanNum;
+  var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(directUrl);
+  try {
+    var res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var d = (data.data && data.data[0]) || null;
+    liveCache[num] = d;
+    renderLive(num, d, flightId, autoBox);
+  } catch(err) {
+    try {
+      var proxyUrl2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
+      var res2 = await fetch(proxyUrl2);
+      var data2 = await res2.json();
+      var d2 = (data2.data && data2.data[0]) || null;
+      renderLive(num, d2, flightId, autoBox);
+    } catch(err2) {
+      document.getElementById('live-body').innerHTML = autoBox
+        + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No se pudieron obtener datos GPS en vivo (el vuelo puede no estar activo en este momento en AviationStack, o se alcanzó el límite mensual gratuito).</div>';
+    }
+  }
+}
+
+function statusBgColor(c) {
+  return {pending:'#FEF3C7', transit:'#E8F5EE', delivered:'#D1FAE5', warn:'#FEF3C7', late:'#FEE2E2'}[c] || '#F3F4F6';
+}
+function statusTxColor(c) {
+  return {pending:'#92400E', transit:'#1B7A3E', delivered:'#065F46', warn:'#92400E', late:'#991B1B'}[c] || '#374151';
+}
+
+// Coordenadas de aeropuertos (lat, lon) para el mapa
+var AIRPORT_COORDS = {
+  'UIO': [-0.1292, -78.3575, 'Quito'],
+  'MED': [6.1645, -75.4231, 'Medellín'],
+  'BOG': [4.7016, -74.1469, 'Bogotá'],
+  'GUAT': [14.5833, -90.5275, 'Guatemala City'],
+  'MIA': [25.7959, -80.2870, 'Miami'],
+  'JFK': [40.6413, -73.7781, 'New York JFK'],
+  'LAX': [33.9416, -118.4085, 'Los Angeles'],
+  'ORD': [41.9742, -87.9073, 'Chicago'],
+  'AMS': [52.3105, 4.7683, 'Amsterdam'],
+  'MAD': [40.4983, -3.5676, 'Madrid'],
+  'PTY': [9.0714, -79.3835, 'Panama City']
+};
+var _liveMap = null;
+
+function renderFlightMap(f, d) {
+  // Espera a que el DOM tenga el contenedor del mapa
+  setTimeout(function() {
+    var mapEl = document.getElementById('flight-map');
+    if (!mapEl || typeof L === 'undefined') return;
+    // Limpiar mapa anterior
+    if (_liveMap) { _liveMap.remove(); _liveMap = null; }
+
+    var origin = f && AIRPORT_COORDS[f.origin];
+    var dest = f && AIRPORT_COORDS[f.dest];
+    var planePos = (d && d.live && d.live.latitude && d.live.longitude)
+      ? [parseFloat(d.live.latitude), parseFloat(d.live.longitude)] : null;
+
+    // Centro inicial del mapa
+    var center = planePos || origin || dest || [15, -78];
+    _liveMap = L.map('flight-map', { zoomControl: true, attributionControl: false }).setView(center, 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10 }).addTo(_liveMap);
+
+    var bounds = [];
+
+    // Marcador origen (verde)
+    if (origin) {
+      L.circleMarker([origin[0], origin[1]], { radius: 8, color: '#1B7A3E', fillColor: '#22A351', fillOpacity: 1, weight: 2 })
+        .addTo(_liveMap).bindPopup('<b>Origen:</b> ' + origin[2] + ' (' + f.origin + ')');
+      bounds.push([origin[0], origin[1]]);
+    }
+    // Marcador destino (rojo)
+    if (dest) {
+      L.circleMarker([dest[0], dest[1]], { radius: 8, color: '#DC2626', fillColor: '#EF4444', fillOpacity: 1, weight: 2 })
+        .addTo(_liveMap).bindPopup('<b>Destino:</b> ' + dest[2] + ' (' + f.dest + ')');
+      bounds.push([dest[0], dest[1]]);
+    }
+    // Línea de ruta origen→destino (punteada)
+    if (origin && dest) {
+      L.polyline([[origin[0], origin[1]], [dest[0], dest[1]]], { color: '#1B7A3E', weight: 2, dashArray: '6, 8', opacity: 0.6 }).addTo(_liveMap);
+    }
+    // Avión en posición GPS real (icono avión)
+    if (planePos) {
+      var planeIcon = L.divIcon({
+        html: '<div style="font-size:26px;transform:rotate(' + ((d.live.direction||0)-45) + 'deg);">✈️</div>',
+        className: 'plane-icon', iconSize: [30, 30], iconAnchor: [15, 15]
+      });
+      L.marker(planePos, { icon: planeIcon }).addTo(_liveMap)
+        .bindPopup('<b>✈ ' + esc(f?f.num:'') + '</b><br>Altitud: ' + Math.round(d.live.altitude||0) + ' m<br>Velocidad: ' + Math.round(d.live.speed_horizontal||0) + ' km/h').openPopup();
+      bounds.push(planePos);
+    }
+    // Ajustar zoom para ver todo
+    if (bounds.length > 1) _liveMap.fitBounds(bounds, { padding: [40, 40] });
+    else if (bounds.length === 1) _liveMap.setView(bounds[0], 5);
+    // Forzar recálculo de tamaño (Leaflet dentro de modal)
+    setTimeout(function(){ if(_liveMap) _liveMap.invalidateSize(); }, 100);
+  }, 150);
+}
+
+function renderLive(num, d, flightId, autoBox) {
+  autoBox = autoBox || '';
+  var f = DB.flights.find(function(x){ return x.id === flightId; });
+  var hasGPS = d && d.live && d.live.latitude && d.live.longitude;
+
+  if (!d) {
+    // Sin datos live, pero igual mostramos mapa con ruta origen→destino
+    var mapSection = (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest]))
+      ? '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:14px 0 8px;">Ruta del vuelo</div><div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);"></div>'
+      : '';
+    document.getElementById('live-body').innerHTML = autoBox
+      + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No hay datos GPS en vivo para <strong>' + esc(num) + '</strong> en este momento (el vuelo puede no estar volando ahora). Se muestra la ruta programada.</div>'
+      + mapSection;
+    if (mapSection) renderFlightMap(f, null);
+    return;
+  }
+  // Recalcular estado usando los datos en vivo (más preciso)
+  var autoStatus = computeAutoStatus(f, d);
+  if (f && autoStatus.status !== f.status) {
+    f.status = autoStatus.status; f.modifiedAt = nowStr();
+    saveFlight_SP(f).then(function(){ renderScreen(screen); });
+  }
+  var scc = d.flight_status || 'scheduled';
+  var ground = d.live && d.live.is_ground;
+  var html = autoBox + '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Datos GPS en vivo (AviationStack)</div>';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:#E8F5EE;color:#1B7A3E;">' + scc.toUpperCase() + '</span><span style="font-size:12px;color:var(--t2);">' + (ground?'🛬 En tierra':'✈ En vuelo') + (d.live&&!ground?' · '+Math.round(d.live.altitude)+' m · '+Math.round(d.live.speed_horizontal)+' km/h':'') + '</span></div>';
+  // Mapa
+  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
+    html += '<div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px;"></div>';
+  }
+  html += '<div class="lv-grid">';
+  var cells = [
+    ['Aerolínea', esc((d.airline&&d.airline.name)||'—')],
+    ['Aeropuerto salida', esc((d.departure&&d.departure.airport)||'—')],
+    ['Aeropuerto llegada', esc((d.arrival&&d.arrival.airport)||'—')],
+    ['Salida programada', fmtD(d.departure&&d.departure.scheduled)],
+    ['Salida real', d.departure&&d.departure.actual ? fmtD(d.departure.actual) : '—'],
+    ['Llegada estimada', fmtD(d.arrival&&d.arrival.estimated)],
+    ['Llegada real', d.arrival&&d.arrival.actual ? fmtD(d.arrival.actual) : '<span style="color:var(--t3)">Aún no aterriza</span>'],
+    ['Demora llegada', d.arrival&&d.arrival.delay ? '<span style="color:var(--red)">+'+d.arrival.delay+' min</span>' : '<span style="color:var(--green2)">A tiempo</span>'],
+    ['Posición GPS', hasGPS ? parseFloat(d.live.latitude).toFixed(3) + ', ' + parseFloat(d.live.longitude).toFixed(3) : '—']
+  ];
+  cells.forEach(function(c) { html += '<div class="lv-cell"><div class="lk">'+c[0]+'</div><div class="lv">'+c[1]+'</div></div>'; });
+  html += '</div><div style="margin-top:10px;font-size:10px;color:var(--t3);">⚡ Actualizado ' + new Date().toLocaleTimeString('es-EC') + '</div>';
+  document.getElementById('live-body').innerHTML = html;
+  // Renderizar el mapa después de insertar el HTML
+  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
+    renderFlightMap(f, d);
+  }
+}
+
+// ══ AI — Claude ══
+function dbSummary() {
+  return 'VUELOS(' + DB.flights.length + '): ' + DB.flights.slice(0,15).map(function(f){
+    return f.num+'('+f.origin+'→'+f.dest+',estado:'+f.status+',cajas:'+f.bconf+'/'+f.bsent+',AWB:'+f.awb+',costo:$'+(f.totalpaid||0)+',tarifa:$'+(f.rate||0)+',tarifaEsp:$'+(f.rateExp||0)+',por:'+f.createdby+',consignatario:'+f.consignee+')';
+  }).join(';') + ' | AGENCIAS(' + DB.agencies.length + '): ' + DB.agencies.map(function(a){ return a.name+'('+a.phone+','+a.email+')'; }).join(';');
+}
+
+async function aiAsk(q) {
+  var el = document.getElementById('ai-result');
+  el.className = 'ai-bubble';
+  el.innerHTML = '<span class="dp"><span></span><span></span><span></span></span>';
+  if (!CFG.claudeKey) { el.textContent = 'Agrega tu Claude API Key en Configuración para usar la IA.'; return; }
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.claudeKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
+        system: 'Eres un asistente de logística para Jet Fresh Flowers Distributors, empresa de carga aérea perecedera (rosas/flores, Ecuador→USA). Sé conciso y accionable. Responde en español. Datos actuales:\n' + dbSummary(),
+        messages: [{ role: 'user', content: q }] })
+    });
+    var data = await res.json();
+    el.textContent = (data.content && data.content[0] && data.content[0].text) || 'Sin respuesta.';
+  } catch(e) { el.textContent = 'Error IA: ' + e.message; }
+}
+
+async function sendChat() {
+  var inp = document.getElementById('chat-inp');
+  var q = inp.value.trim(); if (!q) return;
+  inp.value = '';
+  chatMsg('user', q); chatHist.push({ role: 'user', content: q });
+  var loading = chatMsg('ai', '…');
+  loading.innerHTML = '<span class="dp"><span></span><span></span><span></span></span>';
+  if (!CFG.claudeKey) { loading.textContent = 'Agrega tu Claude API Key en Configuración.'; return; }
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.claudeKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
+        system: 'Eres asistente de logística para Jet Fresh Flowers Distributors (carga aérea perecedera, rosas/flores, Ecuador→USA). Datos:\n' + dbSummary(),
+        messages: chatHist.slice(-16) })
+    });
+    var data = await res.json();
+    var text = (data.content && data.content[0] && data.content[0].text) || 'Sin respuesta.';
+    loading.textContent = text;
+    chatHist.push({ role: 'assistant', content: text });
+    if (chatHist.length > 20) chatHist = chatHist.slice(-20);
+  } catch(e) { loading.textContent = 'Error: ' + e.message; }
+}
+
+function chatMsg(role, text) {
+  var el = document.getElementById('chat-msgs');
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;gap:8px;align-items:flex-start;' + (role==='user'?'flex-direction:row-reverse;':'');
+  var av = document.createElement('div');
+  av.style.cssText = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;' + (role==='user'?'background:var(--lightgreen);color:var(--green);':'background:var(--navy);color:#fff;');
+  av.textContent = role==='user' ? (document.getElementById('user-av').textContent||'YO') : 'IA';
+  var bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + (role==='user'?'user':'ai');
+  bubble.textContent = text;
+  wrap.appendChild(av); wrap.appendChild(bubble);
+  el.appendChild(wrap); el.scrollTop = el.scrollHeight;
+  return bubble;
+}
+function chatQ(q) { document.getElementById('chat-inp').value = q; sendChat(); }
+
+// ══ HELPERS ══
+function gv(id) { var el=document.getElementById(id); return el?el.value.trim():''; }
+function sv(id, v) { var el=document.getElementById(id); if(el) el.value=v||''; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt$(v) { return v&&parseFloat(v)>0?'$'+parseFloat(v).toFixed(2):'—'; }
+function fmtD(d) { if(!d)return'—'; try{return new Date(d).toLocaleString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return d;} }
+function nowStr() { return new Date().toLocaleString('es-EC',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function setSyncStatus(status, text) {
+  var dot = document.getElementById('sync-dot');
+  var txt = document.getElementById('sync-txt');
+  dot.className = 'sync-dot ' + status;
+  txt.textContent = text;
+}
+
+// ══ AIRLINE AUTOFILL ══
+var AIRLINES = {'LA':'LATAM Airlines','AA':'American Airlines','AV':'Avianca','KL':'KLM Royal Dutch Airlines','CM':'Copa Airlines','IB':'Iberia','UA':'United Airlines','DL':'Delta Air Lines','BA':'British Airways','LH':'Lufthansa','AF':'Air France','EK':'Emirates','AM':'Aeromexico'};
+var _pendingAl = null;
+function onFlightNum(v) {
+  var tip = document.getElementById('tip-airline');
+  var al = AIRLINES[v.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2)];
+  if (al && v.length >= 3) { _pendingAl = al; document.getElementById('tip-airline-txt').textContent = 'IA: Aerolínea encontrada — '+al+'. Toca para rellenar.'; tip.style.display='flex'; }
+  else { tip.style.display='none'; _pendingAl=null; }
+}
+function applyAirline() { if(_pendingAl) sv('f-airline',_pendingAl); document.getElementById('tip-airline').style.display='none'; }
+
+// ══ AGENCY SELECT ══
+function populateAgSel() {
+  var sel = document.getElementById('f-agency');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Seleccionar agencia…</option>';
+  DB.agencies.forEach(function(a) { var o=document.createElement('option'); o.value=a.id; o.textContent=a.name; sel.appendChild(o); });
+  if (cur) sel.value = cur;
+}
+function onAgencyChange(id) {
+  var tip = document.getElementById('tip-agency');
+  if (!id) { tip.style.display='none'; return; }
+  var ag = DB.agencies.find(function(a){ return a.id===id; });
+  if (!ag) { tip.style.display='none'; return; }
+  if (ag.contact) sv('f-agcontact', ag.contact);
+  if (ag.phone) sv('f-agphone', ag.phone);
+  if (ag.email) sv('f-agemail', ag.email);
+  var filled = [ag.contact, ag.phone, ag.email].filter(Boolean);
+  if (filled.length) { tip.style.display='flex'; document.getElementById('tip-agency-txt').textContent = 'Auto-rellenado desde agencia: ' + filled.join(' · '); }
+  else tip.style.display = 'none';
+}
+
+function populateConsignees() {
+  var sel = document.getElementById('f-consignee');
+  sel.innerHTML = '<option value="">Seleccionar…</option>';
+  (CFG.consignees||'MAS Customs,Delivery Plus').split(',').map(function(s){return s.trim();}).filter(Boolean).forEach(function(c){
+    var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+  });
+}
+
+// ══ CALCULATIONS ══
+// Maneja el cambio de las casillas de confirmación manual
+function onManualStatusChange() {
+  var arrived = document.getElementById('f-arrived');
+  var completed = document.getElementById('f-completed');
+  var arrivedCard = document.getElementById('check-arrived-card');
+  var completedCard = document.getElementById('check-completed-card');
+  // "Proceso terminado" implica que llegó — marca automáticamente llegada
+  if (completed && completed.checked && arrived && !arrived.checked) {
+    arrived.checked = true;
+  }
+  if (arrivedCard) arrivedCard.classList.toggle('on', arrived && arrived.checked);
+  if (completedCard) completedCard.classList.toggle('on', completed && completed.checked);
+  // Autocompletar fecha de llegada si se marca llegada y está vacía
+  var arrTime = document.getElementById('f-arrived-time');
+  if (arrived && arrived.checked && arrTime && !arrTime.value) {
+    var n = new Date();
+    n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+    arrTime.value = n.toISOString().slice(0,16);
+  }
+}
+
+function calcAll() {
+  var sent=parseInt(gv('f-bsent'))||0, conf=parseInt(gv('f-bconf'))||0, miss=Math.max(0,sent-conf);
+  sv('f-bmiss', miss>0?miss:'');
+  if (sent > 0) {
+    var pct = Math.round(conf/sent*100);
+    var cs = document.getElementById('f-confst');
+    if (cs) cs.value = pct===100?'confirmed':pct>0?'partial':'unconfirmed';
+    var tb = document.getElementById('tip-boxes'); tb.style.display='flex';
+    document.getElementById('tip-boxes-txt').textContent = pct===100?'✓ Confirmación completa — '+sent+' cajas contabilizadas.':pct>=80?'⚠ Parcial ('+pct+'%) — '+miss+' cajas pendientes.':'✗ Baja confirmación ('+pct+'%) — contactar agencia urgentemente por '+miss+' cajas faltantes.';
+  } else { document.getElementById('tip-boxes').style.display='none'; }
+
+  // ── Tarifa efectiva = Rate base + MYC + ESC (si existen MYC/ESC). Si no existen, queda solo el rate base. ──
+  var rateBase=parseFloat(gv('f-rate'))||0, mycRate=parseFloat(gv('f-myc'))||0, escRate=parseFloat(gv('f-esc'))||0;
+  var rateEffective = rateBase + mycRate + escRate;
+
+  var cw=parseFloat(gv('f-cweight'))||parseFloat(gv('f-weight'))||0, wc=rateBase*cw;
+  if (wc>0) sv('f-wcharge', wc.toFixed(2));
+  var maa=parseFloat(gv('f-maa'))||0, awc=parseFloat(gv('f-awc'))||0;
+  var boxes=parseInt(gv('f-bsent'))||0, agTot=maa+awc, carTot=mycRate*boxes+escRate*boxes;
+  if (agTot>0) sv('f-ochagent', agTot.toFixed(2));
+  if (carTot>0) sv('f-ochcarrier', carTot.toFixed(2));
+  var val=parseFloat(gv('f-valcharge'))||0, tax=parseFloat(gv('f-tax'))||0, total=wc+agTot+carTot+val+tax;
+  if (total > 0) {
+    sv('f-totalpaid', total.toFixed(2));
+    var tc=document.getElementById('tip-cost'); tc.style.display='flex';
+    document.getElementById('tip-cost-txt').textContent = 'Total prepagado: $'+total.toFixed(2)+' (peso $'+wc.toFixed(2)+' + agente $'+agTot.toFixed(2)+' + carrier $'+carTot.toFixed(2)+')';
+  } else document.getElementById('tip-cost').style.display='none';
+
+  // ── Comparación de tarifa: usa la Tarifa Efectiva (Rate + MYC + ESC) vs Tarifa Esperada ──
+  var rateExp=parseFloat(gv('f-rate-exp'))||0;
+  var rateAlert=document.getElementById('rate-mismatch-alert');
+  var rateField=document.getElementById('f-rate');
+  if (rateExp>0 && rateEffective>0 && Math.abs(rateEffective-rateExp)>0.001) {
+    var detalle = (mycRate>0||escRate>0)
+      ? ' (base $'+rateBase.toFixed(3)+' + MYC $'+mycRate.toFixed(3)+' + ESC $'+escRate.toFixed(3)+')'
+      : ' (tarifa única, sin MYC/ESC)';
+    rateAlert.textContent='⚠ Diferencia de tarifa: real $'+rateEffective.toFixed(3)+'/kg'+detalle+' vs esperada $'+rateExp.toFixed(3)+'/kg (dif: $'+(rateEffective-rateExp).toFixed(3)+')';
+    rateAlert.style.display='block'; rateField.classList.add('rate-alert');
+  } else { rateAlert.style.display='none'; if(rateField)rateField.classList.remove('rate-alert'); }
+}
+
+// ══ CLEAR FORM ══
+function clearFlightForm() {
+  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes'].forEach(function(i){sv(i,'');});
+  sv('f-origin','UIO'); sv('f-dest','MIA'); sv('f-status','pending'); sv('f-priority','normal');
+  sv('f-agency',''); sv('f-confst','unconfirmed'); sv('f-ctype','Perecedero'); sv('f-handling','Mantener refrigerado');
+  sv('f-commodity',''); sv('f-consignee',''); sv('f-createdby','');
+  sv('f-sname','Jet Fresh Flowers Distributors');
+  ['tip-airline','tip-agency','tip-boxes','tip-cost','tip-agency-detected'].forEach(function(i){document.getElementById(i).style.display='none';});
+  document.getElementById('rate-mismatch-alert').style.display='none';
+  document.getElementById('awb-status').style.display='none';
+  document.getElementById('pod-status').style.display='none';
+  document.getElementById('awb-zone-txt').textContent='Clic para subir AWB PDF / Imagen';
+  document.getElementById('pod-zone-txt').textContent='Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive';
+  pendingPOD = null; _pendingAl = null;
+  if(document.getElementById('f-arrived')) document.getElementById('f-arrived').checked = false;
+  if(document.getElementById('f-completed')) document.getElementById('f-completed').checked = false;
+  sv('f-arrived-time',''); sv('f-status-notes','');
+  var ac=document.getElementById('check-arrived-card'), cc=document.getElementById('check-completed-card');
+  if(ac)ac.classList.remove('on'); if(cc)cc.classList.remove('on');
+}
+
+// ══ MODAL ══
+function openModal(id) {
+  if (id==='new'&&!editFlId) { clearFlightForm(); document.getElementById('modal-new-title').textContent='Nuevo Envío'; document.getElementById('save-flight-btn').textContent='Guardar envío'; populateAgSel(); populateConsignees(); }
+  if (id==='agency'&&!editAgId) { document.getElementById('modal-agency-title').textContent='Agregar Agencia'; ['ag-name','ag-contact','ag-phone','ag-email','ag-addr','ag-notes'].forEach(function(i){sv(i,'');}); }
+  document.getElementById('modal-'+id).classList.add('open');
+}
+function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); if(id==='new')editFlId=null; if(id==='agency')editAgId=null; }
+document.addEventListener('keydown',function(e){if(e.key==='Escape')['new','agency','detail','live'].forEach(closeModal);});
+
+// ══ SAVE FLIGHT ══
+async function saveFlight() {
+  var num=gv('f-num'),airline=gv('f-airline'),origin=gv('f-origin'),dest=gv('f-dest'),etd=gv('f-etd'),cb=gv('f-createdby');
+  if (!num||!airline||!origin||!dest||!etd) { toast('Completa todos los campos requeridos.','err'); return; }
+  if (!cb) { toast('Selecciona quién crea este envío.','err'); return; }
+  if (!gv('f-consignee')) { toast('Selecciona un consignatario.','err'); return; }
+  var agId=gv('f-agency'), agName='';
+  if (agId) { var ag=DB.agencies.find(function(a){return a.id===agId;}); if(ag) agName=ag.name; }
+  var now = nowStr();
+  var f = {
+    id: editFlId || ('local_'+Date.now()),
+    num:num, airline:airline, origin:origin, dest:dest, etd:etd, eta:gv('f-eta'),
+    status:gv('f-status'), priority:gv('f-priority'),
+    agId:agId, agName:agName, agcontact:gv('f-agcontact'), agphone:gv('f-agphone'), agemail:gv('f-agemail'),
+    awb:gv('f-awb'),
+    bsent:parseInt(gv('f-bsent'))||0, bconf:parseInt(gv('f-bconf'))||0, bmiss:parseInt(gv('f-bmiss'))||0, confst:gv('f-confst'),
+    weight:gv('f-weight'), cweight:gv('f-cweight'), ctype:gv('f-ctype'), handling:gv('f-handling'),
+    commodity:gv('f-commodity'), hs:gv('f-hs'),
+    rateBase:gv('f-rate'), rate:(parseFloat(gv('f-rate'))||0)+(parseFloat(gv('f-myc'))||0)+(parseFloat(gv('f-esc'))||0), rateExp:gv('f-rate-exp'), wcharge:gv('f-wcharge'), valcharge:gv('f-valcharge'), tax:gv('f-tax'),
+    maa:gv('f-maa'), awc:gv('f-awc'), myc:gv('f-myc'), esc:gv('f-esc'),
+    ochagent:gv('f-ochagent'), ochcarrier:gv('f-ochcarrier'), totalpaid:gv('f-totalpaid'), totalcoll:gv('f-totalcoll'),
+    sname:'Jet Fresh Flowers Distributors', consignee:gv('f-consignee'),
+    notes:gv('f-notes'), ref:gv('f-ref'), createdby:cb,
+    arrived: document.getElementById('f-arrived') ? document.getElementById('f-arrived').checked : false,
+    completed: document.getElementById('f-completed') ? document.getElementById('f-completed').checked : false,
+    arrivedTime: gv('f-arrived-time'),
+    statusNotes: gv('f-status-notes'),
+    podUrl: pendingPOD ? pendingPOD.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podUrl||'':''),
+    podName: pendingPOD ? pendingPOD.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podName||'':''),
+    modifiedAt: now,
+    createdAt: editFlId ? ((DB.flights.find(function(x){return x.id===editFlId;})||{}).createdAt||now) : now
+  };
+  var isEdit = !!editFlId;
+  // Calcular estado automático según ETD/ETA vs hora actual (o confirmación manual)
+  var autoSt = computeAutoStatus(f, null);
+  f.status = autoSt.status;
+  f.manualDelivered = !!(f.arrived || f.completed); // marca que fue confirmado manualmente
+  if (isEdit) { var idx=DB.flights.findIndex(function(x){return x.id===editFlId;}); if(idx>=0)DB.flights[idx]=f; }
+  else { DB.flights.unshift(f); pushNotif('Nuevo envío: '+num+' ('+origin+'→'+dest+') por '+cb, f.confst==='unconfirmed'?'#D97706':'#1B7A3E'); }
+  closeModal('new');
+  toast(isEdit?'Envío actualizado!':'Envío guardado!','ok');
+  renderScreen(screen); updateBadges();
+  await saveFlight_SP(f);
+  renderScreen(screen);
+}
+
+// ══ SAVE AGENCY ══
+async function saveAgency() {
+  var name = gv('ag-name'); if(!name){toast('Nombre de agencia requerido.','err');return;}
+  var a = { id:editAgId||('local_ag_'+Date.now()), name:name, contact:gv('ag-contact'), phone:gv('ag-phone'), email:gv('ag-email'), address:gv('ag-addr'), notes:gv('ag-notes') };
+  if (editAgId) { var idx=DB.agencies.findIndex(function(x){return x.id===editAgId;}); if(idx>=0)DB.agencies[idx]=a; editAgId=null; }
+  else DB.agencies.push(a);
+  closeModal('agency'); toast('Agencia guardada!','ok'); renderScreen(screen);
+  await saveAgency_SP(a);
+}
+function editAgencyFn(id) {
+  var ag=DB.agencies.find(function(a){return a.id===id;}); if(!ag)return;
+  editAgId=id; document.getElementById('modal-agency-title').textContent='Editar Agencia';
+  sv('ag-name',ag.name); sv('ag-contact',ag.contact); sv('ag-phone',ag.phone); sv('ag-email',ag.email); sv('ag-addr',ag.address); sv('ag-notes',ag.notes);
+  document.getElementById('modal-agency').classList.add('open');
+}
+async function deleteAgencyFn(id) {
+  if(!confirm('¿Eliminar esta agencia?'))return;
+  await deleteAgency_SP(id); toast('Agencia eliminada.','ok'); renderScreen(screen);
+}
+
+// ══ RENDER ══
+function go(s) {
+  document.getElementById('s-'+screen).classList.remove('active');
+  var pn=document.getElementById('nav-'+screen); if(pn)pn.classList.remove('active');
+  screen=s;
+  document.getElementById('s-'+s).classList.add('active');
+  var cn=document.getElementById('nav-'+s); if(cn)cn.classList.add('active');
+  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
+  document.getElementById('pg-title').textContent=titles[s]||s;
+  renderScreen(s);
+}
+function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='settings')renderSettingsPage();}
+
+var SL={transit:'En tránsito',delivered:'Entregado',pending:'Pendiente',delayed:'Demorado'};
+var CL={confirmed:'Confirmado',partial:'Parcial',unconfirmed:'Sin confirmar'};
+function sl(s){return SL[s]||s;} function cl(s){return CL[s]||s;}
+function livBtn(num,id){return '<button class="btn xs" style="background:var(--lightgreen);color:var(--green);border-color:var(--midgreen);" onclick="event.stopPropagation();checkLive(\''+esc(num)+'\',\''+id+'\')">✈ Live</button>';}
+function viewBtn(id){return '<button class="btn xs" onclick="event.stopPropagation();openDetail(\''+id+'\')">Ver</button>';}
+function erow(c,m){return '<tr class="erow"><td colspan="'+c+'">'+m+'</td></tr>';}
+function etaSt(f){if(!f.eta)return'<span class="pill pending">Sin ETA</span>';return'<span class="pill ontime">OK</span>';}
+function rateDiff(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;if(e>0&&a>0&&Math.abs(a-e)>0.001)return' <span class="pill late">⚠ Tarifa</span>';return'';}
+
+function renderDash(){
+  var fl=DB.flights, tc=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
+  var sent=fl.reduce(function(s,f){return s+f.bsent;},0), conf=fl.reduce(function(s,f){return s+f.bconf;},0), miss=sent-conf;
+  var rateAlerts=fl.filter(function(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;return e>0&&a>0&&Math.abs(a-e)>0.001;});
+  sv('st-fl',fl.length); document.getElementById('st-fl-s').textContent=fl.length>0?fl.length+' total':'Sin vuelos aún';
+  sv('st-conf',conf); document.getElementById('st-conf-s').textContent=sent>0?Math.round(conf/sent*100)+'% tasa':'—';
+  sv('st-miss',miss); document.getElementById('st-miss-s').textContent=miss>0?miss+' cajas':'—';
+  sv('st-rate-alerts',rateAlerts.length);
+  document.getElementById('st-cost').textContent='$'+tc.toFixed(2);
+  document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' vuelos':'—';
+  var alertCard=document.getElementById('rate-alert-card'), alertList=document.getElementById('rate-alert-list');
+  if(rateAlerts.length>0){alertCard.classList.add('show');alertList.innerHTML=rateAlerts.map(function(f){return'<div class="alert-item">✈ '+esc(f.num)+' ('+esc(f.origin)+'→'+esc(f.dest)+'): Tarifa real $'+parseFloat(f.rate).toFixed(3)+'/kg vs Esperada $'+parseFloat(f.rateExp).toFixed(3)+'/kg — Dif: $'+(parseFloat(f.rate)-parseFloat(f.rateExp)).toFixed(3)+'</div>';}).join('');}
+  else alertCard.classList.remove('show');
+  var ab=document.getElementById('badge-alert'); ab.style.display=rateAlerts.length>0?'':'none'; ab.textContent=rateAlerts.length;
+  var filtered=dashFlt==='all'?fl:fl.filter(function(f){return f.status===dashFlt;});
+  var tb=document.getElementById('dash-tbody'); tb.innerHTML='';
+  if(!filtered.length){tb.innerHTML=erow(13,'Sin vuelos aún — clic en + Nuevo Envío para agregar.');return;}
+  filtered.slice(0,12).forEach(function(f){
+    var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'<span style="color:var(--t3);font-size:10px;">—</span>';
+    var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:12px;">'+esc(f.num)+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'→'+esc(f.dest)+'</td><td>'+esc(f.agName||'—')+'</td><td><span style="font-family:var(--mono);font-size:11px;color:var(--green);">'+esc(f.awb||'—')+'</span></td><td>'+f.bconf+'/'+f.bsent+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+( f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+etaSt(f)+rateDiff(f)+'</td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+pod+'</td><td>'+viewBtn(f.id)+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function renderFlights(){
+  var filtered=flsFlt==='all'?DB.flights:DB.flights.filter(function(f){return f.status===flsFlt;});
+  var tb=document.getElementById('flights-tbody');tb.innerHTML='';
+  if(!filtered.length){tb.innerHTML=erow(22,'Sin vuelos.');return;}
+  filtered.forEach(function(f){
+    var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'—';
+    var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
+    var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:12px;">'+esc(f.num)+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;">'+fmtD(f.etd)+'</td><td style="font-size:11px;">'+fmtD(f.eta)+'</td><td>'+esc(f.agName||'—')+'</td><td><span style="font-family:var(--mono);font-size:11px;color:var(--green);">'+esc(f.awb||'—')+'</span></td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.bmiss>0?'<span style="color:var(--red);font-weight:700;">'+f.bmiss+'</span>':'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function renderAgencies(){
+  var tb=document.getElementById('agencies-tbody');tb.innerHTML='';
+  if(!DB.agencies.length){tb.innerHTML=erow(9,'Sin agencias aún.');return;}
+  DB.agencies.forEach(function(a){
+    var fl=DB.flights.filter(function(f){return f.agId===a.id;});
+    var tb2=fl.reduce(function(s,f){return s+f.bsent;},0), cb=fl.reduce(function(s,f){return s+f.bconf;},0);
+    var rate=tb2>0?Math.round(cb/tb2*100):0, billed=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
+    var rc=rate>=90?'var(--green2)':rate>=70?'var(--amber)':'var(--red)';
+    var tr=document.createElement('tr');tr.className='dr';
+    tr.innerHTML='<td><strong>'+esc(a.name)+'</strong></td><td>'+esc(a.contact||'—')+'</td><td>'+esc(a.phone||'—')+'</td><td>'+esc(a.email||'—')+'</td><td>'+fl.length+'</td><td>'+tb2+'</td><td><span style="font-weight:700;color:'+rc+';">'+rate+'%</span></td><td><strong style="color:var(--green2);">'+(billed>0?'$'+billed.toFixed(2):'—')+'</strong></td><td><div style="display:flex;gap:5px;"><button class="btn xs" onclick="event.stopPropagation();editAgencyFn(\''+a.id+'\')">Editar</button><button class="btn xs danger" onclick="event.stopPropagation();deleteAgencyFn(\''+a.id+'\')">Eliminar</button></div></td>';
+    document.getElementById('agencies-tbody').appendChild(tr);
+  });
+}
+
+function renderPred(){
+  var fl=DB.flights, risks=fl.map(function(f){var r=0;if(f.status==='delayed')r+=50;if(f.confst==='unconfirmed')r+=30;else if(f.confst==='partial')r+=15;if(f.priority==='critical')r+=20;else if(f.priority==='high')r+=10;return{f:f,r:Math.min(r,99)};}).sort(function(a,b){return b.r-a.r;});
+  var avg=risks.length>0?Math.round(risks.reduce(function(s,x){return s+x.r;},0)/risks.length):0;
+  var high=risks.filter(function(x){return x.r>=60;}).length;
+  var miss=fl.reduce(function(s,f){return s+f.bmiss;},0);
+  var del=fl.filter(function(f){return f.status==='delivered';}).length;
+  var ot=fl.length>0?Math.round(del/fl.length*100):0;
+  sv('pr-risk',risks.length>0?avg+'%':'—'); sv('pr-high',high); sv('pr-unc',miss); sv('pr-ot',fl.length>0?ot+'%':'—');
+  var el=document.getElementById('risk-bars');
+  if(!risks.length){el.innerHTML='<div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div>';return;}
+  el.innerHTML='';
+  risks.forEach(function(x){var c=x.r>=70?'var(--red)':x.r>=40?'var(--amber)':x.r>=20?'var(--green)':'var(--green2)';var row=document.createElement('div');row.className='rb-row';row.innerHTML='<span class="rb-lbl">'+esc(x.f.num)+'<br><span style="font-family:var(--font);font-weight:400;font-size:10px;color:var(--t3);">'+esc(x.f.origin)+'→'+esc(x.f.dest)+'</span></span><div class="rb-track"><div class="rb-fill" style="width:'+x.r+'%;background:'+c+'"></div></div><span class="rb-val" style="color:'+c+';">'+x.r+'%</span>';el.appendChild(row);});
+}
+
+function renderSettingsPage(){
+  sv('cfg-claude',CFG.claudeKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
+  var el=document.getElementById('set-agencies');
+  if(!DB.agencies.length){el.innerHTML='<div style="font-size:12px;color:var(--t3);">Sin agencias aún.</div>';return;}
+  el.innerHTML='';
+  DB.agencies.forEach(function(a){var row=document.createElement('div');row.className='ag-row';row.innerHTML='<span><strong>'+esc(a.name)+'</strong>'+(a.contact?' · '+esc(a.contact):'')+(a.email?' · '+esc(a.email):'')+'</span><div style="display:flex;gap:5px;"><button class="btn xs" onclick="editAgencyFn(\''+a.id+'\')">Editar</button><button class="btn xs danger" onclick="deleteAgencyFn(\''+a.id+'\')">Eliminar</button></div>';el.appendChild(row);});
+}
+
+// ══ DETAIL ══
+function openDetail(id){
+  var f=DB.flights.find(function(x){return x.id===id;}); if(!f)return;
+  document.getElementById('detail-title').textContent=f.num+' — Detalle';
+  var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
+  var S=function(t){return'<div class="dsec">'+t+'</div>';};
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>')+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes',f.bmiss>0?'<strong style="color:var(--red);">'+f.bmiss+'</strong>':'0')+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
+  document.getElementById('detail-body').innerHTML=b;
+  document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
+  document.getElementById('btn-edit').onclick=function(){closeModal('detail');openEditFlight(id);};
+  document.getElementById('modal-detail').classList.add('open');
+}
+
+function openEditFlight(id){
+  var f=DB.flights.find(function(x){return x.id===id;}); if(!f)return;
+  editFlId=id; document.getElementById('modal-new-title').textContent='Editar Envío'; document.getElementById('save-flight-btn').textContent='Actualizar envío';
+  populateAgSel(); populateConsignees();
+  sv('f-num',f.num); sv('f-airline',f.airline); sv('f-origin',f.origin); sv('f-dest',f.dest); sv('f-etd',f.etd); sv('f-eta',f.eta); sv('f-status',f.status); sv('f-priority',f.priority);
+  sv('f-agency',f.agId); if(f.agId)onAgencyChange(f.agId); sv('f-awb',f.awb); sv('f-agcontact',f.agcontact); sv('f-agphone',f.agphone); sv('f-agemail',f.agemail);
+  sv('f-bsent',f.bsent||''); sv('f-bconf',f.bconf||''); sv('f-bmiss',f.bmiss||''); sv('f-confst',f.confst); sv('f-weight',f.weight); sv('f-cweight',f.cweight); sv('f-ctype',f.ctype||'Perecedero'); sv('f-handling',f.handling||'Mantener refrigerado'); sv('f-commodity',f.commodity||''); sv('f-hs',f.hs||'');
+  sv('f-rate',f.rateBase!==undefined?f.rateBase:f.rate); sv('f-rate-exp',f.rateExp||''); sv('f-wcharge',f.wcharge); sv('f-valcharge',f.valcharge); sv('f-tax',f.tax); sv('f-maa',f.maa); sv('f-awc',f.awc); sv('f-myc',f.myc); sv('f-esc',f.esc); sv('f-ochagent',f.ochagent); sv('f-ochcarrier',f.ochcarrier); sv('f-totalpaid',f.totalpaid); sv('f-totalcoll',f.totalcoll);
+  sv('f-sname','Jet Fresh Flowers Distributors'); sv('f-consignee',f.consignee||''); sv('f-createdby',f.createdby||''); sv('f-notes',f.notes); sv('f-ref',f.ref);
+  // Restaurar confirmación manual de estado
+  if(document.getElementById('f-arrived')) document.getElementById('f-arrived').checked = !!f.arrived;
+  if(document.getElementById('f-completed')) document.getElementById('f-completed').checked = !!f.completed;
+  sv('f-arrived-time', f.arrivedTime||''); sv('f-status-notes', f.statusNotes||'');
+  onManualStatusChange();
+  if(f.podName){document.getElementById('pod-zone-txt').textContent='POD adjunto: '+f.podName; document.getElementById('pod-status').textContent='✓ POD: '+f.podName; document.getElementById('pod-status').className='upload-status ok';}
+  ['tip-airline','tip-boxes','tip-cost'].forEach(function(i){document.getElementById(i).style.display='none';});
+  document.getElementById('rate-mismatch-alert').style.display='none';
+  document.getElementById('modal-new').classList.add('open');
+}
+
+// ══ SEARCH ══
+function doSearch(){
+  var q=document.getElementById('srch-inp').value.toLowerCase(); if(!q)return;
+  var m=DB.flights.filter(function(f){return(f.num&&f.num.toLowerCase().includes(q))||(f.awb&&f.awb.toLowerCase().includes(q))||(f.agName&&f.agName.toLowerCase().includes(q))||(f.createdby&&f.createdby.toLowerCase().includes(q));});
+  if(m.length===1)openDetail(m[0].id); else if(m.length>1)go('flights'); else aiAsk('Buscar: '+q);
+}
+
+// ══ FILTERS ══
+function dashF(el,v){document.querySelectorAll('#s-dashboard .ftab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');dashFlt=v;renderDash();}
+function flF(el,v){document.querySelectorAll('#s-flights .ftab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');flsFlt=v;renderFlights();}
+
+// ══ NOTIFICATIONS ══
+function pushNotif(msg,color){var el=document.getElementById('notif-list');var item=document.createElement('div');item.className='ni-item';item.innerHTML='<div class="ni-dot" style="background:'+color+';"></div><div><div class="ni-s">'+esc(msg)+'</div><div class="ni-ts">'+nowStr()+'</div></div>';el.insertBefore(item,el.firstChild);updateBadges();}
+function clearNotifs(){document.getElementById('notif-list').innerHTML='<div class="ni-item"><div class="ni-dot" style="background:var(--t3)"></div><div class="ni-s">Sin notificaciones.</div></div>';updateBadges();}
+function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').length;var nb=document.getElementById('badge-notif');nb.textContent=n;nb.style.display=n>0?'':'none';var fb=document.getElementById('badge-fl');fb.textContent=DB.flights.length;fb.style.display=DB.flights.length>0?'':'none';}
+
+// ══ SETTINGS ══
+function saveSettings(){
+  CFG.claudeKey=gv('cfg-claude'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
+  saveLocalCFG(); populateConsignees(); toast('Configuración guardada!','ok');
+}
+async function forceSyncAll_unused(){}
+
+// ══ EXPORT ══
+function exportCSV(){
+  if(!DB.flights.length){toast('Sin vuelos para exportar.','err');return;}
+  var h='Vuelo#,Aerolínea,Origen,Destino,ETD,ETA,Agencia,AWB,CajasEnv,CajasConf,CajasFalt,EstConf,EstVuelo,PesoBruto,PesoFact,TipoCarga,Manejo,Mercancía,CódHS,Tarifa,TarifaEsp,CargoPeso,MAA,AWC,MYC,ESC,OtroAgente,OtroCarrier,TotalPagado,TotalCobrar,Remitente,Consignatario,CreadoPor,Modificado,POD,Notas';
+  var rows=DB.flights.map(function(f){return[f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,f.confst,f.status,f.weight,f.cweight,f.ctype,f.handling,f.commodity,f.hs,f.rate,f.rateExp,f.wcharge,f.maa,f.awc,f.myc,f.esc,f.ochagent,f.ochcarrier,f.totalpaid,f.totalcoll,f.sname,f.consignee,f.createdby,f.modifiedAt,f.podName,f.notes].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');});
+  var blob=new Blob([[h].concat(rows).join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='jff-vuelos-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
+}
+
+// ══ EXPORT EXCEL (.xlsx) — con filtros automáticos ══
+function exportExcel(){
+  if(!DB.flights.length){toast('Sin vuelos para exportar.','err');return;}
+  if (typeof XLSX === 'undefined') {
+    loadSheetJS(function(){ exportExcel(); });
+    return;
+  }
+  var headers=['Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','AWB #','Cajas Enviadas','Cajas Confirmadas','Cajas Faltantes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Mercancía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Remitente','Consignatario','Creado Por','Modificado','POD','Notas'];
+  var rows=DB.flights.map(function(f){
+    return [f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,
+      f.confst==='confirmed'?'Confirmado':f.confst==='partial'?'Parcial':'Sin confirmar',
+      f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':'Pendiente',
+      parseFloat(f.weight)||'', parseFloat(f.cweight)||'', f.ctype, f.handling, f.commodity, f.hs,
+      parseFloat(f.rate)||'', parseFloat(f.rateExp)||'', parseFloat(f.wcharge)||'',
+      parseFloat(f.maa)||'', parseFloat(f.awc)||'', parseFloat(f.myc)||'', parseFloat(f.esc)||'',
+      parseFloat(f.ochagent)||'', parseFloat(f.ochcarrier)||'', parseFloat(f.totalpaid)||'', parseFloat(f.totalcoll)||'',
+      f.sname, f.consignee, f.createdby, f.modifiedAt, f.podName||'', f.notes
+    ];
+  });
+  var wsData = [headers].concat(rows);
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  // Auto-width columns
+  var colWidths = headers.map(function(h,i){
+    var maxLen = h.length;
+    rows.forEach(function(r){ var v=String(r[i]||''); if(v.length>maxLen) maxLen=v.length; });
+    return { wch: Math.min(maxLen+2, 40) };
+  });
+  ws['!cols'] = colWidths;
+  // Enable autofilter on header row
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({s:{r:0,c:0},e:{r:wsData.length-1,c:headers.length-1}}) };
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vuelos');
+  XLSX.writeFile(wb, 'jff-vuelos-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel descargado con filtros activos','ok');
+}
+
+function loadSheetJS(callback){
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = callback;
+  s.onerror = function(){ toast('No se pudo cargar la librería de Excel. Verifica tu conexión.','err'); };
+  document.head.appendChild(s);
+}
+
+// ══ LANGUAGE ══
+function setLang(l,btn){lang=l;document.querySelectorAll('.lang-btns .lb').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');}
+
+// ══ TOAST ══
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'ok');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2800);}
+
+// ══ FALLBACK (sin SharePoint) ══
+function loadLocalFallback_unused(){}
+
+// ══ INIT ══
+window.onload = function() {
+  loadLocalCFG();
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  var script = document.createElement('script');
+  script.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+  script.onload = function() { initMSAL(); };
+  script.onerror = function() {
+    // Fallback CDN
+    var s2 = document.createElement('script');
+    s2.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+    s2.onload = function() { initMSAL(); };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(script);
+};
+</script>
+</body>
+</html>
