@@ -1074,23 +1074,36 @@ function extractAWBFields(text) {
     }
   }
 
-  // Estrategia peso bruto: la fila real tiene "PesoBruto k" — buscar número seguido de k que NO sea el total
-  if (!result.gross_weight) {
-    // Buscar "### k [letra]" que es el peso bruto seguido de la clase de tarifa
-    var grossK = clean.match(/(\d{3,6}(?:\.\d+)?)\s*[kK]\s+[A-Z]{1,2}\s/);
-    if (grossK) result.gross_weight = parseFloat(grossK[1]);
-    else {
-      var grossLabel = clean.match(/Gross\s*Weight[^0-9]{0,20}?(\d{3,6}(?:\.\d+)?)\s*[kK]/i);
-      if (grossLabel) result.gross_weight = parseFloat(grossLabel[1]);
-    }
-  }
-
-  // Piezas
+  // Piezas (primero, para usarlo en la deducción del peso bruto)
   if (!result.boxes_conf) {
     var piecesMatch = clean.match(/PCS:\s*(\d+)/i)
       || clean.match(/(\d+)\s*PIECES/i)
       || clean.match(/No\.?\s*Of?\s*Pieces\D{0,15}?(\d{1,5})\b/i);
     if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
+  }
+
+  // ── PESO BRUTO — múltiples estrategias en cascada ──
+  if (!result.gross_weight) {
+    // 1) "### k [letra clase]" con o sin espacio: "1849 k CN" o "1849k CN" o "1849 K Q"
+    var grossK = clean.match(/(\d{3,6}(?:\.\d+)?)\s*[kK]\s*[A-Z]{1,2}\s+\d/);
+    // 2) tras la etiqueta "Gross Weight"
+    var grossLabel = !grossK && clean.match(/Gross\s*Weight[^0-9]{0,25}?(\d{3,6}(?:\.\d+)?)/i);
+    // 3) resumen "piezas pesobruto total": "262 1849 3168.00" — el peso bruto va entre piezas y un total con decimales
+    var grossSummary = null;
+    if (!grossK && !grossLabel && result.boxes_conf) {
+      var re = new RegExp('\\b' + result.boxes_conf + '\\s+(\\d{3,6})\\s+\\d{2,7}\\.\\d{2}');
+      grossSummary = clean.match(re);
+    }
+    // 4) el número justo antes del peso facturable en la fila (### [### facturable] tarifa total)
+    var grossBeforeCharge = null;
+    if (!grossK && !grossLabel && !grossSummary && result.chargeable_weight) {
+      var re2 = new RegExp('(\\d{3,6})\\s*[kK]?\\s*[A-Z]{0,2}\\s+' + String(result.chargeable_weight).replace('.','\\.') + '\\b');
+      grossBeforeCharge = clean.match(re2);
+    }
+    if (grossK) result.gross_weight = parseFloat(grossK[1]);
+    else if (grossLabel) result.gross_weight = parseFloat(grossLabel[1]);
+    else if (grossSummary) result.gross_weight = parseFloat(grossSummary[1]);
+    else if (grossBeforeCharge) result.gross_weight = parseFloat(grossBeforeCharge[1]);
   }
 
   // Si tenemos bruto pero no facturable, usar el bruto
