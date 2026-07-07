@@ -1049,8 +1049,12 @@ function extractAWBFields(text) {
     result.declaredValue = parseFloat(declaredMatch[1].replace(',', '.'));
   }
 
-  // ── TABLA PRINCIPAL DE CARGA — Rate Class puede ser 1 o 2 letras (Q, CN, etc.) ──
-  var tableMatch = clean.match(/(\d{2,4})\s+(\d{3,5}(?:\.\d+)?)\s*K\s+([A-Z]{1,2})\s+(\d{3,5}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,6}\.\d{2})/i);
+  // ── TABLA PRINCIPAL DE CARGA — múltiples patrones tolerantes a variaciones de formato ──
+  // Estructura estándar: [Piezas] [PesoBruto] [k/K] [ClaseTarifa 1-2 letras] [PesoFacturable] [Tarifa X.XX] [Total X.XX]
+  // Ejemplos reales: "262 1849 k CN 1980 1.60 3168.00" | "98 532 K Q 762.0 1.58 1203.96"
+  var tableMatch =
+       clean.match(/(\d{2,4})\s+(\d{3,6}(?:\.\d+)?)\s*[kK]\s+([A-Z]{1,2})\s+(\d{3,6}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,7}\.\d{2})/)
+    || clean.match(/(\d{2,4})\s+(\d{3,6}(?:\.\d+)?)\s*[kK]\s*([A-Z]{1,2})\s+(\d{3,6}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,7}\.\d{2})/);
   if (tableMatch) {
     result.boxes_conf = parseInt(tableMatch[1]);
     result.gross_weight = parseFloat(tableMatch[2]);
@@ -1059,7 +1063,29 @@ function extractAWBFields(text) {
     result.weight_charge = parseFloat(tableMatch[6]);
   }
 
-  // Estrategia 2: piezas — "PCS: 98" en descripción, o "PIECES", o "No. of Pieces"
+  // Estrategia alternativa: buscar el patrón de fin de fila "PesoFact Tarifa Total" (los 3 números clave juntos)
+  // Ej: "1980 1.60 3168.00" — el peso facturable, tarifa y total siempre van seguidos
+  if (!result.rate || !result.chargeable_weight) {
+    var rowEnd = clean.match(/(\d{3,6}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,7}\.\d{2})(?!\d)/);
+    if (rowEnd) {
+      if (!result.chargeable_weight) result.chargeable_weight = parseFloat(rowEnd[1]);
+      if (!result.rate) result.rate = parseFloat(rowEnd[2]);
+      if (!result.weight_charge) result.weight_charge = parseFloat(rowEnd[3]);
+    }
+  }
+
+  // Estrategia peso bruto: la fila real tiene "PesoBruto k" — buscar número seguido de k que NO sea el total
+  if (!result.gross_weight) {
+    // Buscar "### k [letra]" que es el peso bruto seguido de la clase de tarifa
+    var grossK = clean.match(/(\d{3,6}(?:\.\d+)?)\s*[kK]\s+[A-Z]{1,2}\s/);
+    if (grossK) result.gross_weight = parseFloat(grossK[1]);
+    else {
+      var grossLabel = clean.match(/Gross\s*Weight[^0-9]{0,20}?(\d{3,6}(?:\.\d+)?)\s*[kK]/i);
+      if (grossLabel) result.gross_weight = parseFloat(grossLabel[1]);
+    }
+  }
+
+  // Piezas
   if (!result.boxes_conf) {
     var piecesMatch = clean.match(/PCS:\s*(\d+)/i)
       || clean.match(/(\d+)\s*PIECES/i)
@@ -1067,38 +1093,16 @@ function extractAWBFields(text) {
     if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
   }
 
-  // Estrategia 3: peso bruto — buscar número seguido de "k" (kg) en cualquier parte del documento
-  if (!result.gross_weight) {
-    var grossMatch = clean.match(/Gross\s*Weight[^0-9]{0,20}?(\d{2,6}(?:\.\d+)?)\s*k/i)
-      || clean.match(/(\d{2,6}(?:\.\d+)?)\s*k\b(?!\s*g)/i);
-    if (grossMatch) result.gross_weight = parseFloat(grossMatch[1].replace(',', '.'));
-  }
-
-  // Estrategia 4: peso facturable — saltar el encabezado de tabla, usar el dato de la fila real
-  if (!result.chargeable_weight) {
-    var chargeMatch = clean.match(/Chargeable\s*Weight\s+Rate\s+Charge\s+Total[^\d]*\d+\s+\d+(?:\.\d+)?\s*k\w?\s+[A-Z]{2}\s+(\d{2,6}(?:\.\d+)?)/i)
-      || clean.match(/Chargeable\s*Weight\D{0,8}?(\d{2,6}(?:\.\d+)?)\b/i);
-    if (chargeMatch) result.chargeable_weight = parseFloat(chargeMatch[1].replace(',', '.'));
-  }
+  // Si tenemos bruto pero no facturable, usar el bruto
   if (!result.chargeable_weight && result.gross_weight) result.chargeable_weight = result.gross_weight;
 
-  // Estrategia 5: tarifa — varias estrategias en cascada
-  if (!result.rate) {
-    var rateMatch = clean.match(/Rate\s*\/?\s*Charge[^0-9]{0,15}?(\d{1,3}\.\d{2})\b/i)
-      || clean.match(/\bRate(?!\s*Class)\D{0,20}?(\d{1,3}\.\d{2})\b/i);
-    if (rateMatch) result.rate = parseFloat(rateMatch[1]);
-    else {
-      var allDecimals = clean.match(/(?<![\d.])(\d{1,2}\.\d{2})(?![\d.])/g);
-      if (allDecimals && allDecimals.length === 1) result.rate = parseFloat(allDecimals[0]);
-    }
-  }
-  // Estrategia 5b: si aún no hay tarifa pero tenemos cargo de peso y peso facturable, calcularla (tarifa = cargo ÷ peso)
+  // Tarifa por cálculo si aún falta (tarifa = cargo peso ÷ peso facturable)
   if ((!result.rate || result.rate <= 0) && result.weight_charge && result.chargeable_weight) {
     var calcRate = result.weight_charge / result.chargeable_weight;
     if (calcRate > 0 && calcRate < 100) result.rate = parseFloat(calcRate.toFixed(2));
   }
 
-  // Estrategia 6: cargo por peso (weight charge) — calculado si no se detectó directamente
+  // Cargo de peso por cálculo si falta (cargo = tarifa × peso facturable)
   if (!result.weight_charge && result.rate && result.chargeable_weight) {
     result.weight_charge = parseFloat((result.rate * result.chargeable_weight).toFixed(2));
   }
