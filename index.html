@@ -459,11 +459,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="fs">
         <div class="ft">INFORMACIÓN DEL VUELO</div>
         <div class="fg c4">
-          <div class="field"><label>Vuelo # <span class="req">*</span></label><input id="f-num" placeholder="e.g. LA450" oninput="onFlightNum(this.value)"></div>
-          <div class="field"><label>Aerolínea <span class="req">*</span></label><input id="f-airline" placeholder="e.g. LATAM Airlines"></div>
+          <div class="field"><label>Vuelo #</label><input id="f-num" placeholder="e.g. LA450" oninput="onFlightNum(this.value)"></div>
+          <div class="field"><label>Aerolínea</label><input id="f-airline" placeholder="e.g. LATAM Airlines"></div>
           <div class="field"><label>Origen <span class="req">*</span></label><select id="f-origin"><option value="UIO">UIO — Quito</option><option value="MED">MED — Medellín</option><option value="BOG">BOG — Bogotá</option><option value="GUAT">GUAT — Guatemala City</option></select></div>
           <div class="field"><label>Destino <span class="req">*</span></label><select id="f-dest"><option value="MIA">MIA — Miami</option><option value="JFK">JFK — New York</option><option value="LAX">LAX — Los Angeles</option><option value="ORD">ORD — Chicago</option><option value="AMS">AMS — Amsterdam</option><option value="MAD">MAD — Madrid</option><option value="PTY">PTY — Panama City</option></select></div>
-          <div class="field"><label>ETD <span class="req">*</span></label><input type="datetime-local" id="f-etd"></div>
+          <div class="field"><label>ETD</label><input type="datetime-local" id="f-etd"></div>
           <div class="field"><label>ETA</label><input type="datetime-local" id="f-eta"></div>
           <div class="field"><label>Estado del vuelo</label><select id="f-status"><option value="pending">Pendiente</option><option value="transit">En tránsito</option><option value="delivered">Entregado</option></select></div>
           <div class="field"><label>Prioridad</label><select id="f-priority"><option value="normal">Normal</option><option value="high">Alta</option><option value="critical">Crítica</option></select></div>
@@ -1904,9 +1904,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')['new','agen
 // ══ SAVE FLIGHT ══
 async function saveFlight() {
   var num=gv('f-num'),airline=gv('f-airline'),origin=gv('f-origin'),dest=gv('f-dest'),etd=gv('f-etd'),cb=gv('f-createdby');
-  if (!num||!airline||!origin||!dest||!etd) { toast('Completa todos los campos requeridos.','err'); return; }
+  if (!origin||!dest) { toast('Selecciona origen y destino.','err'); return; }
   if (!cb) { toast('Selecciona quién crea este envío.','err'); return; }
   if (!gv('f-consignee')) { toast('Selecciona un consignatario.','err'); return; }
+  // Si no hay número de vuelo, usar el AWB o un identificador genérico para mostrar en las tablas
+  if (!num) num = gv('f-awb') ? ('AWB ' + gv('f-awb')) : 'Sin vuelo';
   var agId=gv('f-agency'), agName='';
   if (agId) { var ag=DB.agencies.find(function(a){return a.id===agId;}); if(ag) agName=ag.name; }
   var now = nowStr();
