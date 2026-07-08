@@ -406,7 +406,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="ss">
             <div class="ss-t">API Keys</div>
             <div class="fg" style="gap:9px;">
-              <div class="field"><label>Claude API Key <span class="req">*</span> <span style="font-size:10px;color:var(--t3);">(console.anthropic.com)</span></label><input id="cfg-claude" type="password" placeholder="sk-ant-..."></div>
+              <div class="field"><label>Groq API Key <span style="font-size:10px;color:var(--t3);">(gratis en console.groq.com — para IA y asistente)</span></label><input id="cfg-groq" type="password" placeholder="gsk_..."></div>
               <div class="field"><label>AviationStack API Key <span style="font-size:10px;color:var(--t3);">(gratis — aviationstack.com)</span></label><input id="cfg-aviation" type="password" placeholder="Tu key gratuita"></div>
               <div class="field"><label>Consignatarios (separados por coma)</label><input id="cfg-consignees" placeholder="MAS Customs, Delivery Plus, otro…"></div>
               <button class="btn pr" onclick="saveSettings()">Guardar configuración</button>
@@ -518,6 +518,38 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         </div>
         <div class="ai-tip" id="tip-cost"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-cost-txt"></span></div>
         <div id="rate-mismatch-alert" style="display:none;background:var(--amberbg);color:var(--ambertxt);border:1px solid #F59E0B;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;"></div>
+      </div>
+      <!-- CONTROL DE CALIDAD Y USDA -->
+      <div class="fs">
+        <div class="ft">CONTROL DE CALIDAD Y USDA</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Registra incidencias con la carga: cajas dañadas, cajas perdidas por la aerolínea, y retenciones de USDA en destino.</div>
+        <div class="fg c4">
+          <div class="field"><label>Cajas dañadas</label><input id="f-bdamaged" type="number" min="0" placeholder="0" oninput="calcQC()"></div>
+          <div class="field"><label>Cajas perdidas (aerolínea)</label><input id="f-blost" type="number" min="0" placeholder="0" oninput="calcQC()"></div>
+          <div class="field"><label>Cajas en hold USDA</label><input id="f-busda" type="number" min="0" placeholder="0" oninput="onUsdaChange()"></div>
+          <div class="field"><label>Cajas liberadas por USDA</label><input id="f-busda-released" type="number" min="0" placeholder="0" oninput="onUsdaChange()"></div>
+        </div>
+        <div class="fg c2" style="margin-top:10px;">
+          <label class="check-card" id="check-usda-card">
+            <input type="checkbox" id="f-usda-hold" onchange="onUsdaChange()">
+            <div>
+              <div class="check-title">🛃 Carga retenida por USDA</div>
+              <div class="check-sub">Marca si USDA puso la carga en hold para inspección</div>
+            </div>
+          </label>
+          <label class="check-card" id="check-released-card">
+            <input type="checkbox" id="f-usda-freed" onchange="onUsdaChange()">
+            <div>
+              <div class="check-title">✅ Carga liberada por USDA</div>
+              <div class="check-sub">Marca cuando USDA autoriza la salida de la carga</div>
+            </div>
+          </label>
+        </div>
+        <div class="fg c2" style="margin-top:10px;">
+          <div class="field"><label>Fecha/hora de liberación USDA</label><input type="datetime-local" id="f-usda-freed-time"></div>
+          <div class="field"><label>Observaciones de calidad / USDA</label><textarea id="f-qc-notes" placeholder="Ej: 5 cajas con daño por frío, 2 perdidas en tránsito, USDA retuvo por documentación..." style="min-height:44px;"></textarea></div>
+        </div>
+        <div class="ai-tip" id="tip-qc" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-qc-txt"></span></div>
       </div>
       <!-- SHIPPER & CONSIGNEE -->
       <div class="fs">
@@ -695,7 +727,7 @@ var flsFlt = 'all';
 var chatHist = [];
 var liveCache = {};
 var DB = { flights: [], agencies: [] };
-var CFG = { claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus' };
+var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus' };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -1528,22 +1560,43 @@ function dbSummary() {
   }).join(';') + ' | AGENCIAS(' + DB.agencies.length + '): ' + DB.agencies.map(function(a){ return a.name+'('+a.phone+','+a.email+')'; }).join(';');
 }
 
+// ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
+// Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
+async function callAI(systemPrompt, messages) {
+  if (!CFG.groqKey) {
+    throw new Error('NO_KEY');
+  }
+  var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + CFG.groqKey
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 1000,
+      messages: [{ role: 'system', content: systemPrompt }].concat(messages)
+    })
+  });
+  var data = await res.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || 'Sin respuesta.';
+}
+
 async function aiAsk(q) {
   var el = document.getElementById('ai-result');
   el.className = 'ai-bubble';
   el.innerHTML = '<span class="dp"><span></span><span></span><span></span></span>';
-  if (!CFG.claudeKey) { el.textContent = 'Agrega tu Claude API Key en Configuración para usar la IA.'; return; }
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.claudeKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
-        system: 'Eres un asistente de logística para Jet Fresh Flowers Distributors, empresa de carga aérea perecedera (rosas/flores, Ecuador→USA). Sé conciso y accionable. Responde en español. Datos actuales:\n' + dbSummary(),
-        messages: [{ role: 'user', content: q }] })
-    });
-    var data = await res.json();
-    el.textContent = (data.content && data.content[0] && data.content[0].text) || 'Sin respuesta.';
-  } catch(e) { el.textContent = 'Error IA: ' + e.message; }
+    var text = await callAI(
+      'Eres un asistente de logística para Jet Fresh Flowers Distributors, empresa de carga aérea perecedera (rosas/flores, Ecuador→USA). Sé conciso y accionable. Responde en español. Datos actuales:\n' + dbSummary(),
+      [{ role: 'user', content: q }]
+    );
+    el.textContent = text;
+  } catch(e) {
+    if (e.message === 'NO_KEY') el.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para usar la IA. Consíguela en console.groq.com';
+    else el.textContent = 'No se pudo conectar con la IA: ' + e.message;
+  }
 }
 
 async function sendChat() {
@@ -1553,21 +1606,18 @@ async function sendChat() {
   chatMsg('user', q); chatHist.push({ role: 'user', content: q });
   var loading = chatMsg('ai', '…');
   loading.innerHTML = '<span class="dp"><span></span><span></span><span></span></span>';
-  if (!CFG.claudeKey) { loading.textContent = 'Agrega tu Claude API Key en Configuración.'; return; }
+  if (!CFG.groqKey) { loading.textContent = 'Agrega tu Groq API Key (gratis) en Configuración. Consíguela en console.groq.com'; return; }
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.claudeKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
-        system: 'Eres asistente de logística para Jet Fresh Flowers Distributors (carga aérea perecedera, rosas/flores, Ecuador→USA). Datos:\n' + dbSummary(),
-        messages: chatHist.slice(-16) })
-    });
-    var data = await res.json();
-    var text = (data.content && data.content[0] && data.content[0].text) || 'Sin respuesta.';
+    var text = await callAI(
+      'Eres asistente de logística para Jet Fresh Flowers Distributors (carga aérea perecedera, rosas/flores, Ecuador→USA). Responde en español, conciso y accionable. Datos:\n' + dbSummary(),
+      chatHist.slice(-16)
+    );
     loading.textContent = text;
     chatHist.push({ role: 'assistant', content: text });
     if (chatHist.length > 20) chatHist = chatHist.slice(-20);
-  } catch(e) { loading.textContent = 'Error: ' + e.message; }
+  } catch(e) {
+    loading.textContent = 'No se pudo conectar con la IA: ' + e.message;
+  }
 }
 
 function chatMsg(role, text) {
@@ -1662,6 +1712,49 @@ function onManualStatusChange() {
   }
 }
 
+// Control de calidad: muestra un resumen de incidencias
+function calcQC() {
+  var damaged = parseInt(gv('f-bdamaged')) || 0;
+  var lost = parseInt(gv('f-blost')) || 0;
+  var usda = parseInt(gv('f-busda')) || 0;
+  var tip = document.getElementById('tip-qc');
+  var txt = document.getElementById('tip-qc-txt');
+  if (damaged > 0 || lost > 0 || usda > 0) {
+    var parts = [];
+    if (damaged > 0) parts.push(damaged + ' dañada' + (damaged>1?'s':''));
+    if (lost > 0) parts.push(lost + ' perdida' + (lost>1?'s':'') + ' por aerolínea');
+    if (usda > 0) parts.push(usda + ' en hold USDA');
+    txt.textContent = 'Incidencias registradas: ' + parts.join(', ') + '.';
+    tip.style.display = 'flex';
+  } else {
+    tip.style.display = 'none';
+  }
+}
+
+// Maneja los cambios de estado USDA (hold/liberado)
+function onUsdaChange() {
+  var hold = document.getElementById('f-usda-hold');
+  var freed = document.getElementById('f-usda-freed');
+  var holdCard = document.getElementById('check-usda-card');
+  var freedCard = document.getElementById('check-released-card');
+  var usdaBoxes = parseInt(gv('f-busda')) || 0;
+  // Si hay cajas en hold, marca automáticamente el checkbox de retención
+  if (usdaBoxes > 0 && hold && !hold.checked && !freed.checked) {
+    hold.checked = true;
+  }
+  // Liberado implica que ya no está en hold activo
+  if (holdCard) holdCard.classList.toggle('on', hold && hold.checked);
+  if (freedCard) freedCard.classList.toggle('on', freed && freed.checked);
+  // Autocompletar fecha de liberación
+  var freedTime = document.getElementById('f-usda-freed-time');
+  if (freed && freed.checked && freedTime && !freedTime.value) {
+    var n = new Date();
+    n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+    freedTime.value = n.toISOString().slice(0,16);
+  }
+  calcQC();
+}
+
 function calcAll() {
   var sent=parseInt(gv('f-bsent'))||0, conf=parseInt(gv('f-bconf'))||0, miss=Math.max(0,sent-conf);
   sv('f-bmiss', miss>0?miss:'');
@@ -1705,7 +1798,9 @@ function calcAll() {
 
 // ══ CLEAR FORM ══
 function clearFlightForm() {
-  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes'].forEach(function(i){sv(i,'');});
+  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes'].forEach(function(i){sv(i,'');});
+  ['f-usda-hold','f-usda-freed'].forEach(function(i){var e=document.getElementById(i);if(e)e.checked=false;});
+  ['check-usda-card','check-released-card'].forEach(function(i){var e=document.getElementById(i);if(e)e.classList.remove('on');});
   sv('f-origin','UIO'); sv('f-dest','MIA'); sv('f-status','pending'); sv('f-priority','normal');
   sv('f-agency',''); sv('f-confst','unconfirmed'); sv('f-ctype','Perecedero'); sv('f-handling','Mantener refrigerado');
   sv('f-commodity',''); sv('f-consignee',''); sv('f-createdby','');
@@ -1760,6 +1855,14 @@ async function saveFlight() {
     completed: document.getElementById('f-completed') ? document.getElementById('f-completed').checked : false,
     arrivedTime: gv('f-arrived-time'),
     statusNotes: gv('f-status-notes'),
+    bdamaged: parseInt(gv('f-bdamaged'))||0,
+    blost: parseInt(gv('f-blost'))||0,
+    busda: parseInt(gv('f-busda'))||0,
+    busdaReleased: parseInt(gv('f-busda-released'))||0,
+    usdaHold: document.getElementById('f-usda-hold') ? document.getElementById('f-usda-hold').checked : false,
+    usdaFreed: document.getElementById('f-usda-freed') ? document.getElementById('f-usda-freed').checked : false,
+    usdaFreedTime: gv('f-usda-freed-time'),
+    qcNotes: gv('f-qc-notes'),
     podUrl: pendingPOD ? pendingPOD.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podUrl||'':''),
     podName: pendingPOD ? pendingPOD.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podName||'':''),
     modifiedAt: now,
@@ -1888,7 +1991,7 @@ function renderPred(){
 }
 
 function renderSettingsPage(){
-  sv('cfg-claude',CFG.claudeKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
+  sv('cfg-groq',CFG.groqKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
   var el=document.getElementById('set-agencies');
   if(!DB.agencies.length){el.innerHTML='<div style="font-size:12px;color:var(--t3);">Sin agencias aún.</div>';return;}
   el.innerHTML='';
@@ -1901,7 +2004,7 @@ function openDetail(id){
   document.getElementById('detail-title').textContent=f.num+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
-  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>')+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes',f.bmiss>0?'<strong style="color:var(--red);">'+f.bmiss+'</strong>':'0')+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>')+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes',f.bmiss>0?'<strong style="color:var(--red);">'+f.bmiss+'</strong>':'0')+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
   if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
   document.getElementById('detail-body').innerHTML=b;
   document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
@@ -1923,6 +2026,12 @@ function openEditFlight(id){
   if(document.getElementById('f-completed')) document.getElementById('f-completed').checked = !!f.completed;
   sv('f-arrived-time', f.arrivedTime||''); sv('f-status-notes', f.statusNotes||'');
   onManualStatusChange();
+  // Restaurar control de calidad y USDA
+  sv('f-bdamaged', f.bdamaged||''); sv('f-blost', f.blost||''); sv('f-busda', f.busda||''); sv('f-busda-released', f.busdaReleased||'');
+  if(document.getElementById('f-usda-hold')) document.getElementById('f-usda-hold').checked = !!f.usdaHold;
+  if(document.getElementById('f-usda-freed')) document.getElementById('f-usda-freed').checked = !!f.usdaFreed;
+  sv('f-usda-freed-time', f.usdaFreedTime||''); sv('f-qc-notes', f.qcNotes||'');
+  onUsdaChange();
   if(f.podName){document.getElementById('pod-zone-txt').textContent='POD adjunto: '+f.podName; document.getElementById('pod-status').textContent='✓ POD: '+f.podName; document.getElementById('pod-status').className='upload-status ok';}
   ['tip-airline','tip-boxes','tip-cost'].forEach(function(i){document.getElementById(i).style.display='none';});
   document.getElementById('rate-mismatch-alert').style.display='none';
@@ -1947,7 +2056,7 @@ function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').
 
 // ══ SETTINGS ══
 function saveSettings(){
-  CFG.claudeKey=gv('cfg-claude'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
+  CFG.groqKey=gv('cfg-groq'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
   saveLocalCFG(); populateConsignees(); toast('Configuración guardada!','ok');
 }
 async function forceSyncAll_unused(){}
