@@ -932,6 +932,43 @@ function boxSummary(f) {
   return parts.join(' | ');
 }
 
+// Notifica cuando se registran cajas en hold USDA (se llama al guardar el vuelo)
+async function notifyUsdaHold(f, prevUsda, prevFreed) {
+  if (!emailConfigured() || !CFG.notifyOnUsda) return;
+  var ident = f.awb ? ('AWB ' + f.awb) : (f.num || 'Envío');
+  var route = (f.origin||'?') + '→' + (f.dest||'?');
+  var usda = parseInt(f.busda)||0, released = parseInt(f.busdaReleased)||0;
+
+  // Aviso 1: nuevas cajas puestas en hold (antes no había o había menos)
+  if (usda > 0 && usda > (prevUsda||0) && !f.usdaFreed) {
+    var keyHold = f.id + '_usda_hold_' + usda;
+    if (!_sentNotifs[keyHold]) {
+      _sentNotifs[keyHold] = true;
+      var sent = await sendEmail(
+        '🛃 Cajas retenidas por USDA — ' + ident,
+        'ATENCIÓN: USDA retuvo ' + usda + ' cajas del envío ' + ident + ' (' + route + ', vuelo ' + (f.num||'—') + ').\n\n'
+          + boxSummary(f) + (f.qcNotes ? '\n\nObservaciones: ' + f.qcNotes : '') + '\n\nRevisa y da seguimiento a la liberación.',
+        f.num
+      );
+      if (sent) pushNotif('Correo enviado: ' + ident + ' — ' + usda + ' cajas en hold USDA', '#B45309');
+    }
+  }
+  // Aviso 2: cajas liberadas por USDA
+  if ((f.usdaFreed || released > 0) && !prevFreed) {
+    var keyFreed = f.id + '_usda_freed';
+    if (!_sentNotifs[keyFreed]) {
+      _sentNotifs[keyFreed] = true;
+      var sent2 = await sendEmail(
+        '✅ Cajas liberadas por USDA — ' + ident,
+        'BUENA NOTICIA: USDA liberó ' + (released||usda) + ' cajas del envío ' + ident + ' (' + route + ', vuelo ' + (f.num||'—') + ').\n\n'
+          + boxSummary(f) + (f.usdaFreedTime ? '\n\nLiberado: ' + fmtD(f.usdaFreedTime) : ''),
+        f.num
+      );
+      if (sent2) pushNotif('Correo enviado: ' + ident + ' — cajas liberadas por USDA', '#1B7A3E');
+    }
+  }
+}
+
 
 function exportBackup() {
   try {
@@ -2146,6 +2183,12 @@ async function saveFlight() {
     createdAt: editFlId ? ((DB.flights.find(function(x){return x.id===editFlId;})||{}).createdAt||now) : now
   };
   var isEdit = !!editFlId;
+  // Capturar valores USDA previos para comparar (solo en edición)
+  var prevUsda = 0, prevFreed = false;
+  if (isEdit) {
+    var existing = DB.flights.find(function(x){return x.id===editFlId;});
+    if (existing) { prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed; }
+  }
   // Calcular estado automático según ETD/ETA vs hora actual (o confirmación manual)
   var autoSt = computeAutoStatus(f, null);
   f.status = autoSt.status;
@@ -2156,6 +2199,8 @@ async function saveFlight() {
   toast(isEdit?'Envío actualizado!':'Envío guardado!','ok');
   renderScreen(screen); updateBadges();
   await saveFlight_SP(f);
+  // Notificar cambios de USDA por correo
+  notifyUsdaHold(f, prevUsda, prevFreed);
   renderScreen(screen);
 }
 
