@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -108,11 +109,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px
 .alert-title{font-size:12px;font-weight:700;color:#92400E;margin-bottom:6px;}
 .alert-item{font-size:11px;color:#78350F;padding:4px 0;border-bottom:1px solid #FDE68A;}
 .alert-item:last-child{border-bottom:none;}
-.tw{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:12px;}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px;}
 th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:#F6FBF8;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 th:hover{background:var(--lightgreen);}
-td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--t1);vertical-align:middle;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--t1);vertical-align:middle;white-space:nowrap;}
 tr:last-child td{border-bottom:none;}
 tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 .erow td{text-align:center;padding:28px;color:var(--t3);}
@@ -328,9 +329,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         </div>
         <div class="card" style="margin-bottom:14px;">
           <div class="ch"><span class="ct">📊 Análisis Visual</span><span style="font-size:10px;color:var(--t3);">Actualizado en tiempo real</span></div>
-          <div id="dash-charts" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
-            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">Tarifa promedio por aerolínea ($/kg)</div><canvas id="chart-rate" height="180"></canvas></div>
-            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">AWBs por puerto de origen</div><canvas id="chart-port" height="180"></canvas></div>
+          <div id="dash-charts" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">Tarifa promedio por aerolínea ($/kg)</div><div style="height:200px;position:relative;"><canvas id="chart-rate"></canvas></div></div>
+            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">AWBs por puerto de origen</div><div style="height:200px;position:relative;"><canvas id="chart-port"></canvas></div></div>
             <div style="grid-column:1/-1;">
               <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
                 <span style="font-size:12px;font-weight:700;color:var(--t2);">Cajas por período</span>
@@ -341,11 +342,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                   <option value="semester">Semestre</option>
                 </select>
               </div>
-              <canvas id="chart-volume" height="120"></canvas>
+              <div style="height:220px;position:relative;"><canvas id="chart-volume"></canvas></div>
             </div>
             <div style="grid-column:1/-1;">
               <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">📈 Tendencia y proyección de envíos</div>
-              <canvas id="chart-trend" height="120"></canvas>
+              <div style="height:240px;position:relative;"><canvas id="chart-trend"></canvas></div>
               <div id="trend-ai" style="margin-top:12px;font-size:12px;color:var(--t2);background:var(--lightgreen);border-radius:8px;padding:10px 14px;line-height:1.5;display:none;"></div>
               <div style="text-align:center;margin-top:10px;"><button class="btn xs pr" onclick="explainTrend()">🤖 Interpretar tendencia con IA</button></div>
             </div>
@@ -369,7 +370,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span class="ct">Vuelos Recientes</span>
             <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="dashF(this,'all')">Todos</span><span class="ftab" onclick="dashF(this,'transit')">En tránsito</span><span class="ftab" onclick="dashF(this,'pending')">Pendiente</span><span class="ftab" onclick="dashF(this,'delivered')">Entregado</span></div></div>
           </div>
-          <div class="tw"><table><thead><tr><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>AWB #</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Estado ETA</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Estado ETA</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -439,6 +440,20 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <div class="field"><label>Groq API Key <span style="font-size:10px;color:var(--t3);">(gratis en console.groq.com — para IA y asistente)</span></label><input id="cfg-groq" type="password" placeholder="gsk_..."></div>
               <div class="field"><label>AviationStack API Key <span style="font-size:10px;color:var(--t3);">(gratis — aviationstack.com)</span></label><input id="cfg-aviation" type="password" placeholder="Tu key gratuita"></div>
               <div class="field"><label>Consignatarios (separados por coma)</label><input id="cfg-consignees" placeholder="MAS Customs, Delivery Plus, otro…"></div>
+              <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">📧 Notificaciones por correo (EmailJS)</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:10px;line-height:1.4;">Gratis (200/mes) en emailjs.com. Necesitas los 3 datos de tu cuenta. <a href="https://dashboard.emailjs.com" target="_blank" style="color:var(--green);">Abrir EmailJS ↗</a></div>
+                <div class="field"><label>Service ID</label><input id="cfg-email-service" placeholder="service_xxxxxxx"></div>
+                <div class="field"><label>Template ID</label><input id="cfg-email-template" placeholder="template_xxxxxxx"></div>
+                <div class="field"><label>Public Key</label><input id="cfg-email-key" type="password" placeholder="Tu public key"></div>
+                <div class="field"><label>Correos que reciben avisos (separados por coma)</label><input id="cfg-notify-emails" placeholder="tu@correo.com, broker@correo.com"></div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+                  <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="checkbox" id="cfg-notify-arrival" style="width:15px;height:15px;accent-color:var(--green);"> Avisar cuando un vuelo arribe</label>
+                  <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="checkbox" id="cfg-notify-delay" style="width:15px;height:15px;accent-color:var(--green);"> Avisar cuando un vuelo se demore</label>
+                  <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="checkbox" id="cfg-notify-usda" style="width:15px;height:15px;accent-color:var(--green);"> Avisar sobre retenciones USDA</label>
+                </div>
+                <button class="btn" onclick="sendTestEmail()" style="margin-top:8px;width:100%;">✉ Enviar correo de prueba</button>
+              </div>
               <button class="btn pr" onclick="saveSettings()">Guardar configuración</button>
             </div>
           </div>
@@ -764,7 +779,7 @@ var flsFlt = 'all';
 var chatHist = [];
 var liveCache = {};
 var DB = { flights: [], agencies: [] };
-var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus' };
+var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -831,7 +846,93 @@ function persistDB() {
   try { localStorage.setItem('jff_db', JSON.stringify(DB)); } catch(e) {}
 }
 
-// ══ RESPALDO: exportar toda la base de datos a un archivo JSON ══
+// ══ NOTIFICACIONES POR CORREO (EmailJS) ══
+function emailConfigured() {
+  return CFG.emailServiceId && CFG.emailTemplateId && CFG.emailPublicKey && CFG.notifyEmails;
+}
+
+async function sendEmail(subject, message, flightNum) {
+  if (!emailConfigured()) return false;
+  if (typeof emailjs === 'undefined') return false;
+  try {
+    emailjs.init({ publicKey: CFG.emailPublicKey });
+    var recipients = CFG.notifyEmails.split(',').map(function(e){return e.trim();}).filter(Boolean);
+    // EmailJS envía uno por destinatario
+    for (var i = 0; i < recipients.length; i++) {
+      await emailjs.send(CFG.emailServiceId, CFG.emailTemplateId, {
+        to_email: recipients[i],
+        subject: subject,
+        message: message,
+        flight_num: flightNum || '',
+        company: 'Jet Fresh Flowers Distributors',
+        sent_at: new Date().toLocaleString('es-EC')
+      });
+    }
+    return true;
+  } catch(e) {
+    console.error('Error EmailJS:', e);
+    return false;
+  }
+}
+
+async function sendTestEmail() {
+  // Guardar primero la config actual para usar los valores del formulario
+  CFG.emailServiceId=gv('cfg-email-service'); CFG.emailTemplateId=gv('cfg-email-template');
+  CFG.emailPublicKey=gv('cfg-email-key'); CFG.notifyEmails=gv('cfg-notify-emails');
+  if (!emailConfigured()) { toast('Completa los 3 datos de EmailJS y al menos un correo.', 'err'); return; }
+  toast('Enviando correo de prueba…', 'ok');
+  var ok = await sendEmail(
+    'Prueba de TrackFlow Air ✈',
+    'Este es un correo de prueba de TrackFlow Air. Si lo recibes, las notificaciones están configuradas correctamente y recibirás avisos automáticos sobre tus vuelos.',
+    'PRUEBA'
+  );
+  if (ok) toast('✓ Correo de prueba enviado. Revisa tu bandeja.', 'ok');
+  else toast('No se pudo enviar. Verifica los datos de EmailJS.', 'err');
+}
+
+// Registra qué notificaciones ya se enviaron para no duplicar
+var _sentNotifs = {};
+async function checkAndNotify(f, oldStatus, newStatus) {
+  if (!emailConfigured()) return;
+  var key = f.id + '_' + newStatus;
+  if (_sentNotifs[key]) return; // ya notificado
+
+  var ident = f.awb ? ('AWB ' + f.awb) : (f.num || 'Envío');
+  var route = (f.origin||'?') + '→' + (f.dest||'?');
+
+  // Arribo
+  if (CFG.notifyOnArrival && newStatus === 'delivered' && oldStatus !== 'delivered') {
+    _sentNotifs[key] = true;
+    var sent = await sendEmail(
+      '✅ Vuelo arribado — ' + ident,
+      'El envío ' + ident + ' (' + route + ', vuelo ' + (f.num||'—') + ') ha ARRIBADO a destino.\n\n' + boxSummary(f),
+      f.num
+    );
+    if (sent) pushNotif('Correo enviado: ' + ident + ' arribó', '#1B7A3E');
+  }
+  // Demora
+  if (CFG.notifyOnDelay && newStatus === 'delayed' && oldStatus !== 'delayed') {
+    _sentNotifs[key] = true;
+    var sent2 = await sendEmail(
+      '🔴 Vuelo demorado — ' + ident,
+      'ATENCIÓN: El envío ' + ident + ' (' + route + ', vuelo ' + (f.num||'—') + ') está DEMORADO.\n\nRevisa el estado en TrackFlow Air.',
+      f.num
+    );
+    if (sent2) pushNotif('Correo enviado: ' + ident + ' demorado', '#991B1B');
+  }
+}
+
+function boxSummary(f) {
+  var parts = [];
+  if (f.bsent) parts.push('Cajas enviadas: ' + f.bsent);
+  if (f.bconf) parts.push('Confirmadas: ' + f.bconf);
+  if (f.bdamaged) parts.push('Dañadas: ' + f.bdamaged);
+  if (f.blost) parts.push('Perdidas: ' + f.blost);
+  if (f.busda) parts.push('En hold USDA: ' + f.busda);
+  return parts.join(' | ');
+}
+
+
 function exportBackup() {
   try {
     var backup = {
@@ -1476,9 +1577,12 @@ function autoUpdateAllStatuses() {
     if (f.status === 'delivered' && f.manualDelivered) return; // no tocar si fue marcado manualmente entregado
     var auto = computeAutoStatus(f, null);
     if (auto.status !== f.status) {
+      var oldStatus = f.status;
       f.status = auto.status;
       f.modifiedAt = nowStr();
       changed = true;
+      // Disparar notificación por correo si aplica
+      checkAndNotify(f, oldStatus, auto.status);
     }
   });
   if (changed) { persistDB(); renderScreen(screen); updateBadges(); }
@@ -2159,7 +2263,7 @@ function renderDashCharts(){
   if (ctxR) _dashCharts.rate = new Chart(ctxR, {
     type: 'bar',
     data: { labels: airLabels, datasets: [{ label: '$/kg promedio', data: airAvg, backgroundColor: green, borderRadius: 5 }] },
-    options: { plugins: { legend: { display: false }, tooltip:{callbacks:{label:function(c){return '$'+c.raw+'/kg';}}} },
+    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { display: false }, tooltip:{callbacks:{label:function(c){return '$'+c.raw+'/kg';}}} },
       scales: { y: { beginAtZero: false, ticks:{font:{size:10},callback:function(v){return '$'+v;}} }, x:{ticks:{font:{size:9}}} } }
   });
 
@@ -2171,7 +2275,7 @@ function renderDashCharts(){
   if (ctxP) _dashCharts.port = new Chart(ctxP, {
     type: 'doughnut',
     data: { labels: portLabels, datasets: [{ data: portData, backgroundColor: palette, borderWidth: 0 }] },
-    options: { plugins: { legend: { position: 'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} },
+    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { position: 'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} },
       tooltip:{callbacks:{label:function(c){return c.label+': '+c.raw+' AWB';}}} }, cutout: '55%' }
   });
 
@@ -2189,7 +2293,7 @@ function renderDashCharts(){
   if (ctxV) _dashCharts.volume = new Chart(ctxV, {
     type: 'bar',
     data: { labels: perLabels, datasets: [{ label: 'Cajas enviadas', data: perData, backgroundColor: blue, borderRadius: 5 }] },
-    options: { plugins: { legend: { display: false } }, scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
+    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { display: false } }, scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
   });
 
   // ── 4) TENDENCIA Y PROYECCIÓN ──
@@ -2217,7 +2321,7 @@ function renderDashCharts(){
         { label: 'Cajas reales', data: trendActual, borderColor: green, backgroundColor: 'rgba(34,163,81,.1)', tension: 0.3, spanGaps: false, pointRadius: 4, fill: true },
         { label: 'Tendencia / proyección', data: trendLine, borderColor: amber, borderDash: [6,5], tension: 0.3, pointRadius: 2, fill: false }
       ] },
-      options: { plugins: { legend: { position:'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} } },
+      options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { position:'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} } },
         scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:9}}} } }
     });
   } else {
@@ -2317,7 +2421,7 @@ function renderDash(){
   filtered.slice(0,12).forEach(function(f){
     var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'<span style="color:var(--t3);font-size:10px;">—</span>';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
-    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:12px;">'+esc(f.num)+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'→'+esc(f.dest)+'</td><td>'+esc(f.agName||'—')+'</td><td><span style="font-family:var(--mono);font-size:11px;color:var(--green);">'+esc(f.awb||'—')+'</span></td><td>'+f.bconf+'/'+f.bsent+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+( f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+etaSt(f)+rateDiff(f)+'</td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+pod+'</td><td>'+viewBtn(f.id)+'</td>';
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'→'+esc(f.dest)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bconf+'/'+f.bsent+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+( f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+etaSt(f)+rateDiff(f)+'</td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+pod+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
 }
@@ -2365,6 +2469,10 @@ function renderPred(){
 
 function renderSettingsPage(){
   sv('cfg-groq',CFG.groqKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
+  sv('cfg-email-service',CFG.emailServiceId||''); sv('cfg-email-template',CFG.emailTemplateId||''); sv('cfg-email-key',CFG.emailPublicKey||''); sv('cfg-notify-emails',CFG.notifyEmails||'');
+  var na=document.getElementById('cfg-notify-arrival'); if(na)na.checked=CFG.notifyOnArrival!==false;
+  var nd=document.getElementById('cfg-notify-delay'); if(nd)nd.checked=CFG.notifyOnDelay!==false;
+  var nu=document.getElementById('cfg-notify-usda'); if(nu)nu.checked=CFG.notifyOnUsda!==false;
   var el=document.getElementById('set-agencies');
   if(!DB.agencies.length){el.innerHTML='<div style="font-size:12px;color:var(--t3);">Sin agencias aún.</div>';return;}
   el.innerHTML='';
@@ -2431,6 +2539,9 @@ function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').
 // ══ SETTINGS ══
 function saveSettings(){
   CFG.groqKey=gv('cfg-groq'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
+  CFG.emailServiceId=gv('cfg-email-service'); CFG.emailTemplateId=gv('cfg-email-template'); CFG.emailPublicKey=gv('cfg-email-key'); CFG.notifyEmails=gv('cfg-notify-emails');
+  var na=document.getElementById('cfg-notify-arrival'), nd=document.getElementById('cfg-notify-delay'), nu=document.getElementById('cfg-notify-usda');
+  CFG.notifyOnArrival=na?na.checked:true; CFG.notifyOnDelay=nd?nd.checked:true; CFG.notifyOnUsda=nu?nu.checked:true;
   saveLocalCFG(); populateConsignees(); toast('Configuración guardada!','ok');
 }
 async function forceSyncAll_unused(){}
