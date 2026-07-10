@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -321,8 +322,37 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="sc"><div class="sl">Costo Total AWB</div><div class="sv" id="st-cost" style="font-size:17px;">$0</div><div class="ss up" id="st-cost-s">—</div></div>
         </div>
         <div class="alert-card" id="rate-alert-card"><div class="alert-title">⚠ Diferencias de Tarifa — la tarifa real difiere de la esperada</div><div id="rate-alert-list"></div></div>
+        <div id="urgent-panel" style="display:none;background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:800;color:#991B1B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">🚨 Requiere tu atención</div>
+          <div id="urgent-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+        </div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="ch"><span class="ct">📊 Análisis Visual</span><span style="font-size:10px;color:var(--t3);">Actualizado en tiempo real</span></div>
+          <div id="dash-charts" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">Tarifa promedio por aerolínea ($/kg)</div><canvas id="chart-rate" height="180"></canvas></div>
+            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">AWBs por puerto de origen</div><canvas id="chart-port" height="180"></canvas></div>
+            <div style="grid-column:1/-1;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
+                <span style="font-size:12px;font-weight:700;color:var(--t2);">Cajas por período</span>
+                <select id="period-selector" onchange="renderDashCharts()" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);">
+                  <option value="week">Semana</option>
+                  <option value="month" selected>Mes</option>
+                  <option value="quarter">Trimestre</option>
+                  <option value="semester">Semestre</option>
+                </select>
+              </div>
+              <canvas id="chart-volume" height="120"></canvas>
+            </div>
+            <div style="grid-column:1/-1;">
+              <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">📈 Tendencia y proyección de envíos</div>
+              <canvas id="chart-trend" height="120"></canvas>
+              <div id="trend-ai" style="margin-top:12px;font-size:12px;color:var(--t2);background:var(--lightgreen);border-radius:8px;padding:10px 14px;line-height:1.5;display:none;"></div>
+              <div style="text-align:center;margin-top:10px;"><button class="btn xs pr" onclick="explainTrend()">🤖 Interpretar tendencia con IA</button></div>
+            </div>
+          </div>
+        </div>
         <div class="card">
-          <div class="ch"><span class="ct">Búsqueda IA — Claude</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
+          <div class="ch"><span class="ct">Búsqueda IA — Groq</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
           <div style="padding:12px 15px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <button class="qbtn" onclick="aiAsk('Lista todos los vuelos con cajas sin confirmar y la acción recomendada para cada uno')">Cajas sin confirmar</button>
@@ -426,6 +456,12 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 5 vuelos de ejemplo</button>
               <button class="btn" onclick="exportCSV()">Exportar vuelos CSV</button>
               <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
+              <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;">
+                <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px;">🔒 Respaldo de datos</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.4;">Tus datos se guardan en este navegador. Exporta un respaldo regularmente para no perderlos.</div>
+                <button class="btn pr" onclick="exportBackup()" style="width:100%;margin-bottom:6px;">💾 Exportar respaldo completo</button>
+                <label class="btn" style="width:100%;text-align:center;cursor:pointer;display:block;">📥 Restaurar desde respaldo<input type="file" accept=".json" onchange="importBackup(this)" style="display:none;"></label>
+              </div>
             </div>
           </div>
           <div class="ss" style="grid-column:span 2;">
@@ -793,6 +829,55 @@ async function initApp() {
 // ══ STORAGE — localStorage (funciona sin permisos de admin) ══
 function persistDB() {
   try { localStorage.setItem('jff_db', JSON.stringify(DB)); } catch(e) {}
+}
+
+// ══ RESPALDO: exportar toda la base de datos a un archivo JSON ══
+function exportBackup() {
+  try {
+    var backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      exportedBy: 'TrackFlow Air',
+      flights: DB.flights || [],
+      agencies: DB.agencies || [],
+      notifications: DB.notifications || []
+    };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var date = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = 'TrackFlow_Respaldo_' + date + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('✓ Respaldo descargado (' + (DB.flights||[]).length + ' vuelos)', 'ok');
+  } catch(e) { toast('Error al exportar respaldo: ' + e.message, 'err'); }
+}
+
+// ══ RESTAURAR: importar base de datos desde un archivo JSON ══
+function importBackup(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.flights && !data.agencies) { toast('El archivo no es un respaldo válido de TrackFlow.', 'err'); return; }
+      var nFl = (data.flights||[]).length, nAg = (data.agencies||[]).length;
+      if (!confirm('¿Restaurar este respaldo?\n\n' + nFl + ' vuelos y ' + nAg + ' agencias.\n\nEsto REEMPLAZA todos los datos actuales. Se recomienda exportar un respaldo antes.')) { input.value=''; return; }
+      DB.flights = data.flights || [];
+      DB.agencies = data.agencies || [];
+      DB.notifications = data.notifications || DB.notifications || [];
+      persistDB();
+      autoUpdateAllStatuses();
+      renderScreen(screen);
+      updateBadges();
+      populateConsignees();
+      toast('✓ Respaldo restaurado: ' + nFl + ' vuelos, ' + nAg + ' agencias', 'ok');
+    } catch(err) { toast('Error al leer el respaldo: ' + err.message, 'err'); }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function loadLocalFallback() {
@@ -1429,27 +1514,39 @@ async function checkLive(num, flightId) {
   document.getElementById('live-body').innerHTML = autoBox
     + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Buscando datos GPS en vivo…</div>';
 
-  var cleanNum = num.replace(/\s/g,'');
-  var directUrl = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&flight_iata=' + cleanNum;
-  var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(directUrl);
+  // Limpiar el número: quitar espacios Y el sufijo del día (ej: "LNE318-8" → "LNE318")
+  var cleanNum = num.replace(/\s/g,'').replace(/[-\/]\d{1,2}$/,'').toUpperCase();
+  // AviationStack: si el código tiene 3 letras + números es ICAO (LNE318), si son 2 es IATA (XL318)
+  // Detectar el prefijo de letras para elegir el parámetro correcto
+  var letterPrefix = (cleanNum.match(/^[A-Z]+/) || [''])[0];
+  var paramName = letterPrefix.length >= 3 ? 'flight_icao' : 'flight_iata';
+
+  async function fetchLive(param, value) {
+    var url = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&' + param + '=' + value;
+    var proxies = ['https://corsproxy.io/?' + encodeURIComponent(url), 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)];
+    for (var i = 0; i < proxies.length; i++) {
+      try {
+        var res = await fetch(proxies[i]);
+        if (!res.ok) continue;
+        var data = await res.json();
+        if (data.data && data.data[0]) return data.data[0];
+      } catch(e) { /* intenta el siguiente proxy */ }
+    }
+    return null;
+  }
+
   try {
-    var res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    var d = (data.data && data.data[0]) || null;
+    // Intentar con el parámetro detectado, luego con el otro por si acaso
+    var d = await fetchLive(paramName, cleanNum);
+    if (!d) {
+      var altParam = paramName === 'flight_icao' ? 'flight_iata' : 'flight_icao';
+      d = await fetchLive(altParam, cleanNum);
+    }
     liveCache[num] = d;
     renderLive(num, d, flightId, autoBox);
   } catch(err) {
-    try {
-      var proxyUrl2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
-      var res2 = await fetch(proxyUrl2);
-      var data2 = await res2.json();
-      var d2 = (data2.data && data2.data[0]) || null;
-      renderLive(num, d2, flightId, autoBox);
-    } catch(err2) {
-      document.getElementById('live-body').innerHTML = autoBox
-        + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No se pudieron obtener datos GPS en vivo (el vuelo puede no estar activo en este momento en AviationStack, o se alcanzó el límite mensual gratuito).</div>';
-    }
+    document.getElementById('live-body').innerHTML = autoBox
+      + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No se pudieron obtener datos GPS en vivo (el vuelo puede no estar activo en este momento en AviationStack, o se alcanzó el límite mensual gratuito).</div>';
   }
 }
 
@@ -2007,17 +2104,209 @@ function erow(c,m){return '<tr class="erow"><td colspan="'+c+'">'+m+'</td></tr>'
 function etaSt(f){if(!f.eta)return'<span class="pill pending">Sin ETA</span>';return'<span class="pill ontime">OK</span>';}
 function rateDiff(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;if(e>0&&a>0&&Math.abs(a-e)>0.001)return' <span class="pill late">⚠ Tarifa</span>';return'';}
 
+var _dashCharts = {};
+var _lastTrendData = null;
+
+// Agrupa una fecha en la clave del período seleccionado
+function periodKey(date, period) {
+  var d = new Date(date);
+  if (isNaN(d)) return null;
+  var y = d.getFullYear();
+  if (period === 'week') {
+    // Número de semana ISO aproximado
+    var onejan = new Date(y, 0, 1);
+    var week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+    return y + '-S' + String(week).padStart(2, '0');
+  }
+  if (period === 'month') return y + '-' + String(d.getMonth()+1).padStart(2, '0');
+  if (period === 'quarter') return y + '-T' + (Math.floor(d.getMonth()/3)+1);
+  if (period === 'semester') return y + '-Sem' + (d.getMonth() < 6 ? 1 : 2);
+  return y + '-' + String(d.getMonth()+1).padStart(2, '0');
+}
+
+// Regresión lineal simple para proyección: devuelve función y = mx + b
+function linearRegression(points) {
+  var n = points.length;
+  if (n < 2) return null;
+  var sumX=0, sumY=0, sumXY=0, sumXX=0;
+  points.forEach(function(p, i){ sumX+=i; sumY+=p; sumXY+=i*p; sumXX+=i*i; });
+  var m = (n*sumXY - sumX*sumY) / (n*sumXX - sumX*sumX);
+  var b = (sumY - m*sumX) / n;
+  return { m: m, b: b };
+}
+
+function renderDashCharts(){
+  if (typeof Chart === 'undefined') return;
+  var fl = DB.flights;
+  Object.keys(_dashCharts).forEach(function(k){ if(_dashCharts[k]) _dashCharts[k].destroy(); });
+
+  var green='#1B7A3E', greenL='#22A351', amber='#F59E0B', red='#DC2626', blue='#3B82F6', purple='#8B5CF6', teal='#14B8A6';
+  var palette = [green, blue, amber, purple, teal, red, greenL];
+
+  // ── 1) TARIFA PROMEDIO POR AEROLÍNEA ($/kg) ──
+  var rateByAir = {};
+  fl.forEach(function(f){
+    var r = parseFloat(f.rate)||0;
+    if (r > 0) {
+      var a = f.airline || 'Sin aerolínea';
+      if (!rateByAir[a]) rateByAir[a] = { sum: 0, count: 0 };
+      rateByAir[a].sum += r; rateByAir[a].count++;
+    }
+  });
+  var airLabels = Object.keys(rateByAir);
+  var airAvg = airLabels.map(function(a){ return (rateByAir[a].sum / rateByAir[a].count).toFixed(3); });
+  var ctxR = document.getElementById('chart-rate');
+  if (ctxR) _dashCharts.rate = new Chart(ctxR, {
+    type: 'bar',
+    data: { labels: airLabels, datasets: [{ label: '$/kg promedio', data: airAvg, backgroundColor: green, borderRadius: 5 }] },
+    options: { plugins: { legend: { display: false }, tooltip:{callbacks:{label:function(c){return '$'+c.raw+'/kg';}}} },
+      scales: { y: { beginAtZero: false, ticks:{font:{size:10},callback:function(v){return '$'+v;}} }, x:{ticks:{font:{size:9}}} } }
+  });
+
+  // ── 2) AWBs POR PUERTO DE ORIGEN ──
+  var byPort = {};
+  fl.forEach(function(f){ var o=f.origin||'—'; byPort[o]=(byPort[o]||0)+1; });
+  var portLabels = Object.keys(byPort), portData = portLabels.map(function(p){return byPort[p];});
+  var ctxP = document.getElementById('chart-port');
+  if (ctxP) _dashCharts.port = new Chart(ctxP, {
+    type: 'doughnut',
+    data: { labels: portLabels, datasets: [{ data: portData, backgroundColor: palette, borderWidth: 0 }] },
+    options: { plugins: { legend: { position: 'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} },
+      tooltip:{callbacks:{label:function(c){return c.label+': '+c.raw+' AWB';}}} }, cutout: '55%' }
+  });
+
+  // ── 3) CAJAS POR PERÍODO (con selector) ──
+  var period = (document.getElementById('period-selector')||{}).value || 'month';
+  var boxesByPeriod = {};
+  fl.forEach(function(f){
+    var refDate = f.etd || f.createdAt || f.modifiedAt;
+    var k = periodKey(refDate, period);
+    if (k) boxesByPeriod[k] = (boxesByPeriod[k]||0) + (parseInt(f.bsent)||0);
+  });
+  var perLabels = Object.keys(boxesByPeriod).sort();
+  var perData = perLabels.map(function(k){return boxesByPeriod[k];});
+  var ctxV = document.getElementById('chart-volume');
+  if (ctxV) _dashCharts.volume = new Chart(ctxV, {
+    type: 'bar',
+    data: { labels: perLabels, datasets: [{ label: 'Cajas enviadas', data: perData, backgroundColor: blue, borderRadius: 5 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
+  });
+
+  // ── 4) TENDENCIA Y PROYECCIÓN ──
+  // Usa las cajas por período y proyecta los próximos 3 períodos con regresión lineal
+  var trendLabels = perLabels.slice();
+  var trendActual = perData.slice();
+  var proj = linearRegression(perData);
+  var projData = perData.map(function(){ return null; }); // los reales van en otra serie
+  if (proj && perData.length >= 2) {
+    // Extender 3 períodos hacia el futuro
+    var lastIdx = perData.length - 1;
+    // Conectar la línea de proyección desde el último punto real
+    var trendLine = perData.map(function(v, i){ return Math.max(0, Math.round(proj.m*i + proj.b)); });
+    for (var j = 1; j <= 3; j++) {
+      var futureIdx = lastIdx + j;
+      trendLabels.push('Proy ' + j);
+      trendActual.push(null);
+      trendLine.push(Math.max(0, Math.round(proj.m*futureIdx + proj.b)));
+    }
+    _lastTrendData = { labels: trendLabels, actual: trendActual, line: trendLine, slope: proj.m, period: period };
+    var ctxT = document.getElementById('chart-trend');
+    if (ctxT) _dashCharts.trend = new Chart(ctxT, {
+      type: 'line',
+      data: { labels: trendLabels, datasets: [
+        { label: 'Cajas reales', data: trendActual, borderColor: green, backgroundColor: 'rgba(34,163,81,.1)', tension: 0.3, spanGaps: false, pointRadius: 4, fill: true },
+        { label: 'Tendencia / proyección', data: trendLine, borderColor: amber, borderDash: [6,5], tension: 0.3, pointRadius: 2, fill: false }
+      ] },
+      options: { plugins: { legend: { position:'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} } },
+        scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:9}}} } }
+    });
+  } else {
+    _lastTrendData = null;
+    var ctxT2 = document.getElementById('chart-trend');
+    if (ctxT2 && _dashCharts.trend) _dashCharts.trend.destroy();
+  }
+}
+
+// La IA interpreta la tendencia calculada
+async function explainTrend(){
+  var box = document.getElementById('trend-ai');
+  box.style.display = 'block';
+  box.innerHTML = '<span class="dp"><span></span><span></span><span></span></span> Analizando tendencia…';
+  if (!_lastTrendData) { box.textContent = 'Necesitas al menos 2 períodos con datos para analizar la tendencia. Registra más envíos.'; return; }
+  var d = _lastTrendData;
+  var periodName = {week:'semana',month:'mes',quarter:'trimestre',semester:'semestre'}[d.period]||'período';
+  var realVals = d.actual.filter(function(v){return v!==null;});
+  var futureVals = d.line.slice(realVals.length);
+  var prompt = 'Analiza esta tendencia de envíos de carga de flores (cajas por ' + periodName + '). '
+    + 'Valores históricos reales: ' + JSON.stringify(realVals) + '. '
+    + 'Proyección calculada para los próximos 3 ' + periodName + 's: ' + JSON.stringify(futureVals) + '. '
+    + 'Pendiente de la tendencia: ' + d.slope.toFixed(1) + ' cajas por ' + periodName + '. '
+    + 'Da un análisis breve (máximo 4 frases) en español: si el volumen crece o baja, a qué ritmo, y una recomendación operativa accionable para Jet Fresh Flowers.';
+  try {
+    var text = await callAI('Eres analista de logística de carga aérea. Sé conciso, directo y práctico.', [{role:'user', content: prompt}]);
+    box.textContent = text;
+  } catch(e) {
+    if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. La proyección visual de arriba ya funciona sin IA.';
+    else box.textContent = 'No se pudo analizar: ' + e.message;
+  }
+}
+
+// Panel de acciones urgentes: detecta lo que requiere atención inmediata
+function renderUrgent(){
+  var fl = DB.flights;
+  var items = [];
+  fl.forEach(function(f){
+    var id = f.id, num = esc(f.num||'Sin vuelo');
+    // Vuelos demorados ahora
+    if (f.status === 'delayed') {
+      items.push({ pri: 1, icon:'🔴', txt: num + ' (' + esc(f.origin)+'→'+esc(f.dest) + ') está DEMORADO', id: id });
+    }
+    // Cajas en hold USDA sin liberar
+    var usda = parseInt(f.busda)||0, released = parseInt(f.busdaReleased)||0;
+    if ((f.usdaHold || usda > 0) && !f.usdaFreed && released < usda) {
+      items.push({ pri: 2, icon:'🛃', txt: num + ': ' + (usda||'?') + ' cajas retenidas por USDA sin liberar', id: id });
+    }
+    // Cajas perdidas por aerolínea (posible reclamo)
+    var lost = parseInt(f.blost)||0;
+    if (lost > 0 && (!f.claimStatus || f.claimStatus === 'none')) {
+      items.push({ pri: 3, icon:'📦', txt: num + ': ' + lost + ' cajas perdidas por aerolínea (posible reclamo)', id: id });
+    }
+    // Cajas dañadas
+    var dmg = parseInt(f.bdamaged)||0;
+    if (dmg > 0 && (!f.claimStatus || f.claimStatus === 'none')) {
+      items.push({ pri: 4, icon:'⚠️', txt: num + ': ' + dmg + ' cajas dañadas registradas', id: id });
+    }
+    // Cajas faltantes (confirmadas < enviadas)
+    var sent=parseInt(f.bsent)||0, conf=parseInt(f.bconf)||0;
+    if (sent > 0 && conf > 0 && conf < sent) {
+      items.push({ pri: 5, icon:'📋', txt: num + ': faltan ' + (sent-conf) + ' cajas por confirmar', id: id });
+    }
+  });
+  items.sort(function(a,b){ return a.pri - b.pri; });
+  var panel = document.getElementById('urgent-panel'), list = document.getElementById('urgent-list');
+  if (!panel || !list) return;
+  if (items.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  list.innerHTML = items.slice(0, 8).map(function(it){
+    return '<div onclick="openDetail(\''+it.id+'\')" style="cursor:pointer;font-size:12px;color:#7F1D1D;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(252,165,165,.3);">'
+      + '<span style="font-size:14px;">'+it.icon+'</span><span>'+it.txt+'</span><span style="margin-left:auto;font-size:10px;color:#B91C1C;">Ver →</span></div>';
+  }).join('');
+  if (items.length > 8) list.innerHTML += '<div style="font-size:10px;color:#B91C1C;padding-top:4px;">+ '+(items.length-8)+' más…</div>';
+}
+
 function renderDash(){
   var fl=DB.flights, tc=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
-  var sent=fl.reduce(function(s,f){return s+f.bsent;},0), conf=fl.reduce(function(s,f){return s+f.bconf;},0);
-  var miss=fl.reduce(function(s,f){var d=(f.bconf||0)-(f.bsent||0);return s+(d<0?Math.abs(d):0);},0);
+  var sent=fl.reduce(function(s,f){return s+(parseInt(f.bsent)||0);},0), conf=fl.reduce(function(s,f){return s+(parseInt(f.bconf)||0);},0);
+  var miss=fl.reduce(function(s,f){var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);return s+(d<0?Math.abs(d):0);},0);
   var rateAlerts=fl.filter(function(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;return e>0&&a>0&&Math.abs(a-e)>0.001;});
-  sv('st-fl',fl.length); document.getElementById('st-fl-s').textContent=fl.length>0?fl.length+' total':'Sin vuelos aún';
-  sv('st-conf',conf); document.getElementById('st-conf-s').textContent=sent>0?Math.round(conf/sent*100)+'% tasa':'—';
-  sv('st-miss',miss); document.getElementById('st-miss-s').textContent=miss>0?miss+' cajas':'—';
-  sv('st-rate-alerts',rateAlerts.length);
+  document.getElementById('st-fl').textContent=fl.length; document.getElementById('st-fl-s').textContent=fl.length>0?fl.length+' total':'Sin vuelos aún';
+  document.getElementById('st-conf').textContent=conf; document.getElementById('st-conf-s').textContent=sent>0?Math.round(conf/sent*100)+'% tasa':'—';
+  document.getElementById('st-miss').textContent=miss; document.getElementById('st-miss-s').textContent=miss>0?miss+' cajas':'—';
+  document.getElementById('st-rate-alerts').textContent=rateAlerts.length;
   document.getElementById('st-cost').textContent='$'+tc.toFixed(2);
   document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' vuelos':'—';
+  renderDashCharts();
+  renderUrgent();
   var alertCard=document.getElementById('rate-alert-card'), alertList=document.getElementById('rate-alert-list');
   if(rateAlerts.length>0){alertCard.classList.add('show');alertList.innerHTML=rateAlerts.map(function(f){return'<div class="alert-item">✈ '+esc(f.num)+' ('+esc(f.origin)+'→'+esc(f.dest)+'): Tarifa real $'+parseFloat(f.rate).toFixed(3)+'/kg vs Esperada $'+parseFloat(f.rateExp).toFixed(3)+'/kg — Dif: $'+(parseFloat(f.rate)-parseFloat(f.rateExp)).toFixed(3)+'</div>';}).join('');}
   else alertCard.classList.remove('show');
