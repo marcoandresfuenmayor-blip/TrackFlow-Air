@@ -119,7 +119,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px
 .tw::-webkit-scrollbar-thumb:hover{background:var(--green2);}
 .tw{scrollbar-width:thin;scrollbar-color:#B7D9C4 #F0F7F3;}
 table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px;}
-th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:#F6FBF8;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:#F6FBF8;border-bottom:1px solid var(--border);white-space:nowrap;cursor:grab;user-select:none;position:relative;}
+th[draggable="true"]:active{cursor:grabbing;}
+th.nodrag{cursor:default;}
+th.dragging{opacity:.4;background:var(--lightgreen);}
+th.drop-l::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);}
+th.drop-r::after{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--green);}
 th:hover{background:var(--lightgreen);}
 td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--t1);vertical-align:middle;white-space:nowrap;}
 tr:last-child td{border-bottom:none;}
@@ -324,6 +329,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
     </div>
 
     <div class="content">
+      <div id="storage-alert" style="display:none;background:#FEE2E2;border:1.5px solid #DC2626;color:#991B1B;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.5;"></div>
       <!-- DASHBOARD -->
       <div class="screen active" id="s-dashboard">
         <div class="sg sg5">
@@ -383,9 +389,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="card">
           <div class="ch">
             <span class="ct">Vuelos Recientes</span>
-            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="dashF(this,'all')">Todos</span><span class="ftab" onclick="dashF(this,'transit')">En tránsito</span><span class="ftab" onclick="dashF(this,'pending')">Pendiente</span><span class="ftab" onclick="dashF(this,'delivered')">Entregado</span></div></div>
+            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="dashF(this,'all')">Todos</span><span class="ftab" onclick="dashF(this,'transit')">En tránsito</span><span class="ftab" onclick="dashF(this,'pending')">Pendiente</span><span class="ftab" onclick="dashF(this,'delivered')">Entregado</span></div><button class="btn xs" onclick="resetColOrder('tbl-dash')" title="Restablecer el orden original de las columnas">↺ Columnas</button></div>
           </div>
-          <div class="tw"><table><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Estado ETA</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
+          <div class="tw"><table id="tbl-dash"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Estado ETA</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -394,9 +400,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="card">
           <div class="ch">
             <span class="ct">Todos los Vuelos</span>
-            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="flF(this,'all')">Todos</span><span class="ftab" onclick="flF(this,'transit')">Tránsito</span><span class="ftab" onclick="flF(this,'pending')">Pendiente</span><span class="ftab" onclick="flF(this,'delivered')">Entregado</span></div><button class="btn sm pr" onclick="openModal('new')">+ Nuevo</button></div>
+            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="flF(this,'all')">Todos</span><span class="ftab" onclick="flF(this,'transit')">Tránsito</span><span class="ftab" onclick="flF(this,'pending')">Pendiente</span><span class="ftab" onclick="flF(this,'delivered')">Entregado</span></div><button class="btn xs" onclick="resetColOrder('tbl-flights')" title="Restablecer el orden original de las columnas">↺ Columnas</button><button class="btn sm pr" onclick="openModal('new')">+ Nuevo</button></div>
           </div>
-          <div class="tw"><table><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
+          <div class="tw"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -511,6 +517,17 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <div class="ss-t">API Keys</div>
             <div class="fg" style="gap:9px;">
               <div class="field"><label>Groq API Key <span style="font-size:10px;color:var(--t3);">(gratis en console.groq.com — para IA y asistente)</span></label><input id="cfg-groq" type="password" placeholder="gsk_..."></div>
+              <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">🔐 Privacidad de datos con IA</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Cuando usas la búsqueda IA o el asistente, se envían datos de tus envíos a los servidores de Groq. En el plan gratuito, los proveedores suelen usar los datos para entrenar sus modelos.</div>
+                <div class="field"><label>Nivel de privacidad</label><select id="cfg-ai-privacy" onchange="onPrivacyChange()">
+                  <option value="full">Completo — envía todo (mejores respuestas)</option>
+                  <option value="anon">Anónimo — oculta nombres y notas</option>
+                  <option value="off">Sin IA — no envía nada</option>
+                </select></div>
+                <div id="privacy-explain" style="font-size:10px;line-height:1.5;border-radius:8px;padding:9px 11px;margin-top:8px;"></div>
+                <button class="btn xs" onclick="showAIPayload()" style="width:100%;margin-top:8px;">👁 Ver exactamente qué se enviaría</button>
+              </div>
               <div class="field"><label>AviationStack API Key <span style="font-size:10px;color:var(--t3);">(gratis — aviationstack.com)</span></label><input id="cfg-aviation" type="password" placeholder="Tu key gratuita"></div>
               <div class="field"><label>Consignatarios (separados por coma)</label><input id="cfg-consignees" placeholder="MAS Customs, Delivery Plus, otro…"></div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
@@ -531,16 +548,13 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             </div>
           </div>
           <div class="ss">
-            <div class="ss-t">SharePoint / OneDrive</div>
+            <div class="ss-t">Almacenamiento de datos</div>
             <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="font-size:12px;color:var(--t2);line-height:1.6;">
-                ✅ Base de datos: <strong>SharePoint Lists</strong><br>
-                ✅ Archivos PDF/POD: <strong>OneDrive</strong><br>
-                ✅ Login: <strong>Azure AD (cuenta empresa)</strong><br>
-                ✅ Sync: <strong>Tiempo real automático</strong>
+              <div style="font-size:12px;color:var(--t2);line-height:1.6;background:var(--amberbg);border:1px solid #F59E0B;border-radius:8px;padding:10px 12px;">
+                <strong style="color:var(--ambertxt);">⚠ Tus datos viven en ESTE navegador</strong><br>
+                <span style="font-size:11px;">No hay servidor ni nube. Si borras el caché de Safari, cambias de computadora o usas otro navegador, <strong>no verás estos datos</strong>. Exporta un respaldo con frecuencia.</span>
               </div>
-              <a href="https://jetfreshflowers.sharepoint.com/sites/TrackFlow" target="_blank" class="btn pr" style="text-align:center;text-decoration:none;display:block;margin-top:4px;">Abrir en SharePoint ↗</a>
-              <button class="btn" onclick="forceSyncAll()">🔄 Sincronizar ahora</button>
+              <div id="storage-meter" style="font-size:11px;color:var(--t2);"></div>
               <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 7 vuelos de ejemplo</button>
               <button class="btn" onclick="exportCSV()">Exportar vuelos CSV</button>
               <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
@@ -548,7 +562,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px;">🔒 Respaldo de datos</div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.4;">Tus datos se guardan en este navegador. Exporta un respaldo regularmente para no perderlos.</div>
                 <button class="btn pr" onclick="exportBackup()" style="width:100%;margin-bottom:6px;">💾 Exportar respaldo completo</button>
-                <label class="btn" style="width:100%;text-align:center;cursor:pointer;display:block;">📥 Restaurar desde respaldo<input type="file" accept=".json" onchange="importBackup(this)" style="display:none;"></label>
+                <label class="btn" style="width:100%;text-align:center;cursor:pointer;display:block;margin-bottom:6px;">📥 Restaurar desde respaldo<input type="file" accept=".json" onchange="importBackup(this)" style="display:none;"></label>
+                <button class="btn danger" onclick="purgePODs()" style="width:100%;">🗑 Liberar espacio (borrar PODs adjuntos)</button>
               </div>
             </div>
           </div>
@@ -716,7 +731,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           </div>
         </div>
         <div style="margin-top:12px;">
-          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Prueba de Entrega (POD) — se guarda en OneDrive</label>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Prueba de Entrega (POD) — las fotos se comprimen automáticamente</label>
           <div class="upload-zone" onclick="document.getElementById('pod-file').click()" id="pod-zone">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <p id="pod-zone-txt">Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive</p>
@@ -878,7 +893,7 @@ var flsFlt = 'all';
 var chatHist = [];
 var liveCache = {};
 var DB = { flights: [], agencies: [] };
-var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true };
+var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {} };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -941,8 +956,53 @@ async function initApp() {
 }
 
 // ══ STORAGE — localStorage (funciona sin permisos de admin) ══
+// Guarda la base de datos. Devuelve true si guardó, false si falló.
+// CRÍTICO: localStorage tiene ~5MB. Si se llena, avisamos en vez de perder datos en silencio.
 function persistDB() {
-  try { localStorage.setItem('jff_db', JSON.stringify(DB)); } catch(e) {}
+  try {
+    localStorage.setItem('jff_db', JSON.stringify(DB));
+    return true;
+  } catch(e) {
+    var isQuota = e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22);
+    if (isQuota) {
+      setSyncStatus('err', '⚠ SIN ESPACIO');
+      toast('⚠ NO SE GUARDÓ: almacenamiento lleno. Exporta un respaldo y borra PODs pesados en Configuración.', 'err');
+      // Aviso persistente porque es pérdida de datos real
+      var banner = document.getElementById('storage-alert');
+      if (banner) {
+        banner.style.display = 'block';
+        banner.innerHTML = '<strong>⚠ ALMACENAMIENTO LLENO — tus últimos cambios NO se guardaron.</strong><br>'
+          + 'El navegador solo permite ~5 MB. Las fotos de POD son lo que más ocupa. '
+          + '<button class="btn xs" style="margin-top:6px;" onclick="exportBackup()">💾 Exportar respaldo ahora</button> '
+          + '<button class="btn xs danger" style="margin-top:6px;" onclick="purgePODs()">🗑 Liberar espacio (borrar PODs)</button>';
+      }
+    } else {
+      console.error('Error al guardar:', e);
+      toast('No se pudo guardar: ' + e.message, 'err');
+    }
+    return false;
+  }
+}
+
+// Devuelve el uso de almacenamiento en KB y el % aproximado del límite
+function storageInfo() {
+  var bytes = 0;
+  try { bytes = new Blob([JSON.stringify(DB)]).size; } catch(e) { bytes = JSON.stringify(DB).length; }
+  var limit = 5 * 1024 * 1024; // ~5MB típico
+  return { kb: Math.round(bytes/1024), pct: Math.min(100, Math.round(bytes/limit*100)), bytes: bytes };
+}
+
+// Libera espacio quitando los PODs guardados localmente (los datos del vuelo se conservan)
+function purgePODs() {
+  var withPod = DB.flights.filter(function(f){ return f.podUrl && f.podUrl.indexOf('data:') === 0; });
+  if (!withPod.length) { toast('No hay PODs locales que borrar.', 'ok'); return; }
+  if (!confirm('¿Borrar ' + withPod.length + ' archivo(s) POD guardados en este navegador?\n\nLos datos de los vuelos se conservan — solo se elimina la imagen/PDF adjunto.\n\nRecomendación: exporta un respaldo primero.')) return;
+  withPod.forEach(function(f){ f.podUrl = ''; f.podName = ''; });
+  if (persistDB()) {
+    var banner = document.getElementById('storage-alert'); if (banner) banner.style.display = 'none';
+    renderScreen(screen);
+    toast('✓ Espacio liberado: ' + withPod.length + ' POD(s) eliminados', 'ok');
+  }
 }
 
 // ══ NOTIFICACIONES POR CORREO (EmailJS) ══
@@ -1128,8 +1188,7 @@ function loadLocalFallback() {
 
 async function saveFlight_SP(f) {
   if (!f.id || f.id.startsWith('local_')) f.id = 'local_' + Date.now();
-  persistDB();
-  setSyncStatus('ok', 'Guardado ✓');
+  if (persistDB()) setSyncStatus('ok', 'Guardado ✓');
 }
 
 async function saveAgency_SP(a) {
@@ -1236,12 +1295,7 @@ function loadDemoData() {
 }
 
 // ══ POD — guardar en base64 local ══
-async function uploadToOneDrive(fileName, fileData, mimeType) {
-  // Sin permisos de admin, guardamos referencia local
-  return 'local:' + fileName;
-}
-
-// ══ AWB PDF AUTOFILL WITH CLAUDE ══
+// ══ AWB PDF AUTOFILL — PDF.js + patrones (100% gratis, sin IA) ══
 async function handleAWBUpload(e) {
   var file = e.target.files[0]; if (!file) return;
   var zone = document.getElementById('awb-zone');
@@ -1252,7 +1306,7 @@ async function handleAWBUpload(e) {
   stat.className = 'upload-status ok';
 
   if (file.type.startsWith('image/')) {
-    stat.textContent = '⚠ Las imágenes requieren IA (Claude). Sube un PDF para extracción gratuita, o agrega tu Claude API Key en Configuración para procesar imágenes.';
+    stat.textContent = '⚠ Solo se pueden leer archivos PDF. Si tienes el AWB en imagen, pide el PDF a la agencia o ingresa los datos manualmente.';
     stat.className = 'upload-status err';
     txt.textContent = 'Clic para subir AWB PDF / Imagen';
     e.target.value = ''; return;
@@ -1595,35 +1649,95 @@ function extractAWBFields(text) {
   return result;
 }
 
-// ══ POD UPLOAD TO ONEDRIVE ══
+// ══ POD — guardado local con compresión automática ══
+// Las fotos de celular (3-5MB) llenan localStorage (~5MB) y causan pérdida de datos.
+// Solución: comprimir imágenes a JPEG ~1600px antes de guardar (queda legible y pesa ~200KB).
+function compressImage(file, maxDim, quality) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, w, h); // fondo blanco por si es PNG transparente
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function(){ reject(new Error('No se pudo leer la imagen')); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('No se pudo leer el archivo')); };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handlePODUpload(e) {
   var file = e.target.files[0]; if (!file) return;
   var stat = document.getElementById('pod-status');
   var txt = document.getElementById('pod-zone-txt');
-  txt.textContent = 'Subiendo ' + file.name + ' a OneDrive…';
-  stat.textContent = 'Subiendo a OneDrive…';
+  var isImage = file.type.indexOf('image/') === 0;
+  var MAX_PDF = 1.5 * 1024 * 1024; // los PDF no se pueden comprimir aquí
+
   stat.className = 'upload-status ok';
-  var reader = new FileReader();
-  reader.onload = async function(ev) {
-    var b64 = ev.target.result.split(',')[1];
-    var binary = atob(b64);
-    var bytes = new Uint8Array(binary.length);
-    for (var i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    try {
-      var url = await uploadToOneDrive('POD_' + Date.now() + '_' + file.name, bytes.buffer, file.type);
-      pendingPOD = { name: file.name, url: url };
-      stat.textContent = '✓ POD subido a OneDrive: ' + file.name;
-      stat.className = 'upload-status ok';
-      txt.textContent = 'POD adjunto: ' + file.name;
-    } catch(err) {
-      // Fallback: store as base64 locally
-      pendingPOD = { name: file.name, url: ev.target.result, local: true };
-      stat.textContent = '⚠ Guardado localmente (sin conexión a OneDrive): ' + file.name;
-      stat.className = 'upload-status err';
+  stat.textContent = 'Procesando ' + file.name + '…';
+  txt.textContent = 'Procesando ' + file.name + '…';
+
+  try {
+    var dataUrl, finalKB;
+    if (isImage) {
+      // Comprimir: 1600px de lado mayor, calidad 0.72 → legible y liviano
+      dataUrl = await compressImage(file, 1600, 0.72);
+      finalKB = Math.round(dataUrl.length * 0.75 / 1024);
+      // Si aún pesa mucho, comprimir más agresivamente
+      if (finalKB > 500) {
+        dataUrl = await compressImage(file, 1200, 0.6);
+        finalKB = Math.round(dataUrl.length * 0.75 / 1024);
+      }
+    } else {
+      if (file.size > MAX_PDF) {
+        stat.className = 'upload-status err';
+        stat.textContent = '⚠ El PDF pesa ' + Math.round(file.size/1024) + ' KB (máx 1500 KB). Comprímelo o sube una foto.';
+        txt.textContent = 'Clic para subir POD (foto o PDF)';
+        e.target.value = ''; return;
+      }
+      dataUrl = await new Promise(function(res, rej){
+        var r = new FileReader();
+        r.onload = function(ev){ res(ev.target.result); };
+        r.onerror = function(){ rej(new Error('No se pudo leer el PDF')); };
+        r.readAsDataURL(file);
+      });
+      finalKB = Math.round(dataUrl.length * 0.75 / 1024);
     }
-    e.target.value = '';
-  };
-  reader.readAsDataURL(file);
+
+    // Verificar que quepa en el almacenamiento disponible
+    var info = storageInfo();
+    if (info.bytes + dataUrl.length > 4.5 * 1024 * 1024) {
+      stat.className = 'upload-status err';
+      stat.textContent = '⚠ Sin espacio (usando ' + info.kb + ' KB). Exporta un respaldo y libera PODs en Configuración.';
+      txt.textContent = 'Clic para subir POD (foto o PDF)';
+      e.target.value = ''; return;
+    }
+
+    pendingPOD = { name: file.name, url: dataUrl, local: true };
+    var origKB = Math.round(file.size/1024);
+    stat.className = 'upload-status ok';
+    stat.textContent = isImage
+      ? '✓ POD listo: ' + file.name + ' (comprimido de ' + origKB + ' KB a ' + finalKB + ' KB)'
+      : '✓ POD listo: ' + file.name + ' (' + finalKB + ' KB)';
+    txt.textContent = 'POD adjunto: ' + file.name;
+  } catch(err) {
+    stat.className = 'upload-status err';
+    stat.textContent = '⚠ No se pudo procesar el archivo: ' + err.message;
+    txt.textContent = 'Clic para subir POD (foto o PDF)';
+  }
+  e.target.value = '';
 }
 
 // ══ LIVE FLIGHT STATUS (AviationStack) ══
@@ -1950,7 +2064,66 @@ function renderLive(num, d, flightId, autoBox) {
 }
 
 // ══ AI — Claude ══
+// Explica en pantalla qué implica cada nivel de privacidad
+function onPrivacyChange() {
+  var v = gv('cfg-ai-privacy') || 'full';
+  var box = document.getElementById('privacy-explain');
+  if (!box) return;
+  var cfgs = {
+    full: { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E',
+      html:'<strong>⚠ Se envían a Groq:</strong> números de AWB, <strong>tarifas y costos</strong>, nombres de agencias y consignatarios, nombres de tu equipo, y las notas de calidad/estado (texto libre).<br><br>Tus tarifas negociadas son información comercial sensible. Considera el modo Anónimo si eso te preocupa.' },
+    anon: { bg:'#D1FAE5', bd:'#22A351', tx:'#065F46',
+      html:'<strong>✓ Se ocultan:</strong> AWB (pasa a "Envío 1, 2…"), números de vuelo, nombres de agencias ("Agencia A"), consignatarios ("Consignatario 1"), nombres del equipo ("Usuario 1") y todas las notas de texto libre.<br><br><strong>Se mantienen:</strong> aerolíneas, rutas, cajas, tarifas, estados e incidencias — la IA sigue siendo útil para análisis operativo.' },
+    off:  { bg:'#F3F4F6', bd:'#9CA3AF', tx:'#374151',
+      html:'<strong>✓ No sale ningún dato.</strong> La búsqueda IA y el asistente quedan desactivados.<br><br>Todo lo demás sigue funcionando: extracción de AWB, reportes, gráficos, proyección de tendencia, calendario, correos y alertas. Solo se pierde la interpretación en lenguaje natural.' }
+  };
+  var c = cfgs[v] || cfgs.full;
+  box.style.background = c.bg; box.style.border = '1px solid ' + c.bd; box.style.color = c.tx;
+  box.innerHTML = c.html;
+}
+
+// Muestra al usuario el texto exacto que se enviaría a la IA
+function showAIPayload() {
+  // Usar el nivel seleccionado en pantalla, aunque no se haya guardado aún
+  var prev = CFG.aiPrivacy;
+  CFG.aiPrivacy = gv('cfg-ai-privacy') || 'full';
+  var payload = CFG.aiPrivacy === 'off' ? '(No se envía nada — la IA está desactivada.)' : dbSummary();
+  CFG.aiPrivacy = prev;
+  var w = document.getElementById('payload-modal');
+  if (!w) {
+    w = document.createElement('div');
+    w.id = 'payload-modal';
+    w.className = 'modal-bg';
+    w.innerHTML = '<div class="modal" style="max-width:780px;"><div class="modal-h"><span class="modal-t">👁 Datos que se enviarían a Groq</span><button class="modal-x" onclick="document.getElementById(\'payload-modal\').classList.remove(\'open\')">✕</button></div>'
+      + '<div class="modal-b"><div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Este es el texto literal que acompaña a cada consulta de IA. Cambia el nivel de privacidad para ver la diferencia.</div>'
+      + '<pre id="payload-txt" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:10px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;"></pre></div></div>';
+    document.body.appendChild(w);
+  }
+  document.getElementById('payload-txt').textContent = payload;
+  w.classList.add('open');
+}
+
+// ══ PRIVACIDAD: controla qué información sale hacia la IA ══
+// 'full' = envía todo (mejores respuestas) | 'anon' = oculta nombres y notas | 'off' = no usa IA
+function aiPrivacy() { return CFG.aiPrivacy || 'full'; }
+
+// Sustituye nombres propios por etiquetas genéricas estables (Agencia A, Consignatario 1…)
+var _anonMaps = { ag:{}, cons:{}, user:{} };
+function anonLabel(kind, value) {
+  if (!value) return '';
+  var m = _anonMaps[kind];
+  if (!m[value]) {
+    var n = Object.keys(m).length;
+    m[value] = kind === 'ag' ? ('Agencia ' + String.fromCharCode(65 + n))
+             : kind === 'cons' ? ('Consignatario ' + (n + 1))
+             : ('Usuario ' + (n + 1));
+  }
+  return m[value];
+}
+
 function dbSummary() {
+  var priv = aiPrivacy();
+  var anon = priv === 'anon';
   var fl = DB.flights;
   // Totales agregados para que la IA tenga contexto global sin listar todo
   var t = { sent:0, conf:0, cost:0, damaged:0, lost:0, usda:0, claimOpen:0, claimAmt:0, claimRec:0 };
@@ -1969,16 +2142,17 @@ function dbSummary() {
     + ' | incidencias: ' + t.damaged + ' cajas dañadas, ' + t.lost + ' perdidas por aerolínea, ' + t.usda + ' en hold USDA'
     + ' | reclamos: $' + t.claimAmt.toFixed(2) + ' reclamado, $' + t.claimRec.toFixed(2) + ' recuperado, ' + t.claimOpen + ' abiertos.';
 
-  var detalle = 'DETALLE ÚLTIMOS ENVÍOS: ' + fl.slice(0,20).map(function(f){
+  var detalle = 'DETALLE ÚLTIMOS ENVÍOS: ' + fl.slice(0,20).map(function(f, idx){
     var p = [];
-    p.push('AWB ' + (f.awb||'sin AWB'));
-    if (f.num) p.push('vuelo ' + f.num);
+    // En modo anónimo el AWB se sustituye por un identificador secuencial
+    p.push(anon ? ('Envío ' + (idx+1)) : ('AWB ' + (f.awb||'sin AWB')));
+    if (f.num && !anon) p.push('vuelo ' + f.num);
     p.push((f.origin||'?') + '→' + (f.dest||'?'));
     p.push('estado:' + (f.status||'?'));
     if (f.etd) p.push('ETD:' + f.etd);
     p.push('cajas:' + (f.bconf||0) + '/' + (f.bsent||0));
-    if (f.airline) p.push('aerolínea:' + f.airline);
-    if (f.agName) p.push('agencia:' + f.agName);
+    if (f.airline) p.push('aerolínea:' + f.airline); // la aerolínea se mantiene: es clave para comparar y no es dato privado
+    if (f.agName) p.push('agencia:' + (anon ? anonLabel('ag', f.agName) : f.agName));
     if (f.rate) p.push('tarifa:$' + f.rate + '/kg');
     if (f.rateExp && f.rate && Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001) p.push('ALERTA tarifa esperada era $'+f.rateExp);
     if (f.totalpaid) p.push('costo:$' + f.totalpaid);
@@ -1986,16 +2160,19 @@ function dbSummary() {
     if (parseInt(f.blost)) p.push(f.blost + ' PERDIDAS');
     if (parseInt(f.busda)) p.push(f.busda + ' en HOLD USDA' + (f.usdaFreed?' (liberadas)':' SIN LIBERAR'));
     if (f.claimStatus && f.claimStatus!=='none') p.push('reclamo:' + (CLAIM_LABELS[f.claimStatus]||f.claimStatus) + (f.claimAmount?' $'+f.claimAmount:''));
-    if (f.createdby) p.push('por:' + f.createdby);
-    if (f.consignee) p.push('consignatario:' + f.consignee);
-    if (f.statusNotes) p.push('obs:' + f.statusNotes);
-    if (f.qcNotes) p.push('calidad:' + f.qcNotes);
+    if (f.createdby) p.push('por:' + (anon ? anonLabel('user', f.createdby) : f.createdby));
+    if (f.consignee) p.push('consignatario:' + (anon ? anonLabel('cons', f.consignee) : f.consignee));
+    // Las notas son texto libre: pueden contener cualquier cosa, se omiten en modo anónimo
+    if (!anon && f.statusNotes) p.push('obs:' + f.statusNotes);
+    if (!anon && f.qcNotes) p.push('calidad:' + f.qcNotes);
     return '[' + p.join(', ') + ']';
   }).join(' ');
 
   var agencias = 'AGENCIAS(' + DB.agencies.length + '): ' + DB.agencies.map(function(a){
     var n = DB.flights.filter(function(f){return f.agId===a.id;}).length;
-    return a.name + ' (' + n + ' envíos' + (a.email?', '+a.email:'') + ')';
+    var nm = anon ? anonLabel('ag', a.name) : a.name;
+    // El correo y teléfono de la agencia nunca se envían a la IA
+    return nm + ' (' + n + ' envíos)';
   }).join('; ');
 
   var hoy = 'FECHA ACTUAL: ' + new Date().toLocaleString('es-EC') + '.';
@@ -2005,6 +2182,9 @@ function dbSummary() {
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
 // Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
 async function callAI(systemPrompt, messages) {
+  if (aiPrivacy() === 'off') {
+    throw new Error('AI_OFF');
+  }
   if (!CFG.groqKey) {
     throw new Error('NO_KEY');
   }
@@ -2036,7 +2216,8 @@ async function aiAsk(q) {
     );
     el.textContent = text;
   } catch(e) {
-    if (e.message === 'NO_KEY') el.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para usar la IA. Consíguela en console.groq.com';
+    if (e.message === 'AI_OFF') el.textContent = 'La IA está desactivada por privacidad. Actívala en Configuración → Privacidad de datos.';
+    else if (e.message === 'NO_KEY') el.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para usar la IA. Consíguela en console.groq.com';
     else el.textContent = 'No se pudo conectar con la IA: ' + e.message;
   }
 }
@@ -2197,7 +2378,112 @@ function onClaimChange() {
   else tip.style.display = 'none';
 }
 
+// ══ REORDENAR COLUMNAS ARRASTRÁNDOLAS ══
+// Cada <th> guarda su índice original en data-oi. El orden visible = secuencia de data-oi en el thead.
+// Al re-renderizar el tbody, las celdas se reacomodan para coincidir con el encabezado.
+var _dragTh = null;
+
+function initDragCols(tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var head = table.querySelector('thead tr');
+  if (!head) return;
+  if (table.dataset.dragInit !== '1') {
+    Array.prototype.forEach.call(head.children, function(th, i) {
+      th.dataset.oi = i;
+      // La última columna (acciones) no se arrastra
+      if (th.textContent.trim() === '') { th.classList.add('nodrag'); return; }
+      th.draggable = true;
+      th.title = 'Arrastra para mover esta columna';
+      th.addEventListener('dragstart', function(e) {
+        _dragTh = th; th.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', th.dataset.oi); } catch(err) {}
+      });
+      th.addEventListener('dragend', function() {
+        th.classList.remove('dragging');
+        Array.prototype.forEach.call(head.children, function(x){ x.classList.remove('drop-l','drop-r'); });
+        _dragTh = null;
+      });
+      th.addEventListener('dragover', function(e) {
+        if (!_dragTh || _dragTh === th || th.classList.contains('nodrag')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        var r = th.getBoundingClientRect();
+        var after = (e.clientX - r.left) > r.width / 2;
+        th.classList.toggle('drop-r', after);
+        th.classList.toggle('drop-l', !after);
+      });
+      th.addEventListener('dragleave', function() { th.classList.remove('drop-l','drop-r'); });
+      th.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (!_dragTh || _dragTh === th) return;
+        var r = th.getBoundingClientRect();
+        var after = (e.clientX - r.left) > r.width / 2;
+        head.insertBefore(_dragTh, after ? th.nextSibling : th);
+        th.classList.remove('drop-l','drop-r');
+        saveColOrder(tableId);
+        applyColOrder(tableId);
+      });
+    });
+    table.dataset.dragInit = '1';
+    restoreColOrder(tableId);
+  }
+}
+
+function saveColOrder(tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var order = Array.prototype.map.call(table.querySelectorAll('thead th'), function(th){ return parseInt(th.dataset.oi); });
+  if (!CFG.colOrder) CFG.colOrder = {};
+  CFG.colOrder[tableId] = order;
+  saveLocalCFG();
+}
+
+function restoreColOrder(tableId) {
+  var saved = (CFG.colOrder || {})[tableId];
+  var table = document.getElementById(tableId);
+  if (!saved || !table) return;
+  var head = table.querySelector('thead tr');
+  var ths = Array.prototype.slice.call(head.children);
+  // Si cambió el número de columnas (nueva versión), ignorar el orden guardado
+  if (ths.length !== saved.length) { delete CFG.colOrder[tableId]; saveLocalCFG(); return; }
+  saved.forEach(function(oi) {
+    var th = ths.filter(function(x){ return parseInt(x.dataset.oi) === oi; })[0];
+    if (th) head.appendChild(th);
+  });
+}
+
+// Reacomoda las celdas del cuerpo para que coincidan con el orden del encabezado
+function applyColOrder(tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var order = Array.prototype.map.call(table.querySelectorAll('thead th'), function(th){ return parseInt(th.dataset.oi); });
+  // Si está en orden natural, no hay nada que hacer
+  var natural = order.every(function(v,i){ return v === i; });
+  if (natural) return;
+  Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function(tr) {
+    var cells = Array.prototype.slice.call(tr.children);
+    if (cells.length !== order.length) return; // filas de estado vacío con colspan
+    order.forEach(function(oi){ if (cells[oi]) tr.appendChild(cells[oi]); });
+  });
+}
+
+function resetColOrder(tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var head = table.querySelector('thead tr');
+  var ths = Array.prototype.slice.call(head.children);
+  ths.sort(function(a,b){ return parseInt(a.dataset.oi) - parseInt(b.dataset.oi); });
+  ths.forEach(function(th){ head.appendChild(th); });
+  if (CFG.colOrder) delete CFG.colOrder[tableId];
+  saveLocalCFG();
+  renderScreen(screen);
+  toast('✓ Columnas restablecidas al orden original', 'ok');
+}
+
 // ══ AUDITORÍA: registro de quién cambió qué y cuándo ══
+
 var AUDIT_LABELS = {
   num:'Vuelo #', airline:'Aerolínea', awb:'AWB #', origin:'Origen', dest:'Destino', etd:'ETD', eta:'ETA',
   status:'Estado', bsent:'Cajas enviadas', bconf:'Cajas confirmadas', weight:'Peso bruto', cweight:'Peso facturable',
@@ -2585,7 +2871,8 @@ async function analyzeReport() {
     );
     box.textContent = text;
   } catch(e) {
-    if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. El reporte de arriba ya funciona sin IA.';
+    if (e.message === 'AI_OFF') box.textContent = 'La IA está desactivada por privacidad. El reporte de arriba se genera localmente y sigue funcionando.';
+    else if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. El reporte de arriba ya funciona sin IA.';
     else box.textContent = 'No se pudo analizar: ' + e.message;
   }
 }
@@ -3018,7 +3305,8 @@ async function explainTrend(){
     var text = await callAI('Eres analista de logística de carga aérea. Sé conciso, directo y práctico.', [{role:'user', content: prompt}]);
     box.textContent = text;
   } catch(e) {
-    if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. La proyección visual de arriba ya funciona sin IA.';
+    if (e.message === 'AI_OFF') box.textContent = 'La IA está desactivada por privacidad. La proyección de arriba se calcula localmente y sigue funcionando.';
+    else if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. La proyección visual de arriba ya funciona sin IA.';
     else box.textContent = 'No se pudo analizar: ' + e.message;
   }
 }
@@ -3089,6 +3377,7 @@ function renderDash(){
   document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' vuelos':'—';
   renderDashCharts();
   renderUrgent();
+  initDragCols('tbl-dash');
   var alertCard=document.getElementById('rate-alert-card'), alertList=document.getElementById('rate-alert-list');
   if(rateAlerts.length>0){alertCard.classList.add('show');alertList.innerHTML=rateAlerts.map(function(f){return'<div class="alert-item">✈ '+esc(f.num)+' ('+esc(f.origin)+'→'+esc(f.dest)+'): Tarifa real $'+parseFloat(f.rate).toFixed(3)+'/kg vs Esperada $'+parseFloat(f.rateExp).toFixed(3)+'/kg — Dif: $'+(parseFloat(f.rate)-parseFloat(f.rateExp)).toFixed(3)+'</div>';}).join('');}
   else alertCard.classList.remove('show');
@@ -3102,9 +3391,11 @@ function renderDash(){
     tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'→'+esc(f.dest)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bconf+'/'+f.bsent+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+( f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+etaSt(f)+rateDiff(f)+'</td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+pod+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
+  applyColOrder('tbl-dash');
 }
 
 function renderFlights(){
+  initDragCols('tbl-flights');
   var filtered=flsFlt==='all'?DB.flights:DB.flights.filter(function(f){return f.status===flsFlt;});
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
   if(!filtered.length){tb.innerHTML=erow(22,'Sin vuelos.');return;}
@@ -3115,6 +3406,7 @@ function renderFlights(){
     tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;">'+fmtD(f.etd)+'</td><td style="font-size:11px;">'+fmtD(f.eta)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
+  applyColOrder('tbl-flights');
 }
 
 function renderAgencies(){
@@ -3185,7 +3477,22 @@ function renderPred(){
 }
 
 function renderSettingsPage(){
+  // Medidor de almacenamiento
+  var meter = document.getElementById('storage-meter');
+  if (meter) {
+    var si = storageInfo();
+    var podCount = DB.flights.filter(function(f){ return f.podUrl && f.podUrl.indexOf('data:')===0; }).length;
+    var barColor = si.pct >= 85 ? 'var(--red)' : (si.pct >= 60 ? '#F59E0B' : 'var(--green)');
+    meter.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      + '<span>Espacio usado: <strong>' + si.kb + ' KB</strong> de ~5000 KB</span>'
+      + '<strong style="color:' + barColor + ';">' + si.pct + '%</strong></div>'
+      + '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden;">'
+      + '<div style="height:100%;width:' + si.pct + '%;background:' + barColor + ';border-radius:4px;"></div></div>'
+      + '<div style="font-size:10px;color:var(--t3);margin-top:4px;">' + DB.flights.length + ' vuelos · ' + podCount + ' POD adjuntos'
+      + (si.pct >= 60 ? ' · <strong style="color:'+barColor+';">Conviene exportar respaldo y liberar PODs</strong>' : '') + '</div>';
+  }
   sv('cfg-groq',CFG.groqKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
+  sv('cfg-ai-privacy',CFG.aiPrivacy||'full'); onPrivacyChange();
   sv('cfg-email-service',CFG.emailServiceId||''); sv('cfg-email-template',CFG.emailTemplateId||''); sv('cfg-email-key',CFG.emailPublicKey||''); sv('cfg-notify-emails',CFG.notifyEmails||'');
   var na=document.getElementById('cfg-notify-arrival'); if(na)na.checked=CFG.notifyOnArrival!==false;
   var nd=document.getElementById('cfg-notify-delay'); if(nd)nd.checked=CFG.notifyOnDelay!==false;
@@ -3260,12 +3567,12 @@ function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').
 // ══ SETTINGS ══
 function saveSettings(){
   CFG.groqKey=gv('cfg-groq'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
+  CFG.aiPrivacy=gv('cfg-ai-privacy')||'full';
   CFG.emailServiceId=gv('cfg-email-service'); CFG.emailTemplateId=gv('cfg-email-template'); CFG.emailPublicKey=gv('cfg-email-key'); CFG.notifyEmails=gv('cfg-notify-emails');
   var na=document.getElementById('cfg-notify-arrival'), nd=document.getElementById('cfg-notify-delay'), nu=document.getElementById('cfg-notify-usda');
   CFG.notifyOnArrival=na?na.checked:true; CFG.notifyOnDelay=nd?nd.checked:true; CFG.notifyOnUsda=nu?nu.checked:true;
   saveLocalCFG(); populateConsignees(); toast('Configuración guardada!','ok');
 }
-async function forceSyncAll_unused(){}
 
 // ══ EXPORT ══
 function exportCSV(){
@@ -3331,7 +3638,6 @@ function setLang(l,btn){lang=l;document.querySelectorAll('.lang-btns .lb').forEa
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'ok');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2800);}
 
 // ══ FALLBACK (sin SharePoint) ══
-function loadLocalFallback_unused(){}
 
 // ══ INIT ══
 window.onload = function() {
