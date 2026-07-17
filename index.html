@@ -330,6 +330,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
     <div class="content">
       <div id="storage-alert" style="display:none;background:#FEE2E2;border:1.5px solid #DC2626;color:#991B1B;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.5;"></div>
+      <div id="backup-alert" style="display:none;"></div>
       <!-- DASHBOARD -->
       <div class="screen active" id="s-dashboard">
         <div class="sg sg5">
@@ -651,11 +652,16 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>AWC (USD)</label><input id="f-awc" type="number" step="0.01" placeholder="e.g. 25.00" oninput="calcAll()"></div>
           <div class="field"><label>MYC (USD/unidad)</label><input id="f-myc" type="number" step="0.001" placeholder="e.g. 0.350" oninput="calcAll()"></div>
           <div class="field"><label>ESC (USD/unidad)</label><input id="f-esc" type="number" step="0.001" placeholder="e.g. 0.050" oninput="calcAll()"></div>
-          <div class="field"><label>Otros cargos (agente)</label><input id="f-ochagent" type="number" readonly class="calc"></div>
-          <div class="field"><label>Otros cargos (carrier)</label><input id="f-ochcarrier" type="number" readonly class="calc"></div>
+          <div class="field"><label>Base de MYC/ESC <span style="font-size:9px;color:var(--t3);">(varía por aerolínea)</span></label><select id="f-myc-basis" onchange="calcAll()">
+            <option value="kg">Por kilo (× peso facturable)</option>
+            <option value="box">Por caja (× nº de cajas)</option>
+          </select></div>
+          <div class="field"><label>Otros cargos (agente)</label><input id="f-ochagent" type="number" step="0.01" placeholder="Auto o manual" oninput="markManual(this);calcAll()"></div>
+          <div class="field"><label>Otros cargos (carrier)</label><input id="f-ochcarrier" type="number" step="0.01" placeholder="Auto o manual" oninput="markManual(this);calcAll()"></div>
           <div class="field"><label>TOTAL PREPAGADO (USD)</label><input id="f-totalpaid" type="number" readonly class="calc" style="font-size:14px;font-weight:800;"></div>
-          <div class="field"><label>Total cobrar (USD)</label><input id="f-totalcoll" type="number" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Total cobrar (USD) <span style="font-size:9px;color:var(--t3);">(solo si el AWB es Collect)</span></label><input id="f-totalcoll" type="number" step="0.01" placeholder="0.00"></div>
         </div>
+        <div id="total-mismatch-alert" style="display:none;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;line-height:1.5;"></div>
         <div class="ai-tip" id="tip-cost"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-cost-txt"></span></div>
         <div id="rate-mismatch-alert" style="display:none;background:var(--amberbg);color:var(--ambertxt);border:1px solid #F59E0B;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;"></div>
       </div>
@@ -893,7 +899,7 @@ var flsFlt = 'all';
 var chatHist = [];
 var liveCache = {};
 var DB = { flights: [], agencies: [] };
-var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {} };
+var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '' };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -949,6 +955,7 @@ async function initApp() {
   renderDash();
   updateBadges();
   populateConsignees();
+  checkBackupHealth();
   // Recalcular estados automáticamente cada 60 segundos
   if (!window._statusInterval) {
     window._statusInterval = setInterval(autoUpdateAllStatuses, 60000);
@@ -1129,6 +1136,47 @@ async function notifyUsdaHold(f, prevUsda, prevFreed) {
 }
 
 
+// ══ PROTECCIÓN CONTRA PÉRDIDA DE DATOS ══
+// Safari borra localStorage tras 7 días sin visitar el sitio (política ITP de Apple).
+// Detectamos el navegador y avisamos según los días desde el último respaldo.
+function isSafari() {
+  var ua = navigator.userAgent;
+  return /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+}
+
+function daysSinceBackup() {
+  if (!CFG.lastBackup) return null;
+  return Math.floor((Date.now() - new Date(CFG.lastBackup).getTime()) / 86400000);
+}
+
+function checkBackupHealth() {
+  var banner = document.getElementById('backup-alert');
+  if (!banner) return;
+  if (!DB.flights.length) { banner.style.display = 'none'; return; }
+  var days = daysSinceBackup();
+  var safari = isSafari();
+  var msg = '', level = '';
+
+  if (days === null) {
+    level = safari ? 'high' : 'mid';
+    msg = '<strong>⚠ Nunca has exportado un respaldo.</strong> Tienes ' + DB.flights.length + ' envíos guardados únicamente en este navegador.'
+      + (safari ? '<br><br><strong>Estás usando Safari:</strong> Apple borra automáticamente los datos de los sitios web tras 7 días sin visitarlos. Tus envíos pueden desaparecer solos.' : '');
+  } else if (days >= 5) {
+    level = days >= 7 ? 'high' : 'mid';
+    msg = '<strong>⚠ Tu último respaldo fue hace ' + days + ' día' + (days>1?'s':'') + '.</strong>'
+      + (safari ? ' Safari borra los datos tras 7 días sin abrir el sitio — exporta uno nuevo ahora.' : ' Conviene exportar uno nuevo.');
+  } else {
+    banner.style.display = 'none';
+    return;
+  }
+  var c = level === 'high' ? { bg:'#FEE2E2', bd:'#DC2626', tx:'#991B1B' } : { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E' };
+  banner.style.cssText = 'display:block;background:'+c.bg+';border:1.5px solid '+c.bd+';color:'+c.tx
+    + ';border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.5;';
+  banner.innerHTML = msg + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<button class="btn xs pr" onclick="exportBackup()">💾 Exportar respaldo ahora</button>'
+    + '<button class="btn xs" onclick="document.getElementById(\'backup-alert\').style.display=\'none\'">Después</button></div>';
+}
+
 function exportBackup() {
   try {
     var backup = {
@@ -1148,7 +1196,11 @@ function exportBackup() {
     a.download = 'TrackFlow_Respaldo_' + date + '.json';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast('✓ Respaldo descargado (' + (DB.flights||[]).length + ' vuelos)', 'ok');
+    CFG.lastBackup = new Date().toISOString();
+    saveLocalCFG();
+    var banner = document.getElementById('backup-alert'); if (banner) banner.style.display = 'none';
+    if (screen === 'settings') renderSettingsPage();
+    toast('✓ Respaldo descargado (' + (DB.flights||[]).length + ' vuelos). Guárdalo en un lugar seguro.', 'ok');
   } catch(e) { toast('Error al exportar respaldo: ' + e.message, 'err'); }
 }
 
@@ -1342,10 +1394,16 @@ async function handleAWBUpload(e) {
       if (parsed.awc) { sv('f-awc', parsed.awc); filledCount++; }
       if (parsed.myc) { sv('f-myc', parsed.myc); filledCount++; }
       if (parsed.esc) { sv('f-esc', parsed.esc); filledCount++; }
-      if (parsed.total_prepaid) { sv('f-totalpaid', parsed.total_prepaid); filledCount++; }
+      if (parsed.total_prepaid) {
+        sv('f-totalpaid', parsed.total_prepaid);
+        // Guardar el total impreso en el AWB para validar contra nuestra suma
+        window._awbTotalPrepaid = parseFloat(parsed.total_prepaid) || 0;
+        filledCount++;
+      }
       if (parsed.total_collect) { sv('f-totalcoll', parsed.total_collect); filledCount++; }
-      if (parsed.other_agent) { sv('f-ochagent', parsed.other_agent); filledCount++; }
-      if (parsed.other_carrier) { sv('f-ochcarrier', parsed.other_carrier); filledCount++; }
+      // Los "Other Charges" vienen impresos en el AWB: son la fuente de verdad, no se recalculan
+      if (parsed.other_agent) { sv('f-ochagent', parsed.other_agent); markManual(document.getElementById('f-ochagent')); filledCount++; }
+      if (parsed.other_carrier) { sv('f-ochcarrier', parsed.other_carrier); markManual(document.getElementById('f-ochcarrier')); filledCount++; }
       if (parsed.tax) { sv('f-tax', parsed.tax); filledCount++; }
       if (parsed.valcharge) { sv('f-valcharge', parsed.valcharge); filledCount++; }
       if (parsed.awb) { sv('f-awb', parsed.awb); filledCount++; }
@@ -1630,6 +1688,26 @@ function extractAWBFields(text) {
       if (collectMatch && parseFloat(collectMatch[1]) > 0) result.total_collect = parseFloat(collectMatch[1].replace(',', '.'));
     }
   }
+  // ── Detectar si el AWB es Prepaid (PP) o Collect (CC) ──
+  // El AWB imprime el código de cargos: "USD PP PP PP PP PP" (prepagado) o "USD CC ..." (por cobrar)
+  var chgsMatch = clean.match(/\b[A-Z]{3}\s+(PP|CC)\s+(PP|CC)/);
+  if (chgsMatch) result.chgsCode = chgsMatch[1].toUpperCase();
+
+  // Red de seguridad 0: detectar si Prepaid y Collect salieron intercambiados.
+  // Solo aplica si el AWB dice explícitamente PP (prepagado): en ese caso el "collect"
+  // debe ser 0, así que si trae el total real es que el layout del PDF los invirtió.
+  var computedCheck = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0)
+    + (result.tax||0) + (result.valcharge||0);
+  if (result.chgsCode === 'PP' && computedCheck > 0 && result.total_collect) {
+    var prepaidCuadra = result.total_prepaid && Math.abs(result.total_prepaid - computedCheck) <= 0.02;
+    var collectCuadra = Math.abs(result.total_collect - computedCheck) <= 0.02;
+    if (!prepaidCuadra && collectCuadra) {
+      result.total_prepaid = result.total_collect;
+      result.total_collect = 0;
+      result.swapFixed = true;
+    }
+  }
+
   // Red de seguridad 1: si el total detectado es igual al cargo de peso pero hay otros cargos, recalcular
   // (significa que capturamos el subtotal, no el total real)
   var computedTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0)
@@ -2913,6 +2991,10 @@ function calcQC() {
     tip.style.display = 'none';
   }
   onClaimChange();
+  // Los cargos guardados son la fuente de verdad: marcarlos para que no se recalculen
+  sv('f-myc-basis', f.mycBasis||'kg');
+  ['f-ochagent','f-ochcarrier'].forEach(function(i){var e=document.getElementById(i); if(e && e.value) markManual(e);});
+  window._awbTotalPrepaid = parseFloat(f.totalpaid)||0;
 }
 
 // Maneja los cambios de estado USDA (hold/liberado)
@@ -2938,6 +3020,9 @@ function onUsdaChange() {
   }
   calcQC();
 }
+
+// Marca un campo como editado manualmente para que el cálculo automático no lo pise
+function markManual(el) { if (el) el.dataset.manual = '1'; }
 
 function calcAll() {
   var sentRaw = gv('f-bsent'), confRaw = gv('f-bconf');
@@ -2979,15 +3064,50 @@ function calcAll() {
   var cw=parseFloat(gv('f-cweight'))||parseFloat(gv('f-weight'))||0, wc=rateBase*cw;
   if (wc>0) sv('f-wcharge', wc.toFixed(2));
   var maa=parseFloat(gv('f-maa'))||0, awc=parseFloat(gv('f-awc'))||0;
-  var boxes=parseInt(gv('f-bsent'))||0, agTot=maa+awc, carTot=mycRate*boxes+escRate*boxes;
-  if (agTot>0) sv('f-ochagent', agTot.toFixed(2));
-  if (carTot>0) sv('f-ochcarrier', carTot.toFixed(2));
-  var val=parseFloat(gv('f-valcharge'))||0, tax=parseFloat(gv('f-tax'))||0, total=wc+agTot+carTot+val+tax;
+  var boxes=parseInt(gv('f-bsent'))||0;
+
+  // ── OTROS CARGOS ──
+  // El AWB imprime "Total Other Charges Due Agent/Carrier". Si vienen del PDF o los escribiste tú, mandan esos.
+  // Solo si están vacíos, sugerimos un cálculo: agente = MAA + AWC | carrier = (MYC + ESC) × base
+  var agField = document.getElementById('f-ochagent'), carField = document.getElementById('f-ochcarrier');
+  var basis = gv('f-myc-basis') || 'kg';
+  var basisQty = basis === 'box' ? boxes : cw;
+  var agSuggested = maa + awc;
+  var carSuggested = (mycRate + escRate) * basisQty;
+  var agManual = agField && agField.dataset.manual === '1';
+  var carManual = carField && carField.dataset.manual === '1';
+  if (!agManual && agSuggested > 0 && !gv('f-ochagent')) sv('f-ochagent', agSuggested.toFixed(2));
+  if (!carManual && carSuggested > 0 && !gv('f-ochcarrier')) sv('f-ochcarrier', carSuggested.toFixed(2));
+  var agTot = parseFloat(gv('f-ochagent'))||0;
+  var carTot = parseFloat(gv('f-ochcarrier'))||0;
+
+  var val=parseFloat(gv('f-valcharge'))||0, tax=parseFloat(gv('f-tax'))||0;
+  var total = wc + val + tax + agTot + carTot;
   if (total > 0) {
     sv('f-totalpaid', total.toFixed(2));
     var tc=document.getElementById('tip-cost'); tc.style.display='flex';
-    document.getElementById('tip-cost-txt').textContent = 'Total prepagado: $'+total.toFixed(2)+' (peso $'+wc.toFixed(2)+' + agente $'+agTot.toFixed(2)+' + carrier $'+carTot.toFixed(2)+')';
+    // Desglose completo y honesto de TODOS los componentes
+    var partes = [];
+    partes.push('peso $'+wc.toFixed(2));
+    if (val>0) partes.push('valuación $'+val.toFixed(2));
+    if (tax>0) partes.push('impuesto $'+tax.toFixed(2));
+    partes.push('agente $'+agTot.toFixed(2));
+    partes.push('carrier $'+carTot.toFixed(2));
+    document.getElementById('tip-cost-txt').textContent = 'Total prepagado: $'+total.toFixed(2)+' = '+partes.join(' + ');
   } else document.getElementById('tip-cost').style.display='none';
+
+  // ── VALIDACIÓN: comparar contra el total impreso en el AWB ──
+  // El AWB trae su propio "Total Prepaid". Si no coincide con nuestra suma, algo falta o sobra.
+  var alertT = document.getElementById('total-mismatch-alert');
+  if (alertT) {
+    var awbTotal = window._awbTotalPrepaid || 0;
+    if (awbTotal > 0 && total > 0 && Math.abs(total - awbTotal) > 0.02) {
+      var dif = total - awbTotal;
+      alertT.style.display = 'block';
+      alertT.textContent = '⚠ El total calculado ($'+total.toFixed(2)+') no coincide con el impreso en el AWB ($'+awbTotal.toFixed(2)+'). '
+        + 'Diferencia: $'+(dif>0?'+':'')+dif.toFixed(2)+'. Revisa los cargos — puede faltar un concepto o estar duplicado.';
+    } else alertT.style.display = 'none';
+  }
 
   // ── Comparación de tarifa: usa la Tarifa Efectiva (Rate + MYC + ESC) vs Tarifa Esperada ──
   var rateExp=parseFloat(gv('f-rate-exp'))||0;
@@ -3019,7 +3139,10 @@ function clearFlightForm() {
   document.getElementById('pod-status').style.display='none';
   document.getElementById('awb-zone-txt').textContent='Clic para subir AWB PDF / Imagen';
   document.getElementById('pod-zone-txt').textContent='Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive';
-  pendingPOD = null; _pendingAl = null; window._lastDepartureDay = null;
+  pendingPOD = null; _pendingAl = null; window._lastDepartureDay = null; window._awbTotalPrepaid = 0;
+  ['f-ochagent','f-ochcarrier'].forEach(function(i){var e=document.getElementById(i); if(e) delete e.dataset.manual;});
+  sv('f-myc-basis','kg');
+  var tma=document.getElementById('total-mismatch-alert'); if(tma)tma.style.display='none';
   var tfd=document.getElementById('tip-flight-day'); if(tfd)tfd.style.display='none';
   if(document.getElementById('f-arrived')) document.getElementById('f-arrived').checked = false;
   if(document.getElementById('f-completed')) document.getElementById('f-completed').checked = false;
@@ -3081,6 +3204,7 @@ async function saveFlight() {
     claimDate: gv('f-claim-date'),
     claimDeadline: gv('f-claim-deadline'),
     claimNotes: gv('f-claim-notes'),
+    mycBasis: gv('f-myc-basis')||'kg',
     departureDay: window._lastDepartureDay || null,
     podUrl: pendingPOD ? pendingPOD.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podUrl||'':''),
     podName: pendingPOD ? pendingPOD.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podName||'':''),
@@ -3490,6 +3614,18 @@ function renderSettingsPage(){
       + '<div style="height:100%;width:' + si.pct + '%;background:' + barColor + ';border-radius:4px;"></div></div>'
       + '<div style="font-size:10px;color:var(--t3);margin-top:4px;">' + DB.flights.length + ' vuelos · ' + podCount + ' POD adjuntos'
       + (si.pct >= 60 ? ' · <strong style="color:'+barColor+';">Conviene exportar respaldo y liberar PODs</strong>' : '') + '</div>';
+    // Estado del último respaldo
+    var dsb = daysSinceBackup();
+    var bkTxt = dsb === null
+      ? '<strong style="color:var(--red);">Nunca has exportado un respaldo</strong>'
+      : (dsb === 0 ? '<strong style="color:var(--green);">Último respaldo: hoy ✓</strong>'
+        : '<strong style="color:' + (dsb>=5?'var(--red)':'var(--t2)') + ';">Último respaldo: hace ' + dsb + ' día' + (dsb>1?'s':'') + '</strong>');
+    meter.innerHTML += '<div style="font-size:10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">' + bkTxt + '</div>';
+    if (isSafari()) {
+      meter.innerHTML += '<div style="font-size:10px;line-height:1.5;background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B;border-radius:8px;padding:8px 10px;margin-top:8px;">'
+        + '<strong>🧭 Estás usando Safari</strong><br>Apple borra automáticamente los datos guardados de un sitio si no lo abres durante 7 días. También se borran al limpiar el historial.<br><br>'
+        + '<strong>Opciones:</strong> abre TrackFlow al menos una vez por semana, exporta respaldos con frecuencia, o usa <strong>Chrome</strong> (no aplica este borrado automático).</div>';
+    }
   }
   sv('cfg-groq',CFG.groqKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
   sv('cfg-ai-privacy',CFG.aiPrivacy||'full'); onPrivacyChange();
