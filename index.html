@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/3.6.0/cdn.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <style>
@@ -286,6 +288,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="ni active" id="nav-dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Dashboard</span><span class="nbadge" id="badge-alert" style="display:none">!</span></div>
       <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
       <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
+      <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reportes</span></div>
+      <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendario</span></div>
+      <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Auditoría</span></div>
       <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
       <div class="ni" id="nav-predictions" onclick="go('predictions')"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Predicciones IA</span></div>
       <div class="ni" id="nav-assistant" onclick="go('assistant')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Asistente IA</span></div>
@@ -367,6 +372,10 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <button class="qbtn" onclick="aiAsk('Ranking de agencias de carga por tasa de confirmación y volumen total')">Ranking agencias</button>
               <button class="qbtn" onclick="aiAsk('Muestra el costo total AWB y el desglose por vuelo con todos los cargos')">Resumen de costos</button>
               <button class="qbtn" onclick="aiAsk('Muestra todas las diferencias entre tarifa real y esperada con el impacto en dinero')">Diferencias de tarifa</button>
+              <button class="qbtn" onclick="aiAsk('¿Qué cargas están retenidas por USDA y cuáles siguen sin liberar? Indica qué hacer')">Hold USDA</button>
+              <button class="qbtn" onclick="aiAsk('Resume las cajas dañadas y perdidas por aerolínea, el dinero en juego y el estado de cada reclamo')">Cajas perdidas/dañadas</button>
+              <button class="qbtn" onclick="aiAsk('¿Qué aerolínea me conviene más según tarifa promedio por kg y tasa de incidencias? Compara')">Comparar aerolíneas</button>
+              <button class="qbtn" onclick="aiAsk('Dame las 3 acciones más urgentes que debo hacer hoy según el estado actual de mis envíos')">¿Qué hago hoy?</button>
             </div>
             <div id="ai-result" class="ai-bubble">Pregúntame sobre tus vuelos, agencias, guías AWB, costos o estado de carga.</div>
           </div>
@@ -387,7 +396,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span class="ct">Todos los Vuelos</span>
             <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="flF(this,'all')">Todos</span><span class="ftab" onclick="flF(this,'transit')">Tránsito</span><span class="ftab" onclick="flF(this,'pending')">Pendiente</span><span class="ftab" onclick="flF(this,'delivered')">Entregado</span></div><button class="btn sm pr" onclick="openModal('new')">+ Nuevo</button></div>
           </div>
-          <div class="tw"><table><thead><tr><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>AWB #</th><th>Enviadas</th><th>Conf.</th><th>Falt.</th><th>Est.Conf</th><th>Estado</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -408,6 +417,64 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="sc"><div class="sl">Tasa Puntualidad</div><div class="sv" id="pr-ot">—</div><div class="ss up">—</div></div>
         </div>
         <div class="card"><div class="ch"><span class="ct">Riesgo de Demora por Vuelo</span></div><div style="padding:14px 16px;" id="risk-bars"><div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div></div></div>
+      </div>
+
+      <!-- REPORTES -->
+      <div class="screen" id="s-reports">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">📄 Reporte de Período</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="report-period" onchange="renderReport(parseInt(this.value))" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);">
+                <option value="7">Última semana</option>
+                <option value="30">Último mes</option>
+                <option value="90">Último trimestre</option>
+                <option value="180">Último semestre</option>
+              </select>
+              <button class="btn xs" onclick="copyReport()">📋 Copiar</button>
+              <button class="btn xs pr" onclick="analyzeReport()">🤖 Analizar con IA</button>
+            </div>
+          </div>
+          <div style="padding:16px;">
+            <div id="report-body"><div class="ai-bubble" style="font-size:12px;">Selecciona un período para generar el reporte.</div></div>
+            <div id="report-ai" style="margin-top:14px;font-size:12px;color:var(--t2);background:var(--lightgreen);border-radius:8px;padding:10px 14px;line-height:1.5;display:none;"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">💹 Evolución de tarifas por aerolínea</span><span style="font-size:10px;color:var(--t3);">Detecta si te están subiendo precios</span></div>
+          <div style="padding:16px;" id="rate-history-body"><div class="ai-bubble" style="font-size:12px;">Cargando…</div></div>
+        </div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div class="screen" id="s-calendar">
+        <div class="card">
+          <div class="ch">
+            <span class="ct" id="cal-label">Calendario</span>
+            <div style="display:flex;gap:5px;align-items:center;">
+              <button class="btn xs" onclick="calNav(-1)">‹ Anterior</button>
+              <button class="btn xs" onclick="calToday()">Hoy</button>
+              <button class="btn xs" onclick="calNav(1)">Siguiente ›</button>
+            </div>
+          </div>
+          <div style="padding:16px;" id="calendar-body"></div>
+        </div>
+      </div>
+
+      <!-- AUDITORÍA -->
+      <div class="screen" id="s-audit">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">🔍 Registro de Cambios</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="audit-user" onchange="renderAudit()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);">
+                <option value="all">Todos los usuarios</option>
+              </select>
+              <button class="btn xs danger" onclick="clearAudit()">Borrar registro</button>
+            </div>
+          </div>
+          <div class="tw"><table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>AWB / Vuelo</th><th>Acción</th><th>Cambios</th></tr></thead><tbody id="audit-tbody"></tbody></table></div>
+        </div>
       </div>
 
       <!-- AI ASSISTANT -->
@@ -474,7 +541,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               </div>
               <a href="https://jetfreshflowers.sharepoint.com/sites/TrackFlow" target="_blank" class="btn pr" style="text-align:center;text-decoration:none;display:block;margin-top:4px;">Abrir en SharePoint ↗</a>
               <button class="btn" onclick="forceSyncAll()">🔄 Sincronizar ahora</button>
-              <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 5 vuelos de ejemplo</button>
+              <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 7 vuelos de ejemplo</button>
               <button class="btn" onclick="exportCSV()">Exportar vuelos CSV</button>
               <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
               <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;">
@@ -532,11 +599,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="fs">
         <div class="ft">CONTEO DE CAJAS Y DETALLES DE CARGA</div>
         <div style="margin-bottom:12px;">
-          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Subir AWB PDF para auto-rellenar campos con IA</label>
+          <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Subir AWB PDF para auto-rellenar campos</label>
           <div class="upload-zone" onclick="document.getElementById('awb-pdf').click()" id="awb-zone">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
             <p id="awb-zone-txt">Clic para subir AWB PDF / Imagen</p>
-            <p style="font-size:10px;color:var(--t3);margin-top:3px;">IA extrae: cajas, peso, peso facturable y todos los cargos financieros</p>
+            <p style="font-size:10px;color:var(--t3);margin-top:3px;">Extrae automáticamente: AWB, vuelo, aerolínea, ruta, cajas, pesos, tarifa y todos los cargos financieros</p>
           </div>
           <input type="file" id="awb-pdf" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleAWBUpload(event)">
           <div class="upload-status" id="awb-status"></div>
@@ -608,6 +675,32 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>Observaciones de calidad / USDA</label><textarea id="f-qc-notes" placeholder="Ej: 5 cajas con daño por frío, 2 perdidas en tránsito, USDA retuvo por documentación..." style="min-height:44px;"></textarea></div>
         </div>
         <div class="ai-tip" id="tip-qc" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-qc-txt"></span></div>
+      </div>
+      <!-- RECLAMO A LA AEROLÍNEA -->
+      <div class="fs">
+        <div class="ft">RECLAMO A LA AEROLÍNEA</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Da seguimiento al dinero que la aerolínea debe reembolsar por cajas perdidas o dañadas. Sin seguimiento, ese dinero se pierde.</div>
+        <div class="fg c3">
+          <div class="field"><label>Estado del reclamo</label><select id="f-claim-status" onchange="onClaimChange()">
+            <option value="none">Sin reclamo</option>
+            <option value="pending">Por presentar</option>
+            <option value="submitted">Presentado</option>
+            <option value="approved">Aprobado</option>
+            <option value="paid">Pagado ✓</option>
+            <option value="rejected">Rechazado</option>
+          </select></div>
+          <div class="field"><label>Monto reclamado (USD)</label><input id="f-claim-amount" type="number" step="0.01" min="0" placeholder="0.00" oninput="onClaimChange()"></div>
+          <div class="field"><label>Monto recuperado (USD)</label><input id="f-claim-recovered" type="number" step="0.01" min="0" placeholder="0.00" oninput="onClaimChange()"></div>
+        </div>
+        <div class="fg c3" style="margin-top:10px;">
+          <div class="field"><label>N° de reclamo / referencia</label><input id="f-claim-ref" placeholder="Ej: CLM-2026-0142"></div>
+          <div class="field"><label>Fecha de presentación</label><input type="date" id="f-claim-date"></div>
+          <div class="field"><label>Fecha límite del reclamo</label><input type="date" id="f-claim-deadline"></div>
+        </div>
+        <div class="fg" style="margin-top:10px;">
+          <div class="field"><label>Notas del reclamo</label><textarea id="f-claim-notes" placeholder="Ej: Se presentó con fotos y AWB. Contacto en aerolínea: Juan Pérez." style="min-height:44px;"></textarea></div>
+        </div>
+        <div class="ai-tip" id="tip-claim" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-claim-txt"></span></div>
       </div>
       <!-- SHIPPER & CONSIGNEE -->
       <div class="fs">
@@ -984,7 +1077,8 @@ function exportBackup() {
       exportedBy: 'TrackFlow Air',
       flights: DB.flights || [],
       agencies: DB.agencies || [],
-      notifications: DB.notifications || []
+      notifications: DB.notifications || [],
+      audit: DB.audit || []
     };
     var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
@@ -1012,6 +1106,7 @@ function importBackup(input) {
       DB.flights = data.flights || [];
       DB.agencies = data.agencies || [];
       DB.notifications = data.notifications || DB.notifications || [];
+      DB.audit = data.audit || DB.audit || [];
       persistDB();
       autoUpdateAllStatuses();
       renderScreen(screen);
@@ -1043,6 +1138,8 @@ async function saveAgency_SP(a) {
 }
 
 async function deleteFlight_SP(id) {
+  var doomed = DB.flights.find(function(x){ return x.id === id; });
+  if (doomed) logAudit(doomed, doomed, (doomed.createdby||'Sistema'), 'delete');
   DB.flights = DB.flights.filter(function(x){ return x.id !== id; });
   persistDB();
 }
@@ -1061,7 +1158,7 @@ async function forceSyncAll() {
 
 // ══ CARGAR 5 VUELOS DE DEMOSTRACIÓN ══
 function loadDemoData() {
-  if (DB.flights.length > 0 && !confirm('Ya tienes vuelos guardados. ¿Agregar los 5 vuelos de ejemplo de todos modos?')) return;
+  if (DB.flights.length > 0 && !confirm('Ya tienes vuelos guardados. ¿Agregar los 7 vuelos de ejemplo de todos modos?')) return;
   var now = new Date();
   function h(hrs) {
     var d = new Date(now.getTime() + hrs*3600000);
@@ -1088,7 +1185,18 @@ function loadDemoData() {
     { num:'M38506', airline:'LAN CARGO SA', origin:'UIO', dest:'MIA', etd:h(-10), eta:h(-4),
       awb:'145-11633145', bsent:98, bconf:90, weight:'532', cweight:'762', rateBase:'1.58', myc:'0', esc:'0',
       maa:'0', awc:'43', totalpaid:'1246.96', consignee:'MAS Customs', createdby:'Marco', commodity:'CONSOL',
+      bdamaged:3, blost:5, claimStatus:'submitted', claimAmount:101.80, claimRecovered:0,
+      claimRef:'CLM-2026-0142', claimDate:new Date(Date.now()-2*86400000).toISOString().slice(0,10),
+      claimDeadline:new Date(Date.now()+5*86400000).toISOString().slice(0,10),
+      claimNotes:'Reclamo presentado con fotos y AWB. Contacto: Diego Flores.',
+      qcNotes:'3 cajas con daño por frío, 5 no llegaron al destino.',
       notes:'Llegó con retraso real del mismo día — 8 cajas faltantes' },
+    { num:'5Y0088', airline:'ATLAS AIR', origin:'MED', dest:'MIA', etd:h(-30), eta:h(-25),
+      awb:'369-77112233', bsent:150, bconf:150, weight:'820', cweight:'980', rateBase:'1.55', myc:'0.330', esc:'0.045',
+      maa:'35', awc:'25', totalpaid:'1899.00', consignee:'MAS Customs', createdby:'Maria Jose', commodity:'CONSOL',
+      busda:12, busdaReleased:0, usdaHold:true, usdaFreed:false,
+      qcNotes:'USDA retuvo 12 cajas para inspección fitosanitaria. Pendiente liberación.',
+      notes:'Carga en hold USDA sin liberar' },
     { num:'KL750', airline:'KLM', origin:'UIO', dest:'AMS', etd:h(-8), eta:h(-3),
       awb:'074-99887766', bsent:210, bconf:210, weight:'1150', cweight:'1400', rateBase:'1.65', myc:'0.380', esc:'0.055',
       maa:'35', awc:'25', totalpaid:'2520.00', consignee:'Delivery Plus', createdby:'Joan', commodity:'LINEA RELEASE',
@@ -1110,6 +1218,8 @@ function loadDemoData() {
       sname:'Jet Fresh Flowers Distributors',
       agName:'', agId:'', agcontact:'', agphone:'', agemail:'',
       arrived:false, completed:false, arrivedTime:'', statusNotes:'',
+      bdamaged:0, blost:0, busda:0, busdaReleased:0, usdaHold:false, usdaFreed:false, usdaFreedTime:'', qcNotes:'',
+      claimStatus:'none', claimAmount:0, claimRecovered:0, claimRef:'', claimDate:'', claimDeadline:'', claimNotes:'',
       modifiedAt: nowStr(), createdAt: nowStr()
     }, d);
     var st = computeAutoStatus(f, null);
@@ -1120,8 +1230,8 @@ function loadDemoData() {
   autoUpdateAllStatuses();
   renderScreen(screen);
   updateBadges();
-  pushNotif('Se cargaron 5 vuelos de demostración con distintos estados', '#1B7A3E');
-  toast('✓ 5 vuelos de ejemplo cargados', 'ok');
+  pushNotif('Se cargaron 7 vuelos de demostración con distintos estados', '#1B7A3E');
+  toast('✓ 7 vuelos de ejemplo cargados', 'ok');
   go('dashboard');
 }
 
@@ -1226,14 +1336,6 @@ async function handleAWBUpload(e) {
       }
       calcAll();
       // Panel de depuración: muestra el texto crudo y los campos detectados
-      var debugBox = document.getElementById('awb-debug-box');
-      if (!debugBox) {
-        debugBox = document.createElement('div');
-        debugBox.id = 'awb-debug-box';
-        debugBox.style.cssText = 'margin-top:10px;background:#0A2A14;color:#B7DFC8;border-radius:8px;padding:12px;font-family:monospace;font-size:10px;max-height:240px;overflow-y:auto;white-space:pre-wrap;';
-        document.getElementById('awb-status').parentNode.appendChild(debugBox);
-      }
-      debugBox.innerHTML = '<strong style="color:#fff;">TEXTO EXTRAÍDO DEL PDF (para diagnóstico):</strong>\n\n' + esc(fullText.substring(0, 3000)) + (fullText.length>3000?'\n\n...(truncado)':'') + '\n\n<strong style="color:#fff;">CAMPOS DETECTADOS:</strong>\n' + esc(JSON.stringify(parsed, null, 2));
       if (filledCount > 0) {
         stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)';
         stat.className = 'upload-status ok';
@@ -1849,9 +1951,55 @@ function renderLive(num, d, flightId, autoBox) {
 
 // ══ AI — Claude ══
 function dbSummary() {
-  return 'VUELOS(' + DB.flights.length + '): ' + DB.flights.slice(0,15).map(function(f){
-    return f.num+'('+f.origin+'→'+f.dest+',estado:'+f.status+',cajas:'+f.bconf+'/'+f.bsent+',AWB:'+f.awb+',costo:$'+(f.totalpaid||0)+',tarifa:$'+(f.rate||0)+',tarifaEsp:$'+(f.rateExp||0)+',por:'+f.createdby+',consignatario:'+f.consignee+')';
-  }).join(';') + ' | AGENCIAS(' + DB.agencies.length + '): ' + DB.agencies.map(function(a){ return a.name+'('+a.phone+','+a.email+')'; }).join(';');
+  var fl = DB.flights;
+  // Totales agregados para que la IA tenga contexto global sin listar todo
+  var t = { sent:0, conf:0, cost:0, damaged:0, lost:0, usda:0, claimOpen:0, claimAmt:0, claimRec:0 };
+  var byStatus = {pending:0, transit:0, delivered:0, delayed:0};
+  fl.forEach(function(f){
+    t.sent += parseInt(f.bsent)||0; t.conf += parseInt(f.bconf)||0;
+    t.cost += parseFloat(f.totalpaid)||0;
+    t.damaged += parseInt(f.bdamaged)||0; t.lost += parseInt(f.blost)||0; t.usda += parseInt(f.busda)||0;
+    t.claimAmt += parseFloat(f.claimAmount)||0; t.claimRec += parseFloat(f.claimRecovered)||0;
+    if (f.claimStatus && f.claimStatus!=='none' && f.claimStatus!=='paid' && f.claimStatus!=='rejected') t.claimOpen++;
+    byStatus[f.status] = (byStatus[f.status]||0)+1;
+  });
+  var resumen = 'RESUMEN GLOBAL: ' + fl.length + ' envíos | cajas ' + t.conf + '/' + t.sent + ' confirmadas'
+    + ' | costo total $' + t.cost.toFixed(2)
+    + ' | estados: ' + byStatus.pending + ' programados, ' + byStatus.transit + ' en tránsito, ' + byStatus.delivered + ' arribados, ' + byStatus.delayed + ' demorados'
+    + ' | incidencias: ' + t.damaged + ' cajas dañadas, ' + t.lost + ' perdidas por aerolínea, ' + t.usda + ' en hold USDA'
+    + ' | reclamos: $' + t.claimAmt.toFixed(2) + ' reclamado, $' + t.claimRec.toFixed(2) + ' recuperado, ' + t.claimOpen + ' abiertos.';
+
+  var detalle = 'DETALLE ÚLTIMOS ENVÍOS: ' + fl.slice(0,20).map(function(f){
+    var p = [];
+    p.push('AWB ' + (f.awb||'sin AWB'));
+    if (f.num) p.push('vuelo ' + f.num);
+    p.push((f.origin||'?') + '→' + (f.dest||'?'));
+    p.push('estado:' + (f.status||'?'));
+    if (f.etd) p.push('ETD:' + f.etd);
+    p.push('cajas:' + (f.bconf||0) + '/' + (f.bsent||0));
+    if (f.airline) p.push('aerolínea:' + f.airline);
+    if (f.agName) p.push('agencia:' + f.agName);
+    if (f.rate) p.push('tarifa:$' + f.rate + '/kg');
+    if (f.rateExp && f.rate && Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001) p.push('ALERTA tarifa esperada era $'+f.rateExp);
+    if (f.totalpaid) p.push('costo:$' + f.totalpaid);
+    if (parseInt(f.bdamaged)) p.push(f.bdamaged + ' DAÑADAS');
+    if (parseInt(f.blost)) p.push(f.blost + ' PERDIDAS');
+    if (parseInt(f.busda)) p.push(f.busda + ' en HOLD USDA' + (f.usdaFreed?' (liberadas)':' SIN LIBERAR'));
+    if (f.claimStatus && f.claimStatus!=='none') p.push('reclamo:' + (CLAIM_LABELS[f.claimStatus]||f.claimStatus) + (f.claimAmount?' $'+f.claimAmount:''));
+    if (f.createdby) p.push('por:' + f.createdby);
+    if (f.consignee) p.push('consignatario:' + f.consignee);
+    if (f.statusNotes) p.push('obs:' + f.statusNotes);
+    if (f.qcNotes) p.push('calidad:' + f.qcNotes);
+    return '[' + p.join(', ') + ']';
+  }).join(' ');
+
+  var agencias = 'AGENCIAS(' + DB.agencies.length + '): ' + DB.agencies.map(function(a){
+    var n = DB.flights.filter(function(f){return f.agId===a.id;}).length;
+    return a.name + ' (' + n + ' envíos' + (a.email?', '+a.email:'') + ')';
+  }).join('; ');
+
+  var hoy = 'FECHA ACTUAL: ' + new Date().toLocaleString('es-EC') + '.';
+  return hoy + '\n' + resumen + '\n' + detalle + '\n' + agencias;
 }
 
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
@@ -2006,6 +2154,460 @@ function onManualStatusChange() {
   }
 }
 
+// Maneja el estado del reclamo y sugiere el monto según cajas perdidas/dañadas
+function onClaimChange() {
+  var status = gv('f-claim-status');
+  var amount = parseFloat(gv('f-claim-amount'))||0;
+  var recovered = parseFloat(gv('f-claim-recovered'))||0;
+  var lost = parseInt(gv('f-blost'))||0;
+  var damaged = parseInt(gv('f-bdamaged'))||0;
+  var tip = document.getElementById('tip-claim');
+  var txt = document.getElementById('tip-claim-txt');
+  if (!tip || !txt) return;
+
+  // Autocompletar fecha de presentación al marcar "presentado"
+  var dateField = document.getElementById('f-claim-date');
+  if ((status==='submitted'||status==='approved'||status==='paid') && dateField && !dateField.value) {
+    dateField.value = new Date().toISOString().slice(0,10);
+  }
+
+  var msgs = [];
+  // Sugerir monto usando el valor por caja (total prepagado ÷ cajas enviadas)
+  var affected = lost + damaged;
+  if (affected > 0 && amount === 0) {
+    var totalPaid = parseFloat(gv('f-totalpaid'))||0;
+    var sent = parseInt(gv('f-bsent'))||0;
+    if (totalPaid > 0 && sent > 0) {
+      var perBox = totalPaid / sent;
+      msgs.push('Sugerencia: ' + affected + ' cajas afectadas × $' + perBox.toFixed(2) + '/caja ≈ $' + (perBox*affected).toFixed(2) + ' a reclamar.');
+    } else {
+      msgs.push(affected + ' cajas afectadas — registra el monto a reclamar a la aerolínea.');
+    }
+  }
+  if (status === 'paid' && recovered > 0) msgs.push('✓ Recuperado $' + recovered.toFixed(2) + '.');
+  else if (amount > 0 && recovered > 0 && recovered < amount) msgs.push('Recuperación parcial: $' + recovered.toFixed(2) + ' de $' + amount.toFixed(2) + ' (falta $' + (amount-recovered).toFixed(2) + ').');
+  // Alerta de fecha límite
+  var deadline = gv('f-claim-deadline');
+  if (deadline && status!=='paid' && status!=='rejected') {
+    var days = Math.ceil((new Date(deadline) - new Date()) / 86400000);
+    if (days < 0) msgs.push('⚠ La fecha límite del reclamo YA VENCIÓ.');
+    else if (days <= 7) msgs.push('⚠ Quedan ' + days + ' días para el límite del reclamo.');
+  }
+  if (msgs.length) { txt.textContent = msgs.join(' '); tip.style.display = 'flex'; }
+  else tip.style.display = 'none';
+}
+
+// ══ AUDITORÍA: registro de quién cambió qué y cuándo ══
+var AUDIT_LABELS = {
+  num:'Vuelo #', airline:'Aerolínea', awb:'AWB #', origin:'Origen', dest:'Destino', etd:'ETD', eta:'ETA',
+  status:'Estado', bsent:'Cajas enviadas', bconf:'Cajas confirmadas', weight:'Peso bruto', cweight:'Peso facturable',
+  rate:'Tarifa/kg', rateExp:'Tarifa esperada', totalpaid:'Total prepagado', agName:'Agencia', consignee:'Consignatario',
+  bdamaged:'Cajas dañadas', blost:'Cajas perdidas', busda:'Hold USDA', busdaReleased:'Liberadas USDA',
+  usdaHold:'Retenido USDA', usdaFreed:'Liberado USDA', arrived:'Llegó a destino', completed:'Proceso terminado',
+  claimStatus:'Estado reclamo', claimAmount:'Monto reclamado', claimRecovered:'Monto recuperado', notes:'Notas'
+};
+function auditValue(v) {
+  if (v === true) return 'Sí'; if (v === false) return 'No';
+  if (v === null || v === undefined || v === '') return '(vacío)';
+  return String(v);
+}
+// Compara dos versiones del vuelo y registra los cambios
+function logAudit(oldF, newF, user, action) {
+  if (!DB.audit) DB.audit = [];
+  var changes = [];
+  if (action === 'create') {
+    changes.push({ field:'—', from:'—', to:'Envío creado' });
+  } else if (action === 'delete') {
+    changes.push({ field:'—', from:'Envío existente', to:'Eliminado' });
+  } else {
+    Object.keys(AUDIT_LABELS).forEach(function(k){
+      var a = oldF ? oldF[k] : undefined, b = newF ? newF[k] : undefined;
+      // Normalizar para comparar
+      var na = (a===null||a===undefined)?'':String(a), nb = (b===null||b===undefined)?'':String(b);
+      if (na !== nb) changes.push({ field: k, from: auditValue(a), to: auditValue(b) });
+    });
+    if (!changes.length) return; // nada cambió
+  }
+  DB.audit.unshift({
+    id: 'aud_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    at: new Date().toISOString(),
+    user: user || 'Sistema',
+    flightId: newF ? newF.id : (oldF ? oldF.id : ''),
+    awb: (newF && newF.awb) || (oldF && oldF.awb) || '',
+    num: (newF && newF.num) || (oldF && oldF.num) || '',
+    action: action || 'update',
+    changes: changes
+  });
+  // Limitar a 500 registros para no llenar el almacenamiento
+  if (DB.audit.length > 500) DB.audit = DB.audit.slice(0, 500);
+  persistDB();
+}
+
+function renderAudit(){
+  var tb = document.getElementById('audit-tbody');
+  if (!tb) return;
+  var log = DB.audit || [];
+  var filterUser = (document.getElementById('audit-user')||{}).value || 'all';
+  var filtered = filterUser==='all' ? log : log.filter(function(a){return a.user===filterUser;});
+  // Poblar el filtro de usuarios
+  var sel = document.getElementById('audit-user');
+  if (sel && sel.dataset.filled !== '1') {
+    var users = {};
+    log.forEach(function(a){ if(a.user) users[a.user]=1; });
+    Object.keys(users).forEach(function(u){
+      var o=document.createElement('option'); o.value=u; o.textContent=u; sel.appendChild(o);
+    });
+    sel.dataset.filled = '1';
+  }
+  tb.innerHTML = '';
+  if (!filtered.length) { tb.innerHTML = erow(5, 'Sin registros de auditoría aún. Los cambios que hagas quedarán registrados aquí.'); return; }
+  var actLabel = {create:'✚ Creado', update:'✎ Modificado', delete:'✖ Eliminado'};
+  var actColor = {create:'var(--green)', update:'#1E40AF', delete:'var(--red)'};
+  filtered.slice(0, 200).forEach(function(a){
+    var chTxt = a.changes.map(function(c){
+      if (c.field === '—') return c.to;
+      return '<strong>'+(AUDIT_LABELS[c.field]||c.field)+':</strong> '+esc(c.from)+' → <span style="color:var(--green);">'+esc(c.to)+'</span>';
+    }).join('<br>');
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td style="font-size:11px;white-space:nowrap;">'+new Date(a.at).toLocaleString('es-EC')+'</td>'
+      + '<td><strong style="color:var(--green);">'+esc(a.user)+'</strong></td>'
+      + '<td><span style="font-family:var(--mono);font-size:11px;">'+esc(a.awb||a.num||'—')+'</span></td>'
+      + '<td><span style="font-size:11px;font-weight:700;color:'+(actColor[a.action]||'var(--t2)')+';">'+(actLabel[a.action]||a.action)+'</span></td>'
+      + '<td style="font-size:11px;white-space:normal;max-width:420px;">'+chTxt+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function clearAudit(){
+  if (!confirm('¿Borrar todo el registro de auditoría? Esta acción no se puede deshacer.')) return;
+  DB.audit = []; persistDB(); renderAudit(); toast('Registro de auditoría borrado.', 'ok');
+}
+
+// ══ CALENDARIO DE VUELOS ══
+var _calMonth = new Date().getMonth(), _calYear = new Date().getFullYear();
+function calNav(delta){
+  _calMonth += delta;
+  if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+  if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+  renderCalendar();
+}
+function calToday(){
+  var n = new Date(); _calMonth = n.getMonth(); _calYear = n.getFullYear(); renderCalendar();
+}
+function renderCalendar(){
+  var box = document.getElementById('calendar-body');
+  if (!box) return;
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var lbl = document.getElementById('cal-label');
+  if (lbl) lbl.textContent = MESES[_calMonth] + ' ' + _calYear;
+
+  // Agrupar vuelos por día del mes visible
+  var byDay = {};
+  DB.flights.forEach(function(f){
+    var d = f.etd ? new Date(f.etd) : null;
+    if (!d || isNaN(d)) return;
+    if (d.getMonth() !== _calMonth || d.getFullYear() !== _calYear) return;
+    var day = d.getDate();
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(f);
+  });
+
+  var first = new Date(_calYear, _calMonth, 1);
+  var startDow = first.getDay(); // 0=domingo
+  var daysInMonth = new Date(_calYear, _calMonth+1, 0).getDate();
+  var today = new Date();
+  var isCurrentMonth = today.getMonth()===_calMonth && today.getFullYear()===_calYear;
+
+  var h = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+  ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].forEach(function(d){
+    h += '<div style="text-align:center;font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;padding:6px 0;">'+d+'</div>';
+  });
+  // Celdas vacías antes del día 1
+  for (var i=0; i<startDow; i++) h += '<div></div>';
+  var STC = {pending:'#F59E0B', transit:'#3B82F6', delivered:'#22A351', delayed:'#DC2626'};
+  for (var day=1; day<=daysInMonth; day++) {
+    var fls = byDay[day] || [];
+    var isToday = isCurrentMonth && today.getDate()===day;
+    h += '<div style="min-height:82px;border:1px solid '+(isToday?'var(--green)':'var(--border)')+';border-radius:8px;padding:5px;background:'+(isToday?'var(--lightgreen)':'var(--surf)')+';overflow:hidden;">';
+    h += '<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--t2)')+';margin-bottom:3px;">'+day+'</div>';
+    fls.slice(0,3).forEach(function(f){
+      var c = STC[f.status] || '#9CA3AF';
+      var label = f.awb ? f.awb.split('-')[1] || f.awb : (f.num||'—');
+      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(f.awb||'')+' · '+esc(f.num||'')+' · '+esc(f.origin||'')+'→'+esc(f.dest||'')+'" style="cursor:pointer;font-size:9px;background:'+c+'22;color:'+c+';border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;">'+esc(label)+' '+esc(f.origin||'')+'→'+esc(f.dest||'')+'</div>';
+    });
+    if (fls.length > 3) h += '<div style="font-size:9px;color:var(--t3);padding-left:3px;">+'+(fls.length-3)+' más</div>';
+    h += '</div>';
+  }
+  h += '</div>';
+  // Leyenda
+  h += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;justify-content:center;">';
+  [['Programado','#F59E0B'],['En tránsito','#3B82F6'],['Arribado','#22A351'],['Demorado','#DC2626']].forEach(function(x){
+    h += '<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t2);"><span style="width:9px;height:9px;border-radius:2px;background:'+x[1]+';"></span>'+x[0]+'</div>';
+  });
+  h += '</div>';
+  // Resumen del mes
+  var totalM = Object.keys(byDay).reduce(function(s,k){return s+byDay[k].length;},0);
+  var boxesM = Object.keys(byDay).reduce(function(s,k){
+    return s + byDay[k].reduce(function(t,f){return t+(parseInt(f.bsent)||0);},0);
+  },0);
+  h += '<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--t3);">'+totalM+' envíos · '+boxesM.toLocaleString('es-EC')+' cajas en '+MESES[_calMonth]+'</div>';
+  box.innerHTML = h;
+}
+
+// ══ COMPARADOR / HISTORIAL DE TARIFAS ══
+function renderRateHistory(){
+  var box = document.getElementById('rate-history-body');
+  if (!box || typeof Chart === 'undefined') return;
+  // Agrupar tarifas por aerolínea a lo largo del tiempo
+  var series = {};
+  DB.flights.forEach(function(f){
+    var r = parseFloat(f.rate)||0;
+    var d = f.etd ? new Date(f.etd) : null;
+    if (r<=0 || !d || isNaN(d)) return;
+    var a = f.airline || 'Sin aerolínea';
+    if (!series[a]) series[a] = [];
+    series[a].push({ x: d.getTime(), y: r, awb: f.awb, route: (f.origin||'')+'→'+(f.dest||'') });
+  });
+  var names = Object.keys(series);
+  if (!names.length) {
+    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con tarifa y ETD para ver la evolución de precios por aerolínea.</div>';
+    return;
+  }
+  box.innerHTML = '<div style="height:260px;position:relative;"><canvas id="chart-rate-history"></canvas></div><div id="rate-insights" style="margin-top:14px;"></div>';
+  var palette = ['#1B7A3E','#3B82F6','#F59E0B','#8B5CF6','#14B8A6','#DC2626','#22A351'];
+  var datasets = names.map(function(a, i){
+    series[a].sort(function(p,q){return p.x-q.x;});
+    return { label: a, data: series[a], borderColor: palette[i%palette.length],
+      backgroundColor: palette[i%palette.length]+'22', tension: 0.25, pointRadius: 4, fill: false };
+  });
+  if (_dashCharts.rateHist) { _dashCharts.rateHist.destroy(); }
+  _dashCharts.rateHist = new Chart(document.getElementById('chart-rate-history'), {
+    type: 'line',
+    data: { datasets: datasets },
+    options: { maintainAspectRatio:false, responsive:true,
+      plugins: { legend:{position:'bottom',labels:{font:{size:10},padding:8,usePointStyle:true}},
+        tooltip:{callbacks:{label:function(c){ var p=c.raw; return c.dataset.label+': $'+p.y.toFixed(3)+'/kg'+(p.awb?' ('+p.awb+' '+p.route+')':''); }}} },
+      scales: { x:{type:'time',time:{unit:'day',tooltipFormat:'dd/MM/yyyy'},ticks:{font:{size:9}}},
+        y:{beginAtZero:false,ticks:{font:{size:10},callback:function(v){return '$'+v;}}} } }
+  });
+  // Análisis: variación por aerolínea
+  var insights = '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">Variación de tarifas</div>';
+  insights += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>Aerolínea</th><th>Envíos</th><th>Primera</th><th>Última</th><th>Variación</th><th>Mín</th><th>Máx</th><th>Promedio</th></tr></thead><tbody>';
+  names.forEach(function(a){
+    var pts = series[a];
+    var firstR = pts[0].y, lastR = pts[pts.length-1].y;
+    var diff = lastR - firstR, pct = firstR>0 ? (diff/firstR*100) : 0;
+    var vals = pts.map(function(p){return p.y;});
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var avg = vals.reduce(function(s,v){return s+v;},0)/vals.length;
+    var color = diff>0.001?'var(--red)':(diff<-0.001?'var(--green)':'var(--t2)');
+    var arrow = diff>0.001?'▲':(diff<-0.001?'▼':'=');
+    insights += '<tr><td><strong>'+esc(a)+'</strong></td><td>'+pts.length+'</td><td>$'+firstR.toFixed(3)+'</td><td>$'+lastR.toFixed(3)+'</td>'
+      + '<td><strong style="color:'+color+';">'+arrow+' '+(diff>=0?'+':'')+diff.toFixed(3)+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)</strong></td>'
+      + '<td>$'+min.toFixed(3)+'</td><td>$'+max.toFixed(3)+'</td><td>$'+avg.toFixed(3)+'</td></tr>';
+  });
+  insights += '</tbody></table></div>';
+  // Mejor y peor aerolínea por promedio
+  var avgs = names.map(function(a){
+    var vals = series[a].map(function(p){return p.y;});
+    return { name:a, avg: vals.reduce(function(s,v){return s+v;},0)/vals.length };
+  }).sort(function(p,q){return p.avg-q.avg;});
+  if (avgs.length > 1) {
+    insights += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">'
+      + '<div style="flex:1;min-width:180px;background:#D1FAE5;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#065F46;text-transform:uppercase;font-weight:700;">Más económica</div><div style="font-size:14px;font-weight:800;color:#065F46;">'+esc(avgs[0].name)+' — $'+avgs[0].avg.toFixed(3)+'/kg</div></div>'
+      + '<div style="flex:1;min-width:180px;background:#FEE2E2;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#991B1B;text-transform:uppercase;font-weight:700;">Más costosa</div><div style="font-size:14px;font-weight:800;color:#991B1B;">'+esc(avgs[avgs.length-1].name)+' — $'+avgs[avgs.length-1].avg.toFixed(3)+'/kg</div></div>'
+      + '</div>';
+    var savings = (avgs[avgs.length-1].avg - avgs[0].avg);
+    if (savings > 0.001) insights += '<div style="font-size:11px;color:var(--t2);margin-top:8px;text-align:center;">Diferencia de <strong>$'+savings.toFixed(3)+'/kg</strong> entre la más cara y la más barata. En un envío de 1,500 kg eso son <strong>$'+(savings*1500).toFixed(2)+'</strong> de diferencia.</div>';
+  }
+  document.getElementById('rate-insights').innerHTML = insights;
+}
+
+// ══ REPORTE DE PERÍODO (semanal/mensual) ══
+function buildReport(days) {
+  days = days || 7;
+  var since = new Date(); since.setDate(since.getDate() - days); since.setHours(0,0,0,0);
+  var fl = DB.flights.filter(function(f){
+    var d = new Date(f.etd || f.createdAt || f.modifiedAt);
+    return !isNaN(d) && d >= since;
+  });
+  var r = {
+    days: days, since: since, count: fl.length,
+    sent:0, conf:0, damaged:0, lost:0, usda:0, usdaFreed:0,
+    cost:0, rateSum:0, rateCount:0,
+    claimAmount:0, claimRecovered:0, openClaims:0,
+    byStatus:{pending:0,transit:0,delivered:0,delayed:0},
+    byPort:{}, byAirline:{}, flights: fl
+  };
+  fl.forEach(function(f){
+    r.sent += parseInt(f.bsent)||0;
+    r.conf += parseInt(f.bconf)||0;
+    r.damaged += parseInt(f.bdamaged)||0;
+    r.lost += parseInt(f.blost)||0;
+    r.usda += parseInt(f.busda)||0;
+    r.usdaFreed += parseInt(f.busdaReleased)||0;
+    r.cost += parseFloat(f.totalpaid)||0;
+    var rt = parseFloat(f.rate)||0;
+    if (rt>0){ r.rateSum += rt; r.rateCount++; }
+    r.byStatus[f.status] = (r.byStatus[f.status]||0)+1;
+    var p = f.origin||'—'; r.byPort[p] = (r.byPort[p]||0)+1;
+    var a = f.airline||'—';
+    if (!r.byAirline[a]) r.byAirline[a] = {awbs:0, boxes:0, rateSum:0, rateCount:0, cost:0};
+    r.byAirline[a].awbs++;
+    r.byAirline[a].boxes += parseInt(f.bsent)||0;
+    r.byAirline[a].cost += parseFloat(f.totalpaid)||0;
+    if (rt>0){ r.byAirline[a].rateSum += rt; r.byAirline[a].rateCount++; }
+    r.claimAmount += parseFloat(f.claimAmount)||0;
+    r.claimRecovered += parseFloat(f.claimRecovered)||0;
+    if (f.claimStatus && f.claimStatus!=='none' && f.claimStatus!=='paid' && f.claimStatus!=='rejected') r.openClaims++;
+  });
+  r.avgRate = r.rateCount>0 ? (r.rateSum/r.rateCount) : 0;
+  r.confRate = r.sent>0 ? (r.conf/r.sent*100) : 0;
+  return r;
+}
+
+function renderReport(days) {
+  var r = buildReport(days);
+  var body = document.getElementById('report-body');
+  if (!body) return;
+  var periodTxt = days===7?'últimos 7 días':(days===30?'últimos 30 días':(days===90?'último trimestre':'últimos '+days+' días'));
+  if (r.count === 0) {
+    body.innerHTML = '<div class="ai-bubble" style="font-size:12px;">No hay envíos registrados en los '+periodTxt+'. Registra vuelos con fecha ETD dentro del período para ver el reporte.</div>';
+    return;
+  }
+  function card(label, value, sub, color) {
+    return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">'
+      + '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;">'+label+'</div>'
+      + '<div style="font-size:20px;font-weight:800;color:'+(color||'var(--t1)')+';margin-top:2px;">'+value+'</div>'
+      + (sub?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+sub+'</div>':'') + '</div>';
+  }
+  var h = '<div style="font-size:12px;color:var(--t2);margin-bottom:12px;">Período: <strong>'+periodTxt+'</strong> (desde '+r.since.toLocaleDateString('es-EC')+') · Generado '+new Date().toLocaleString('es-EC')+'</div>';
+  // Tarjetas resumen
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">'
+    + card('AWBs / Envíos', r.count, r.count+' guías')
+    + card('Cajas enviadas', r.sent.toLocaleString('es-EC'), r.conf.toLocaleString('es-EC')+' confirmadas')
+    + card('Tasa confirmación', r.confRate.toFixed(1)+'%', null, r.confRate>=99?'var(--green)':'#B45309')
+    + card('Costo total', fmt$(r.cost), 'AWB pagados')
+    + card('Tarifa promedio', '$'+r.avgRate.toFixed(3), 'por kg')
+    + '</div>';
+  // Incidencias
+  var totalInc = r.damaged + r.lost + r.usda;
+  h += '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">Incidencias</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">'
+    + card('Dañadas', r.damaged, null, r.damaged>0?'var(--red)':'var(--t1)')
+    + card('Perdidas', r.lost, 'por aerolínea', r.lost>0?'var(--red)':'var(--t1)')
+    + card('Hold USDA', r.usda, r.usdaFreed+' liberadas', r.usda>0?'#B45309':'var(--t1)')
+    + card('Demorados', r.byStatus.delayed||0, 'vuelos', (r.byStatus.delayed>0)?'var(--red)':'var(--t1)')
+    + '</div>';
+  // Reclamos
+  if (r.claimAmount > 0 || r.openClaims > 0) {
+    h += '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">Reclamos a aerolíneas</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">'
+      + card('Reclamado', fmt$(r.claimAmount), null, '#B45309')
+      + card('Recuperado', fmt$(r.claimRecovered), null, 'var(--green)')
+      + card('Por cobrar', fmt$(r.claimAmount - r.claimRecovered), null, 'var(--red)')
+      + card('Abiertos', r.openClaims, 'en gestión')
+      + '</div>';
+  }
+  // Tabla por aerolínea
+  h += '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">Desglose por aerolínea</div>';
+  h += '<div class="tw" style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>Aerolínea</th><th>AWBs</th><th>Cajas</th><th>Tarifa prom.</th><th>Costo total</th></tr></thead><tbody>';
+  Object.keys(r.byAirline).sort(function(a,b){return r.byAirline[b].awbs - r.byAirline[a].awbs;}).forEach(function(a){
+    var x = r.byAirline[a];
+    var ar = x.rateCount>0 ? (x.rateSum/x.rateCount) : 0;
+    h += '<tr><td><strong>'+esc(a)+'</strong></td><td>'+x.awbs+'</td><td>'+x.boxes.toLocaleString('es-EC')+'</td><td>$'+ar.toFixed(3)+'</td><td>'+fmt$(x.cost)+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  // Por puerto
+  h += '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">AWBs por puerto de origen</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">';
+  Object.keys(r.byPort).sort(function(a,b){return r.byPort[b]-r.byPort[a];}).forEach(function(p){
+    h += '<div style="background:var(--lightgreen);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);">'+esc(p)+': '+r.byPort[p]+'</div>';
+  });
+  h += '</div>';
+  body.innerHTML = h;
+  window._lastReport = r;
+}
+
+function copyReport() {
+  var r = window._lastReport;
+  if (!r) { toast('Genera el reporte primero.', 'err'); return; }
+  var t = 'REPORTE TRACKFLOW AIR — Jet Fresh Flowers Distributors\n';
+  t += 'Período: últimos ' + r.days + ' días (desde ' + r.since.toLocaleDateString('es-EC') + ')\n';
+  t += 'Generado: ' + new Date().toLocaleString('es-EC') + '\n\n';
+  t += 'RESUMEN\n';
+  t += '• AWBs/Envíos: ' + r.count + '\n';
+  t += '• Cajas enviadas: ' + r.sent + ' | Confirmadas: ' + r.conf + ' (' + r.confRate.toFixed(1) + '%)\n';
+  t += '• Costo total: ' + fmt$(r.cost) + '\n';
+  t += '• Tarifa promedio: $' + r.avgRate.toFixed(3) + '/kg\n\n';
+  t += 'INCIDENCIAS\n';
+  t += '• Cajas dañadas: ' + r.damaged + '\n';
+  t += '• Cajas perdidas por aerolínea: ' + r.lost + '\n';
+  t += '• Cajas en hold USDA: ' + r.usda + ' (liberadas: ' + r.usdaFreed + ')\n';
+  t += '• Vuelos demorados: ' + (r.byStatus.delayed||0) + '\n\n';
+  if (r.claimAmount > 0) {
+    t += 'RECLAMOS\n';
+    t += '• Reclamado: ' + fmt$(r.claimAmount) + ' | Recuperado: ' + fmt$(r.claimRecovered) + ' | Por cobrar: ' + fmt$(r.claimAmount-r.claimRecovered) + '\n';
+    t += '• Reclamos abiertos: ' + r.openClaims + '\n\n';
+  }
+  t += 'POR AEROLÍNEA\n';
+  Object.keys(r.byAirline).forEach(function(a){
+    var x = r.byAirline[a];
+    var ar = x.rateCount>0 ? (x.rateSum/x.rateCount) : 0;
+    t += '• ' + a + ': ' + x.awbs + ' AWBs, ' + x.boxes + ' cajas, $' + ar.toFixed(3) + '/kg, ' + fmt$(x.cost) + '\n';
+  });
+  t += '\nPOR PUERTO\n';
+  Object.keys(r.byPort).forEach(function(p){ t += '• ' + p + ': ' + r.byPort[p] + ' AWBs\n'; });
+  navigator.clipboard.writeText(t).then(function(){ toast('✓ Reporte copiado al portapapeles', 'ok'); },
+    function(){ toast('No se pudo copiar.', 'err'); });
+}
+
+async function analyzeReport() {
+  var r = window._lastReport;
+  var box = document.getElementById('report-ai');
+  if (!r) { toast('Genera el reporte primero.', 'err'); return; }
+  box.style.display = 'block';
+  box.innerHTML = '<span class="dp"><span></span><span></span><span></span></span> Analizando el período…';
+  var summary = 'Período: ' + r.days + ' días. AWBs: ' + r.count + '. Cajas enviadas: ' + r.sent + ', confirmadas: ' + r.conf
+    + ' (' + r.confRate.toFixed(1) + '%). Costo total: $' + r.cost.toFixed(2) + '. Tarifa promedio: $' + r.avgRate.toFixed(3) + '/kg. '
+    + 'Incidencias: ' + r.damaged + ' dañadas, ' + r.lost + ' perdidas, ' + r.usda + ' en hold USDA. '
+    + 'Vuelos demorados: ' + (r.byStatus.delayed||0) + '. '
+    + 'Reclamos: $' + r.claimAmount.toFixed(2) + ' reclamado, $' + r.claimRecovered.toFixed(2) + ' recuperado. '
+    + 'Por aerolínea: ' + Object.keys(r.byAirline).map(function(a){
+        var x=r.byAirline[a]; var ar=x.rateCount>0?(x.rateSum/x.rateCount):0;
+        return a+' ('+x.awbs+' AWBs, $'+ar.toFixed(3)+'/kg)';
+      }).join(', ') + '.';
+  try {
+    var text = await callAI(
+      'Eres analista de logística de carga aérea perecedera. Sé conciso y práctico. Responde en español.',
+      [{role:'user', content: 'Analiza este reporte operativo de Jet Fresh Flowers (exportación de flores Ecuador→USA):\n\n' + summary
+        + '\n\nDa un análisis de máximo 5 frases: qué destaca, qué preocupa, y 2 acciones concretas recomendadas.'}]
+    );
+    box.textContent = text;
+  } catch(e) {
+    if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. El reporte de arriba ya funciona sin IA.';
+    else box.textContent = 'No se pudo analizar: ' + e.message;
+  }
+}
+
+// Etiquetas visuales del estado de reclamo
+var CLAIM_LABELS = {none:'Sin reclamo', pending:'Por presentar', submitted:'Presentado', approved:'Aprobado', paid:'Pagado', rejected:'Rechazado'};
+var CLAIM_COLORS = {none:'var(--t3)', pending:'#B45309', submitted:'#1E40AF', approved:'#065F46', paid:'var(--green)', rejected:'#991B1B'};
+function claimLabel(s){
+  s = s || 'none';
+  var icon = {none:'', pending:'⏳ ', submitted:'📤 ', approved:'👍 ', paid:'✅ ', rejected:'❌ '}[s]||'';
+  return '<strong style="color:'+(CLAIM_COLORS[s]||'var(--t3)')+';">'+icon+(CLAIM_LABELS[s]||s)+'</strong>';
+}
+function claimDeadlineTxt(f){
+  if (!f.claimDeadline) return '—';
+  var days = Math.ceil((new Date(f.claimDeadline) - new Date())/86400000);
+  var done = f.claimStatus==='paid'||f.claimStatus==='rejected';
+  if (done) return esc(f.claimDeadline);
+  if (days < 0) return '<strong style="color:var(--red);">'+esc(f.claimDeadline)+' — VENCIDO</strong>';
+  if (days <= 7) return '<strong style="color:#B45309;">'+esc(f.claimDeadline)+' — quedan '+days+' días</strong>';
+  return esc(f.claimDeadline);
+}
+
 // Control de calidad: muestra un resumen de incidencias
 function calcQC() {
   var damaged = parseInt(gv('f-bdamaged')) || 0;
@@ -2023,6 +2625,7 @@ function calcQC() {
   } else {
     tip.style.display = 'none';
   }
+  onClaimChange();
 }
 
 // Maneja los cambios de estado USDA (hold/liberado)
@@ -2114,7 +2717,9 @@ function calcAll() {
 
 // ══ CLEAR FORM ══
 function clearFlightForm() {
-  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes'].forEach(function(i){sv(i,'');});
+  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes','f-claim-amount','f-claim-recovered','f-claim-ref','f-claim-date','f-claim-deadline','f-claim-notes'].forEach(function(i){sv(i,'');});
+  sv('f-claim-status','none');
+  var tcl=document.getElementById('tip-claim'); if(tcl)tcl.style.display='none';
   ['f-usda-hold','f-usda-freed'].forEach(function(i){var e=document.getElementById(i);if(e)e.checked=false;});
   ['check-usda-card','check-released-card'].forEach(function(i){var e=document.getElementById(i);if(e)e.classList.remove('on');});
   sv('f-origin','UIO'); sv('f-dest','MIA'); sv('f-status','pending'); sv('f-priority','normal');
@@ -2182,6 +2787,13 @@ async function saveFlight() {
     usdaFreed: document.getElementById('f-usda-freed') ? document.getElementById('f-usda-freed').checked : false,
     usdaFreedTime: gv('f-usda-freed-time'),
     qcNotes: gv('f-qc-notes'),
+    claimStatus: gv('f-claim-status')||'none',
+    claimAmount: parseFloat(gv('f-claim-amount'))||0,
+    claimRecovered: parseFloat(gv('f-claim-recovered'))||0,
+    claimRef: gv('f-claim-ref'),
+    claimDate: gv('f-claim-date'),
+    claimDeadline: gv('f-claim-deadline'),
+    claimNotes: gv('f-claim-notes'),
     departureDay: window._lastDepartureDay || null,
     podUrl: pendingPOD ? pendingPOD.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podUrl||'':''),
     podName: pendingPOD ? pendingPOD.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podName||'':''),
@@ -2190,10 +2802,13 @@ async function saveFlight() {
   };
   var isEdit = !!editFlId;
   // Capturar valores USDA previos para comparar (solo en edición)
-  var prevUsda = 0, prevFreed = false;
+  var prevUsda = 0, prevFreed = false, oldSnapshot = null;
   if (isEdit) {
     var existing = DB.flights.find(function(x){return x.id===editFlId;});
-    if (existing) { prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed; }
+    if (existing) {
+      prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed;
+      oldSnapshot = JSON.parse(JSON.stringify(existing)); // copia para auditoría
+    }
   }
   // Calcular estado automático según ETD/ETA vs hora actual (o confirmación manual)
   var autoSt = computeAutoStatus(f, null);
@@ -2201,6 +2816,8 @@ async function saveFlight() {
   f.manualDelivered = !!(f.arrived || f.completed); // marca que fue confirmado manualmente
   if (isEdit) { var idx=DB.flights.findIndex(function(x){return x.id===editFlId;}); if(idx>=0)DB.flights[idx]=f; }
   else { DB.flights.unshift(f); pushNotif('Nuevo envío: '+num+' ('+origin+'→'+dest+') por '+cb, f.confst==='unconfirmed'?'#D97706':'#1B7A3E'); }
+  // Registrar en auditoría
+  logAudit(oldSnapshot, f, cb, isEdit ? 'update' : 'create');
   closeModal('new');
   toast(isEdit?'Envío actualizado!':'Envío guardado!','ok');
   renderScreen(screen); updateBadges();
@@ -2237,11 +2854,11 @@ function go(s) {
   screen=s;
   document.getElementById('s-'+s).classList.add('active');
   var cn=document.getElementById('nav-'+s); if(cn)cn.classList.add('active');
-  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
+  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',calendar:'Calendario de Vuelos',audit:'Auditoría',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
   document.getElementById('pg-title').textContent=titles[s]||s;
   renderScreen(s);
 }
-function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='settings')renderSettingsPage();}
+function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));renderRateHistory();}else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
 
 var SL={transit:'En tránsito',delivered:'Entregado',pending:'Pendiente',delayed:'Demorado'};
 var CL={confirmed:'Confirmado',partial:'Parcial',unconfirmed:'Sin confirmar'};
@@ -2424,7 +3041,17 @@ function renderUrgent(){
     // Cajas perdidas por aerolínea (posible reclamo)
     var lost = parseInt(f.blost)||0;
     if (lost > 0 && (!f.claimStatus || f.claimStatus === 'none')) {
-      items.push({ pri: 3, icon:'📦', txt: num + ': ' + lost + ' cajas perdidas por aerolínea (posible reclamo)', id: id });
+      items.push({ pri: 3, icon:'📦', txt: num + ': ' + lost + ' cajas perdidas por aerolínea — sin reclamo abierto', id: id });
+    }
+    // Reclamo por vencer
+    if (f.claimDeadline && f.claimStatus!=='paid' && f.claimStatus!=='rejected') {
+      var dl = Math.ceil((new Date(f.claimDeadline) - new Date())/86400000);
+      if (dl < 0) items.push({ pri: 1, icon:'⏰', txt: num + ': reclamo VENCIDO (' + f.claimDeadline + ')' + (f.claimAmount>0?' — '+fmt$(f.claimAmount)+' en riesgo':''), id: id });
+      else if (dl <= 7) items.push({ pri: 2, icon:'⏰', txt: num + ': quedan ' + dl + ' días para el límite del reclamo' + (f.claimAmount>0?' de '+fmt$(f.claimAmount):''), id: id });
+    }
+    // Reclamo aprobado pero no cobrado
+    if (f.claimStatus==='approved' && (parseFloat(f.claimRecovered)||0) === 0) {
+      items.push({ pri: 3, icon:'💰', txt: num + ': reclamo aprobado por ' + fmt$(f.claimAmount) + ' — pendiente de cobro', id: id });
     }
     // Cajas dañadas
     var dmg = parseInt(f.bdamaged)||0;
@@ -2485,7 +3112,7 @@ function renderFlights(){
     var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'—';
     var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
-    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:12px;">'+esc(f.num)+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;">'+fmtD(f.etd)+'</td><td style="font-size:11px;">'+fmtD(f.eta)+'</td><td>'+esc(f.agName||'—')+'</td><td><span style="font-family:var(--mono);font-size:11px;color:var(--green);">'+esc(f.awb||'—')+'</span></td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;">'+fmtD(f.etd)+'</td><td style="font-size:11px;">'+fmtD(f.eta)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
 }
@@ -2505,17 +3132,56 @@ function renderAgencies(){
 }
 
 function renderPred(){
-  var fl=DB.flights, risks=fl.map(function(f){var r=0;if(f.status==='delayed')r+=50;if(f.confst==='unconfirmed')r+=30;else if(f.confst==='partial')r+=15;if(f.priority==='critical')r+=20;else if(f.priority==='high')r+=10;return{f:f,r:Math.min(r,99)};}).sort(function(a,b){return b.r-a.r;});
+  var fl=DB.flights;
+  var risks=fl.map(function(f){
+    var r=0, why=[];
+    if(f.status==='delayed'){ r+=45; why.push('demorado'); }
+    if(f.confst==='unconfirmed'){ r+=25; why.push('sin confirmar'); }
+    else if(f.confst==='partial'){ r+=12; why.push('confirmación parcial'); }
+    if(f.priority==='critical'){ r+=15; why.push('prioridad crítica'); }
+    else if(f.priority==='high'){ r+=8; why.push('prioridad alta'); }
+    // Incidencias reales
+    var lost=parseInt(f.blost)||0, dmg=parseInt(f.bdamaged)||0;
+    var usda=parseInt(f.busda)||0, freed=parseInt(f.busdaReleased)||0;
+    if(lost>0){ r+=15; why.push(lost+' perdidas'); }
+    if(dmg>0){ r+=10; why.push(dmg+' dañadas'); }
+    if(usda>0 && !f.usdaFreed && freed<usda){ r+=20; why.push('hold USDA activo'); }
+    // Diferencia de tarifa
+    var ra=parseFloat(f.rate)||0, re=parseFloat(f.rateExp)||0;
+    if(re>0 && ra>0 && Math.abs(ra-re)>0.001){ r+=8; why.push('tarifa ≠ esperada'); }
+    // Confirmación manual reduce el riesgo
+    if(f.completed) { r=Math.max(0, r-40); }
+    else if(f.arrived) { r=Math.max(0, r-25); }
+    return {f:f, r:Math.min(r,99), why:why};
+  }).sort(function(a,b){return b.r-a.r;});
+
   var avg=risks.length>0?Math.round(risks.reduce(function(s,x){return s+x.r;},0)/risks.length):0;
   var high=risks.filter(function(x){return x.r>=60;}).length;
-  var miss=fl.reduce(function(s,f){return s+(f.bmiss<0?Math.abs(f.bmiss):0);},0);
+  var miss=fl.reduce(function(s,f){
+    var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);
+    return s+(d<0?Math.abs(d):0);
+  },0);
   var del=fl.filter(function(f){return f.status==='delivered';}).length;
   var ot=fl.length>0?Math.round(del/fl.length*100):0;
-  sv('pr-risk',risks.length>0?avg+'%':'—'); sv('pr-high',high); sv('pr-unc',miss); sv('pr-ot',fl.length>0?ot+'%':'—');
+  // FIX: son <div>, no inputs — usar textContent
+  function setTxt(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+  setTxt('pr-risk', risks.length>0?avg+'%':'—');
+  setTxt('pr-high', high);
+  setTxt('pr-unc', miss);
+  setTxt('pr-ot', fl.length>0?ot+'%':'—');
+
   var el=document.getElementById('risk-bars');
   if(!risks.length){el.innerHTML='<div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div>';return;}
   el.innerHTML='';
-  risks.forEach(function(x){var c=x.r>=70?'var(--red)':x.r>=40?'var(--amber)':x.r>=20?'var(--green)':'var(--green2)';var row=document.createElement('div');row.className='rb-row';row.innerHTML='<span class="rb-lbl">'+esc(x.f.num)+'<br><span style="font-family:var(--font);font-weight:400;font-size:10px;color:var(--t3);">'+esc(x.f.origin)+'→'+esc(x.f.dest)+'</span></span><div class="rb-track"><div class="rb-fill" style="width:'+x.r+'%;background:'+c+'"></div></div><span class="rb-val" style="color:'+c+';">'+x.r+'%</span>';el.appendChild(row);});
+  risks.forEach(function(x){
+    var c=x.r>=70?'var(--red)':x.r>=40?'var(--amber)':x.r>=20?'var(--green)':'var(--green2)';
+    var ident = x.f.awb || x.f.num || '—';
+    var row=document.createElement('div'); row.className='rb-row';
+    row.style.cursor='pointer';
+    row.onclick=function(){ openDetail(x.f.id); };
+    row.innerHTML='<span class="rb-lbl">'+esc(ident)+'<br><span style="font-family:var(--font);font-weight:400;font-size:10px;color:var(--t3);">'+esc(x.f.origin||'')+'→'+esc(x.f.dest||'')+(x.why.length?' · '+esc(x.why.join(', ')):'')+'</span></span><div class="rb-track"><div class="rb-fill" style="width:'+x.r+'%;background:'+c+'"></div></div><span class="rb-val" style="color:'+c+';">'+x.r+'%</span>';
+    el.appendChild(row);
+  });
 }
 
 function renderSettingsPage(){
@@ -2536,7 +3202,7 @@ function openDetail(id){
   document.getElementById('detail-title').textContent=f.num+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
-  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
   if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
   document.getElementById('detail-body').innerHTML=b;
   document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
@@ -2564,6 +3230,10 @@ function openEditFlight(id){
   if(document.getElementById('f-usda-freed')) document.getElementById('f-usda-freed').checked = !!f.usdaFreed;
   sv('f-usda-freed-time', f.usdaFreedTime||''); sv('f-qc-notes', f.qcNotes||'');
   onUsdaChange();
+  // Restaurar reclamo
+  sv('f-claim-status', f.claimStatus||'none'); sv('f-claim-amount', f.claimAmount||''); sv('f-claim-recovered', f.claimRecovered||'');
+  sv('f-claim-ref', f.claimRef||''); sv('f-claim-date', f.claimDate||''); sv('f-claim-deadline', f.claimDeadline||''); sv('f-claim-notes', f.claimNotes||'');
+  onClaimChange();
   window._lastDepartureDay = f.departureDay || null;
   if(f.podName){document.getElementById('pod-zone-txt').textContent='POD adjunto: '+f.podName; document.getElementById('pod-status').textContent='✓ POD: '+f.podName; document.getElementById('pod-status').className='upload-status ok';}
   ['tip-airline','tip-boxes','tip-cost'].forEach(function(i){document.getElementById(i).style.display='none';});
@@ -2613,15 +3283,19 @@ function exportExcel(){
     loadSheetJS(function(){ exportExcel(); });
     return;
   }
-  var headers=['Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','AWB #','Cajas Enviadas','Cajas Confirmadas','Cajas Faltantes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Mercancía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Remitente','Consignatario','Creado Por','Modificado','POD','Notas'];
+  var headers=['AWB #','Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','Cajas Enviadas','Cajas Confirmadas','Cajas Faltantes/Excedentes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Mercancía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Cajas Dañadas','Cajas Perdidas','Hold USDA','Liberadas USDA','Estado USDA','Estado Reclamo','Monto Reclamado','Monto Recuperado','N° Reclamo','Fecha Reclamo','Límite Reclamo','Notas Reclamo','Remitente','Consignatario','Creado Por','Modificado','POD','Notas'];
   var rows=DB.flights.map(function(f){
-    return [f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,
+    return [f.awb,f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.bsent,f.bconf,f.bmiss,
       f.confst==='confirmed'?'Confirmado':f.confst==='partial'?'Parcial':'Sin confirmar',
-      f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':'Pendiente',
+      f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':f.status==='delayed'?'Demorado':'Pendiente',
       parseFloat(f.weight)||'', parseFloat(f.cweight)||'', f.ctype, f.handling, f.commodity, f.hs,
       parseFloat(f.rate)||'', parseFloat(f.rateExp)||'', parseFloat(f.wcharge)||'',
       parseFloat(f.maa)||'', parseFloat(f.awc)||'', parseFloat(f.myc)||'', parseFloat(f.esc)||'',
       parseFloat(f.ochagent)||'', parseFloat(f.ochcarrier)||'', parseFloat(f.totalpaid)||'', parseFloat(f.totalcoll)||'',
+      parseInt(f.bdamaged)||0, parseInt(f.blost)||0, parseInt(f.busda)||0, parseInt(f.busdaReleased)||0,
+      f.usdaFreed?'Liberado':(f.usdaHold?'En hold':''),
+      CLAIM_LABELS[f.claimStatus||'none']||'Sin reclamo',
+      parseFloat(f.claimAmount)||'', parseFloat(f.claimRecovered)||'', f.claimRef||'', f.claimDate||'', f.claimDeadline||'', f.claimNotes||'',
       f.sname, f.consignee, f.createdby, f.modifiedAt, f.podName||'', f.notes
     ];
   });
