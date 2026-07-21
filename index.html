@@ -604,7 +604,6 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 <div id="privacy-explain" style="font-size:10px;line-height:1.5;border-radius:8px;padding:9px 11px;margin-top:8px;"></div>
                 <button class="btn xs" onclick="showAIPayload()" style="width:100%;margin-top:8px;">👁 Ver exactamente qué se enviaría</button>
               </div>
-              <div class="field"><label>AviationStack API Key <span style="font-size:10px;color:var(--t3);">(opcional — GPS en vivo, aviationstack.com)</span></label><input id="cfg-aviation" type="password" placeholder="Tu key gratuita"></div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
                 <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">✈ Rastreo REAL de arribos (AeroDataBox)</div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Confirma automáticamente si tus guías llegaron a Miami — sin revisar portal por portal. Consíguela en RapidAPI → busca "AeroDataBox" → suscríbete (plan Basic gratuito con límite, o desde $5/mes). <a href="https://rapidapi.com/aedbx-aedbx/api/aerodatabox" target="_blank" style="color:var(--green);">Abrir AeroDataBox ↗</a></div>
@@ -1004,9 +1003,8 @@ var editAgId = null;
 var dashFlt = 'all';
 var flsFlt = 'all';
 var chatHist = [];
-var liveCache = {};
 var DB = { flights: [], agencies: [] };
-var CFG = { groqKey: '', claudeKey: '', aviationKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light' };
+var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light' };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -1947,7 +1945,7 @@ async function handlePODUpload(e) {
   e.target.value = '';
 }
 
-// ══ LIVE FLIGHT STATUS (AviationStack) ══
+// ══ LIVE FLIGHT STATUS (cálculo por horario + AeroDataBox) ══
 // ══ CÁLCULO AUTOMÁTICO DE ESTADO DEL VUELO (basado en ETD/ETA vs hora actual) ══
 // Lógica:
 //  - Aún no pasa el ETD → Programado (pending)
@@ -2114,19 +2112,26 @@ function onScanFreqChange() {
   var hours = parseInt(gv('cfg-scan-hours')) || 2;
   var box = document.getElementById('scan-usage');
   if (!box) return;
-  // Contar vuelos activos típicos por mes según el histórico
+  // Cada consulta al endpoint de vuelo (Tier 3) cuesta 6 unidades. Plan Basic gratis = 600 unidades/mes.
+  var UNITS_PER_CALL = 6;
+  var FREE_UNITS = 600;
   var perMonth = DB.flights.length || 0;
-  // Estimación: cada vuelo se consulta ~(ventana de 13h / frecuencia) veces antes de confirmar
+  // Cada vuelo se consulta ~(ventana de 13h / frecuencia) veces mientras está por llegar
   var checksPerFlight = Math.max(1, Math.ceil(13 / hours));
-  var monthlyEst = perMonth > 0 ? perMonth * checksPerFlight : Math.round((77 * 13) / hours);
-  var freeLimit = 500;
-  var pct = Math.round(monthlyEst / freeLimit * 100);
-  var color = monthlyEst > freeLimit ? 'var(--red)' : (monthlyEst > freeLimit*0.8 ? '#B45309' : 'var(--green)');
-  var msg = '<strong>Estimado:</strong> ~' + monthlyEst + ' consultas/mes ';
-  if (perMonth === 0) msg += '(basado en 77 vuelos típicos) ';
-  msg += '· Plan gratuito: ' + freeLimit + '/mes · <strong style="color:'+color+';">' + pct + '% del límite</strong>';
-  if (monthlyEst > freeLimit) msg += '<br><span style="color:var(--red);">⚠ Excede el plan gratuito. Considera una frecuencia mayor o el plan Pro (~$3-5/mes, 3,000-4,000 consultas).</span>';
-  else msg += '<br><span style="color:var(--green);">✓ Cabe en el plan gratuito.</span>';
+  var flightsBase = perMonth > 0 ? perMonth : 77; // 77 = operación típica estimada
+  var monthlyCalls = flightsBase * checksPerFlight;
+  var monthlyUnits = monthlyCalls * UNITS_PER_CALL;
+  var pct = Math.round(monthlyUnits / FREE_UNITS * 100);
+  var maxFlightsFree = Math.floor(FREE_UNITS / (checksPerFlight * UNITS_PER_CALL));
+  var color = monthlyUnits > FREE_UNITS ? 'var(--red)' : (monthlyUnits > FREE_UNITS*0.8 ? '#B45309' : 'var(--green)');
+  var msg = '<strong>Estimado con ' + flightsBase + ' vuelos/mes:</strong> ~' + monthlyCalls + ' consultas × 6 = <strong>' + monthlyUnits + ' unidades/mes</strong>';
+  if (perMonth === 0) msg += ' <span style="color:var(--t3);">(sin vuelos aún; 77 es una operación típica)</span>';
+  msg += '<br>Plan Basic gratuito: <strong>600 unidades/mes</strong> · <strong style="color:'+color+';">' + pct + '% del límite</strong>';
+  if (monthlyUnits > FREE_UNITS) {
+    msg += '<br><span style="color:var(--red);">⚠ Excede el plan gratuito. Con esta frecuencia el gratis alcanza para ~<strong>' + maxFlightsFree + ' vuelos/mes</strong>. Para tu volumen completo, el plan Pro (~$5.35/mes) da margen de sobra.</span>';
+  } else {
+    msg += '<br><span style="color:var(--green);">✓ Cabe en el plan gratuito (alcanza para ~' + maxFlightsFree + ' vuelos/mes a esta frecuencia).</span>';
+  }
   box.innerHTML = msg;
 }
 
@@ -2278,50 +2283,9 @@ async function checkLive(num, flightId) {
     // Si AeroDataBox falló por red, cae a AviationStack abajo
   }
 
-  // TERCERO: AviationStack como respaldo (GPS en vivo) si está configurado
-  if (!CFG.aviationKey) {
-    document.getElementById('live-body').innerHTML = autoBox
-      + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula con el ETD/ETA registrado. Para <strong>arribos reales confirmados</strong>, agrega tu <strong>AeroDataBox API Key</strong> en Configuración (rastreo confiable de llegadas a Miami).</div>';
-    return;
-  }
-
+  // Sin AeroDataBox configurado: mostrar solo la estimación por horario
   document.getElementById('live-body').innerHTML = autoBox
-    + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Buscando datos GPS en vivo…</div>';
-
-  // Limpiar el número: quitar espacios Y el sufijo del día (ej: "LNE318-8" → "LNE318")
-  var cleanNum = num.replace(/\s/g,'').replace(/[-\/]\d{1,2}$/,'').toUpperCase();
-  // AviationStack: si el código tiene 3 letras + números es ICAO (LNE318), si son 2 es IATA (XL318)
-  // Detectar el prefijo de letras para elegir el parámetro correcto
-  var letterPrefix = (cleanNum.match(/^[A-Z]+/) || [''])[0];
-  var paramName = letterPrefix.length >= 3 ? 'flight_icao' : 'flight_iata';
-
-  async function fetchLive(param, value) {
-    var url = 'http://api.aviationstack.com/v1/flights?access_key=' + CFG.aviationKey + '&' + param + '=' + value;
-    var proxies = ['https://corsproxy.io/?' + encodeURIComponent(url), 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)];
-    for (var i = 0; i < proxies.length; i++) {
-      try {
-        var res = await fetch(proxies[i]);
-        if (!res.ok) continue;
-        var data = await res.json();
-        if (data.data && data.data[0]) return data.data[0];
-      } catch(e) { /* intenta el siguiente proxy */ }
-    }
-    return null;
-  }
-
-  try {
-    // Intentar con el parámetro detectado, luego con el otro por si acaso
-    var d = await fetchLive(paramName, cleanNum);
-    if (!d) {
-      var altParam = paramName === 'flight_icao' ? 'flight_iata' : 'flight_icao';
-      d = await fetchLive(altParam, cleanNum);
-    }
-    liveCache[num] = d;
-    renderLive(num, d, flightId, autoBox);
-  } catch(err) {
-    document.getElementById('live-body').innerHTML = autoBox
-      + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No se pudieron obtener datos GPS en vivo (el vuelo puede no estar activo en este momento en AviationStack, o se alcanzó el límite mensual gratuito).</div>';
-  }
+    + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula con el ETD/ETA registrado. Para <strong>arribos reales confirmados</strong> (dato oficial del aeropuerto), agrega tu <strong>AeroDataBox API Key</strong> en Configuración — es el rastreo confiable de llegadas a Miami para MAS Customs.</div>';
 }
 
 function statusBgColor(c) {
@@ -2347,59 +2311,6 @@ var AIRPORT_COORDS = {
 };
 var _liveMap = null;
 
-function renderFlightMap(f, d) {
-  // Espera a que el DOM tenga el contenedor del mapa
-  setTimeout(function() {
-    var mapEl = document.getElementById('flight-map');
-    if (!mapEl || typeof L === 'undefined') return;
-    // Limpiar mapa anterior
-    if (_liveMap) { _liveMap.remove(); _liveMap = null; }
-
-    var origin = f && AIRPORT_COORDS[f.origin];
-    var dest = f && AIRPORT_COORDS[f.dest];
-    var planePos = (d && d.live && d.live.latitude && d.live.longitude)
-      ? [parseFloat(d.live.latitude), parseFloat(d.live.longitude)] : null;
-
-    // Centro inicial del mapa
-    var center = planePos || origin || dest || [15, -78];
-    _liveMap = L.map('flight-map', { zoomControl: true, attributionControl: false }).setView(center, 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10 }).addTo(_liveMap);
-
-    var bounds = [];
-
-    // Marcador origen (verde)
-    if (origin) {
-      L.circleMarker([origin[0], origin[1]], { radius: 8, color: '#1B7A3E', fillColor: '#22A351', fillOpacity: 1, weight: 2 })
-        .addTo(_liveMap).bindPopup('<b>Origen:</b> ' + origin[2] + ' (' + f.origin + ')');
-      bounds.push([origin[0], origin[1]]);
-    }
-    // Marcador destino (rojo)
-    if (dest) {
-      L.circleMarker([dest[0], dest[1]], { radius: 8, color: '#DC2626', fillColor: '#EF4444', fillOpacity: 1, weight: 2 })
-        .addTo(_liveMap).bindPopup('<b>Destino:</b> ' + dest[2] + ' (' + f.dest + ')');
-      bounds.push([dest[0], dest[1]]);
-    }
-    // Línea de ruta origen→destino (punteada)
-    if (origin && dest) {
-      L.polyline([[origin[0], origin[1]], [dest[0], dest[1]]], { color: '#1B7A3E', weight: 2, dashArray: '6, 8', opacity: 0.6 }).addTo(_liveMap);
-    }
-    // Avión en posición GPS real (icono avión)
-    if (planePos) {
-      var planeIcon = L.divIcon({
-        html: '<div style="font-size:26px;transform:rotate(' + ((d.live.direction||0)-45) + 'deg);">✈️</div>',
-        className: 'plane-icon', iconSize: [30, 30], iconAnchor: [15, 15]
-      });
-      L.marker(planePos, { icon: planeIcon }).addTo(_liveMap)
-        .bindPopup('<b>✈ ' + esc(f?f.num:'') + '</b><br>Altitud: ' + Math.round(d.live.altitude||0) + ' m<br>Velocidad: ' + Math.round(d.live.speed_horizontal||0) + ' km/h').openPopup();
-      bounds.push(planePos);
-    }
-    // Ajustar zoom para ver todo
-    if (bounds.length > 1) _liveMap.fitBounds(bounds, { padding: [40, 40] });
-    else if (bounds.length === 1) _liveMap.setView(bounds[0], 5);
-    // Forzar recálculo de tamaño (Leaflet dentro de modal)
-    setTimeout(function(){ if(_liveMap) _liveMap.invalidateSize(); }, 100);
-  }, 150);
-}
 
 // Muestra el estado REAL del vuelo desde AeroDataBox
 function renderAeroLive(num, m, flightId, autoBox) {
@@ -2454,81 +2365,8 @@ function renderAeroLive(num, m, flightId, autoBox) {
   document.getElementById('live-body').innerHTML = autoBox + mismatch + realBox + details + footer;
 }
 
-// Muestra el estado REAL del vuelo desde AeroDataBox (fin)
-function renderLive(num, d, flightId, autoBox) {
-  autoBox = autoBox || '';
-  var f = DB.flights.find(function(x){ return x.id === flightId; });
-  var hasGPS = d && d.live && d.live.latitude && d.live.longitude;
 
-  if (!d) {
-    // Sin datos live, pero igual mostramos mapa con ruta origen→destino
-    var mapSection = (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest]))
-      ? '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:14px 0 8px;">Ruta del vuelo</div><div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);"></div>'
-      : '';
-    document.getElementById('live-body').innerHTML = autoBox
-      + '<div class="ai-bubble" style="font-size:11px;">El estado automático de arriba está activo. No hay datos GPS en vivo para <strong>' + esc(num) + '</strong> en este momento (el vuelo puede no estar volando ahora). Se muestra la ruta programada.</div>'
-      + mapSection;
-    if (mapSection) renderFlightMap(f, null);
-    return;
-  }
-  // Recalcular estado usando los datos en vivo (más preciso)
-  var autoStatus = computeAutoStatus(f, d);
-  if (f && autoStatus.status !== f.status) {
-    f.status = autoStatus.status; f.modifiedAt = nowStr();
-    saveFlight_SP(f).then(function(){ renderScreen(screen); });
-  }
-  var scc = d.flight_status || 'scheduled';
-  var ground = d.live && d.live.is_ground;
-
-  // ── VALIDACIÓN DE COINCIDENCIA ── el mismo número de vuelo se reutiliza en distintos días/rutas
-  // Verificar que el aeropuerto de salida coincida con el origen de NUESTRO vuelo
-  var liveDepIata = (d.departure && d.departure.iata || '').toUpperCase();
-  var mismatchWarning = '';
-  var mismatchReasons = [];
-  if (f && f.origin && liveDepIata && liveDepIata !== f.origin.toUpperCase()) {
-    mismatchReasons.push('sale de <strong>' + esc(liveDepIata) + '</strong> en vez de <strong>' + esc(f.origin) + '</strong> (tu origen)');
-  }
-  // Verificar el día de salida (del número de vuelo, ej: "5Y 8620-8" → día 8)
-  if (f && f.departureDay && d.departure && d.departure.scheduled) {
-    var liveDepDate = new Date(d.departure.scheduled);
-    if (!isNaN(liveDepDate) && liveDepDate.getDate() !== f.departureDay) {
-      mismatchReasons.push('el vuelo en vivo sale el día <strong>' + liveDepDate.getDate() + '</strong>, pero tu vuelo sale el día <strong>' + f.departureDay + '</strong> (según el número ' + esc(num) + '-' + f.departureDay + ')');
-    }
-  }
-  if (mismatchReasons.length > 0) {
-    mismatchWarning = '<div style="background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.5;">'
-      + '<strong>⚠ Atención:</strong> AviationStack encontró un vuelo <strong>' + esc(num) + '</strong> pero ' + mismatchReasons.join(' y ') + '. '
-      + 'El mismo número de vuelo se reutiliza en distintas rutas y días, así que estos datos GPS probablemente son de <strong>otro vuelo distinto al tuyo</strong>. Confía en el estado automático de arriba, que sí usa las fechas reales de tu envío.</div>';
-  }
-
-  var html = autoBox + mismatchWarning + '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Datos GPS en vivo (AviationStack)' + (mismatchWarning?' — posible vuelo distinto':'') + '</div>';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:#E8F5EE;color:#1B7A3E;">' + scc.toUpperCase() + '</span><span style="font-size:12px;color:var(--t2);">' + (ground?'🛬 En tierra':'✈ En vuelo') + (d.live&&!ground?' · '+Math.round(d.live.altitude)+' m · '+Math.round(d.live.speed_horizontal)+' km/h':'') + '</span></div>';
-  // Mapa
-  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
-    html += '<div id="flight-map" style="height:280px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px;"></div>';
-  }
-  html += '<div class="lv-grid">';
-  var cells = [
-    ['Aerolínea', esc((d.airline&&d.airline.name)||'—')],
-    ['Aeropuerto salida', esc((d.departure&&d.departure.airport)||'—')],
-    ['Aeropuerto llegada', esc((d.arrival&&d.arrival.airport)||'—')],
-    ['Salida programada', fmtD(d.departure&&d.departure.scheduled)],
-    ['Salida real', d.departure&&d.departure.actual ? fmtD(d.departure.actual) : '—'],
-    ['Llegada estimada', fmtD(d.arrival&&d.arrival.estimated)],
-    ['Llegada real', d.arrival&&d.arrival.actual ? fmtD(d.arrival.actual) : '<span style="color:var(--t3)">Aún no aterriza</span>'],
-    ['Demora llegada', d.arrival&&d.arrival.delay ? '<span style="color:var(--red)">+'+d.arrival.delay+' min</span>' : '<span style="color:var(--green2)">A tiempo</span>'],
-    ['Posición GPS', hasGPS ? parseFloat(d.live.latitude).toFixed(3) + ', ' + parseFloat(d.live.longitude).toFixed(3) : '—']
-  ];
-  cells.forEach(function(c) { html += '<div class="lv-cell"><div class="lk">'+c[0]+'</div><div class="lv">'+c[1]+'</div></div>'; });
-  html += '</div><div style="margin-top:10px;font-size:10px;color:var(--t3);">⚡ Actualizado ' + new Date().toLocaleTimeString('es-EC') + '</div>';
-  document.getElementById('live-body').innerHTML = html;
-  // Renderizar el mapa después de insertar el HTML
-  if (f && (AIRPORT_COORDS[f.origin] || AIRPORT_COORDS[f.dest] || hasGPS)) {
-    renderFlightMap(f, d);
-  }
-}
-
-// ══ AI — Claude ══
+// ══ AI — Groq ══
 // Explica en pantalla qué implica cada nivel de privacidad
 function onPrivacyChange() {
   var v = gv('cfg-ai-privacy') || 'full';
@@ -4229,7 +4067,7 @@ function renderSettingsPage(){
         + '<strong>Opciones:</strong> abre TrackFlow al menos una vez por semana, exporta respaldos con frecuencia, o usa <strong>Chrome</strong> (no aplica este borrado automático).</div>';
     }
   }
-  sv('cfg-groq',CFG.groqKey||''); sv('cfg-aviation',CFG.aviationKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
+  sv('cfg-groq',CFG.groqKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus');
   sv('cfg-ai-privacy',CFG.aiPrivacy||'full'); onPrivacyChange();
   sv('cfg-aero',CFG.aeroKey||''); var asc=document.getElementById('cfg-autoscan'); if(asc)asc.checked=CFG.autoScanArrivals!==false;
   sv('cfg-scan-hours', String(CFG.scanHours||2)); onScanFreqChange();
@@ -4310,7 +4148,7 @@ function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').
 
 // ══ SETTINGS ══
 function saveSettings(){
-  CFG.groqKey=gv('cfg-groq'); CFG.aviationKey=gv('cfg-aviation'); CFG.consignees=gv('cfg-consignees');
+  CFG.groqKey=gv('cfg-groq'); CFG.consignees=gv('cfg-consignees');
   CFG.aiPrivacy=gv('cfg-ai-privacy')||'full';
   CFG.aeroKey=gv('cfg-aero'); var asc2=document.getElementById('cfg-autoscan'); CFG.autoScanArrivals=asc2?asc2.checked:true;
   var newHours=parseInt(gv('cfg-scan-hours'))||2;
