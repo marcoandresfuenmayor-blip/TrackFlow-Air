@@ -1730,11 +1730,32 @@ function extractAWBFields(text) {
     if (piecesMatch) result.boxes_conf = parseInt(piecesMatch[1]);
   }
 
-  // ── FBE (Full Boxes Equivalent) ── aparece como "FULL: 39.125" en la descripción de la carga
-  var fbeMatch = clean.match(/FULL:\s*(\d+(?:\.\d+)?)/i)
-    || clean.match(/FBE:?\s*(\d+(?:\.\d+)?)/i)
-    || clean.match(/FULL\s*BOXES?\D{0,5}?(\d+(?:\.\d+)?)/i);
-  if (fbeMatch) result.fbe = parseFloat(fbeMatch[1]);
+  // ── FBE (Full Boxes Equivalent) ── aparece de varias formas según la aerolínea:
+  // "FULL: 39.125" · "FULL BOXES: 39.125" · "FBE: 39.125" · "FB: 39.125" · "F.B.E. 39.125"
+  // "EQUIVALENT FULL BOXES 39.125" · "FULL BOX 39.125" · "39.125 FULL BOXES"
+  var fbePatterns = [
+    /FULL\s*BOX(?:ES)?\s*EQUIVALENTE?S?\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /EQUIVALENTE?S?\s*(?:EN\s*)?(?:CAJAS?\s*)?(?:FULL|COMPLETAS?)\s*(?:BOX(?:ES)?)?\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /F\.?\s*B\.?\s*E\.?\s*[:\-]\s*(\d+(?:[.,]\d+)?)/i,
+    /\bFBE\b\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /FULL\s*BOX(?:ES)?\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /CAJAS?\s*(?:FULL|COMPLETAS?)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /FULL\s*[:\-]\s*(\d+(?:[.,]\d+)?)/i,
+    /\bFB\b\s*[:\-]\s*(\d+(?:[.,]\d+)?)/i,
+    /(\d+(?:[.,]\d+)?)\s*FULL\s*BOX(?:ES)?/i,
+    /(\d+(?:[.,]\d+)?)\s*CAJAS?\s*(?:FULL|COMPLETAS?)/i
+  ];
+  for (var fi = 0; fi < fbePatterns.length; fi++) {
+    var fm = clean.match(fbePatterns[fi]);
+    if (fm) {
+      var fval = parseFloat(fm[1].replace(',', '.'));
+      // Validación: el FBE debe ser positivo y no absurdamente mayor que las piezas
+      if (fval > 0 && (!result.boxes_conf || fval <= result.boxes_conf * 3)) {
+        result.fbe = fval;
+        break;
+      }
+    }
+  }
 
   // ── PESO BRUTO — múltiples estrategias en cascada ──
   if (!result.gross_weight) {
@@ -1841,8 +1862,19 @@ function extractAWBFields(text) {
   }
   // ── Detectar si el AWB es Prepaid (PP) o Collect (CC) ──
   // El AWB imprime el código de cargos: "USD PP PP PP PP PP" (prepagado) o "USD CC ..." (por cobrar)
-  var chgsMatch = clean.match(/\b[A-Z]{3}\s+(PP|CC)\s+(PP|CC)/);
+  // El AWB imprime el código de cargos junto a la moneda: "USD PP X X" o "USD CC ..."
+  // (antes se exigían dos PP/CC seguidos, pero el layout real trae uno solo)
+  var chgsMatch = clean.match(/\b(?:USD|EUR|COP|[A-Z]{3})\s+(PP|CC)\b/);
   if (chgsMatch) result.chgsCode = chgsMatch[1].toUpperCase();
+
+  // Si el AWB es prepagado (PP), el "Total Collect" debe ser 0.
+  // El layout "Total Prepaid Total Collect 1814.74" trae un solo número que pertenece al prepagado.
+  if (result.chgsCode === 'PP' && result.total_collect) {
+    if (!result.total_prepaid || Math.abs(result.total_collect - (result.total_prepaid||0)) < 0.02) {
+      result.total_prepaid = result.total_prepaid || result.total_collect;
+      result.total_collect = 0;
+    }
+  }
 
   // Red de seguridad 0: detectar si Prepaid y Collect salieron intercambiados.
   // Solo aplica si el AWB dice explícitamente PP (prepagado): en ese caso el "collect"
@@ -2116,11 +2148,14 @@ function parseAeroFlight(af, expectedDest) {
     statusRaw: af.status || 'Unknown',
     depAirport: (dep.airport && (dep.airport.iata || dep.airport.icao)) || '',
     arrAirport: (arr.airport && (arr.airport.iata || arr.airport.icao)) || '',
-    depScheduled: (dep.scheduledTime && (dep.scheduledTime.utc || dep.scheduledTime.local)) || null,
-    depActual: (dep.actualTime && (dep.actualTime.utc || dep.actualTime.local)) || (dep.revisedTime && dep.revisedTime.utc) || null,
-    arrScheduled: (arr.scheduledTime && (arr.scheduledTime.utc || arr.scheduledTime.local)) || null,
-    arrActual: (arr.actualTime && (arr.actualTime.utc || arr.actualTime.local)) || null,
-    arrEstimated: (arr.predictedTime && arr.predictedTime.utc) || (arr.revisedTime && arr.revisedTime.utc) || null,
+    // IMPORTANTE: preferir la hora LOCAL del aeropuerto, no UTC.
+    // AeroDataBox devuelve ambas; mostrar UTC como si fuera local desfasaba las horas
+    // (ej: salida 8:30am Bogotá se mostraba como 1:30pm porque BOG es UTC-5).
+    depScheduled: (dep.scheduledTime && (dep.scheduledTime.local || dep.scheduledTime.utc)) || null,
+    depActual: (dep.actualTime && (dep.actualTime.local || dep.actualTime.utc)) || (dep.revisedTime && (dep.revisedTime.local || dep.revisedTime.utc)) || null,
+    arrScheduled: (arr.scheduledTime && (arr.scheduledTime.local || arr.scheduledTime.utc)) || null,
+    arrActual: (arr.actualTime && (arr.actualTime.local || arr.actualTime.utc)) || null,
+    arrEstimated: (arr.predictedTime && (arr.predictedTime.local || arr.predictedTime.utc)) || (arr.revisedTime && (arr.revisedTime.local || arr.revisedTime.utc)) || null,
     arrTerminal: arr.terminal || '',
     arrivedReal: statusRaw === 'arrived',
     enRoute: statusRaw === 'enroute' || statusRaw === 'departed',
@@ -2365,6 +2400,21 @@ function renderAeroLive(num, m, flightId, autoBox) {
   var st = stMap[key] || stMap.unknown;
   if (m.arrActual && key !== 'arrived') st = stMap.arrived;
 
+  // Detectar dato desactualizado: dice "en ruta/despegó" pero la llegada ya debió ocurrir
+  var staleWarn = '';
+  if (!m.arrActual && (key==='enroute' || key==='departed')) {
+    var refArr = m.arrEstimated || m.arrScheduled;
+    if (refArr) {
+      var hoursLate = (Date.now() - new Date(refArr).getTime()) / 3600000;
+      if (hoursLate > 3) {
+        staleWarn = '<div style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.5;">'
+          + '<strong>⚠ Dato posiblemente desactualizado.</strong> El vuelo debió llegar hace ' + Math.round(hoursLate) + ' horas pero la aerolínea aún no reporta el aterrizaje. '
+          + 'Es común en vuelos de carga: el despegue se registra, pero el arribo no siempre se actualiza. '
+          + '<strong>Confirma manualmente con MAS Customs</strong> y marca la llegada en el formulario.</div>';
+      }
+    }
+  }
+
   var realBox = '<div style="background:'+st.bg+';border-radius:8px;padding:14px;margin-bottom:14px;border:1px solid '+st.c+'33;">'
     + '<div style="font-size:11px;font-weight:700;color:'+st.c+';text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estado REAL (AeroDataBox)</div>'
     + '<div style="font-size:17px;font-weight:800;color:'+st.c+';">'+st.t+'</div>'
@@ -2386,7 +2436,7 @@ function renderAeroLive(num, m, flightId, autoBox) {
 
   var footer = '<div style="font-size:10px;color:var(--t3);margin-top:10px;text-align:center;">⚡ Dato consultado ' + new Date().toLocaleTimeString('es-EC') + ' · AeroDataBox</div>';
 
-  document.getElementById('live-body').innerHTML = autoBox + mismatch + realBox + details + footer;
+  document.getElementById('live-body').innerHTML = autoBox + mismatch + staleWarn + realBox + details + footer;
 }
 
 
@@ -2509,13 +2559,15 @@ function dbSummary() {
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
 // Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
 // ══ CENTRO DE INTELIGENCIA ══
-// Scorecard: puntúa cada aerolínea combinando precio y confiabilidad
-function buildCarrierScorecard() {
+// Scorecard: puntúa por AEROLÍNEA o por CARGUERA (agencia) combinando precio y confiabilidad
+// dim = 'airline' | 'agency'
+function buildCarrierScorecard(dim) {
+  dim = dim || 'airline';
   var carriers = {};
   DB.flights.forEach(function(f){
-    var a = f.airline || 'Sin aerolínea';
+    var a = dim === 'agency' ? (f.agName || 'Sin carguera') : (f.airline || 'Sin aerolínea');
     if (!carriers[a]) carriers[a] = { name:a, flights:0, boxes:0, rateSum:0, rateCount:0,
-      damaged:0, lost:0, delayed:0, delivered:0, sent:0 };
+      damaged:0, lost:0, delayed:0, delivered:0, sent:0, partners:{} };
     var c = carriers[a];
     c.flights++;
     c.sent += parseInt(f.bsent)||0;
@@ -2526,6 +2578,9 @@ function buildCarrierScorecard() {
     if (f.status === 'delivered') c.delivered++;
     var r = parseFloat(f.rate)||0;
     if (r>0){ c.rateSum += r; c.rateCount++; }
+    // Registrar con quién opera: si vemos cargueras, guardar aerolíneas usadas y viceversa
+    var partner = dim === 'agency' ? f.airline : f.agName;
+    if (partner) c.partners[partner] = (c.partners[partner]||0) + 1;
   });
   var list = Object.keys(carriers).map(function(k){ return carriers[k]; }).filter(function(c){ return c.flights > 0; });
   if (!list.length) return [];
@@ -2558,12 +2613,26 @@ function buildCarrierScorecard() {
   return list;
 }
 
+var _scDim = 'airline';
+function setScoreDim(d){ _scDim = d; renderScorecard(); }
+
 function renderScorecard() {
   var box = document.getElementById('intel-scorecard');
   if (!box) return;
-  var list = buildCarrierScorecard();
+  var dim = _scDim;
+  var list = buildCarrierScorecard(dim);
+  var dimLabel = dim === 'agency' ? 'Carguera' : 'Aerolínea';
+  var partnerLabel = dim === 'agency' ? 'Aerolíneas que usa' : 'Cargueras que la usan';
+
+  // Pestañas para alternar dimensión
+  function tab(d, label) {
+    var on = dim === d;
+    return '<button onclick="setScoreDim(\''+d+'\')" style="border:1px solid '+(on?'var(--green)':'var(--border)')+';background:'+(on?'var(--green)':'transparent')+';color:'+(on?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;cursor:pointer;transition:all .14s;">'+label+'</button>';
+  }
+  var tabs = '<div style="display:flex;gap:6px;margin-bottom:12px;">' + tab('airline','✈ Por Aerolínea') + tab('agency','🏢 Por Carguera') + '</div>';
+
   if (!list.length) {
-    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con aerolínea y tarifa para ver el desempeño comparativo.</div>';
+    box.innerHTML = tabs + '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con '+dimLabel.toLowerCase()+' y tarifa para ver el desempeño comparativo.</div>';
     return;
   }
   function scoreColor(s){ return s>=85?'#22A351':(s>=70?'#F59E0B':'#DC2626'); }
@@ -2571,17 +2640,23 @@ function renderScorecard() {
     var c = scoreColor(s);
     return '<span style="display:inline-block;background:'+c+'22;color:'+c+';font-weight:800;font-size:13px;padding:4px 10px;border-radius:20px;min-width:44px;text-align:center;">'+s+'</span>';
   }
-  var h = '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). Una aerolínea barata que daña mucha carga puede salir más cara al final.</div>';
-  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>Aerolínea</th><th>Puntaje</th><th>Vuelos</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th></tr></thead><tbody>';
+  var h = tabs;
+  h += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). '
+    + (dim==='agency' ? 'Evalúa a tus <strong>cargueras</strong>: quién te consigue mejor precio y menos problemas.' : 'Evalúa a las <strong>aerolíneas</strong>: una barata que daña mucha carga puede salir más cara.') + '</div>';
+  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
   list.forEach(function(c){
+    var partners = Object.keys(c.partners).sort(function(a,b){return c.partners[b]-c.partners[a];})
+      .slice(0,3).map(function(p){ return esc(p)+' ('+c.partners[p]+')'; }).join(', ') || '—';
     h += '<tr>'
       + '<td><strong>'+esc(c.name)+'</strong></td>'
       + '<td>'+scoreBadge(c.score)+'</td>'
       + '<td>'+c.flights+'</td>'
+      + '<td>'+c.boxes.toLocaleString('es-EC')+'</td>'
       + '<td>'+(c.avgRate>0?'$'+c.avgRate.toFixed(3):'—')+'</td>'
       + '<td style="color:'+(c.dmgPct>1?'var(--red)':'var(--t2)')+';">'+c.dmgPct.toFixed(1)+'%</td>'
       + '<td style="color:'+(c.lostPct>0.5?'var(--red)':'var(--t2)')+';">'+c.lostPct.toFixed(1)+'%</td>'
       + '<td style="color:'+(c.delayPct>10?'var(--red)':'var(--t2)')+';">'+c.delayPct.toFixed(0)+'%</td>'
+      + '<td style="font-size:10px;color:var(--t3);">'+partners+'</td>'
       + '</tr>';
   });
   h += '</tbody></table></div>';
@@ -2595,6 +2670,9 @@ function renderScorecard() {
       h += '<div style="flex:1;min-width:170px;background:var(--lightgreen);border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:var(--green);font-weight:700;text-transform:uppercase;">Más económica</div><div style="font-size:14px;font-weight:800;color:var(--green);">'+esc(cheapest.name)+' ($'+cheapest.avgRate.toFixed(3)+')</div></div>';
     }
     h += '</div>';
+  }
+  if (list.length === 1) {
+    h += '<div style="font-size:11px;color:var(--t3);margin-top:10px;text-align:center;">Con una sola '+dimLabel.toLowerCase()+' registrada el puntaje es referencial. Registra más para comparar.</div>';
   }
   box.innerHTML = h;
 }
@@ -2674,24 +2752,31 @@ function renderRouteHistory() {
 async function prepNegotiation() {
   var box = document.getElementById('intel-ai');
   box.innerHTML = '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Analizando tu histórico para preparar la negociación…</div>';
-  var scorecard = buildCarrierScorecard();
+  var scAir = buildCarrierScorecard('airline');
+  var scAg = buildCarrierScorecard('agency');
   var routes = buildRouteHistory();
-  if (!scorecard.length || !routes.length) {
+  if (!scAir.length || !routes.length) {
     box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Necesitas más vuelos registrados (con aerolínea, ruta y tarifa) para generar recomendaciones útiles.</div>';
     return;
   }
-  var data = 'DESEMPEÑO POR AEROLÍNEA:\n' + scorecard.map(function(c){
-    return '- ' + c.name + ': puntaje ' + c.score + '/100, tarifa prom $' + c.avgRate.toFixed(3) + '/kg, '
-      + c.dmgPct.toFixed(1) + '% dañadas, ' + c.lostPct.toFixed(1) + '% perdidas, ' + c.delayPct.toFixed(0) + '% demoras (' + c.flights + ' vuelos)';
-  }).join('\n');
+  function fmtSc(list, label) {
+    return label + ':\n' + list.map(function(c){
+      var partners = Object.keys(c.partners).slice(0,3).join('/');
+      return '- ' + c.name + ': puntaje ' + c.score + '/100, tarifa prom $' + c.avgRate.toFixed(3) + '/kg, '
+        + c.dmgPct.toFixed(1) + '% dañadas, ' + c.lostPct.toFixed(1) + '% perdidas, ' + c.delayPct.toFixed(0) + '% demoras ('
+        + c.flights + ' vuelos, ' + c.boxes + ' cajas)' + (partners?' — opera con: '+partners:'');
+    }).join('\n');
+  }
+  var data = fmtSc(scAir, 'DESEMPEÑO POR AEROLÍNEA');
+  data += '\n\n' + fmtSc(scAg, 'DESEMPEÑO POR CARGUERA (agencia de carga)');
   data += '\n\nHISTÓRICO POR RUTA:\n' + routes.map(function(rt){
     return '- ' + rt.route + ': mejor $' + rt.min.toFixed(3) + ' (' + rt.bestCarrier + '), promedio $' + rt.avg.toFixed(3) + ', peor $' + rt.max.toFixed(3) + ', tendencia ' + (rt.trend>0?'subiendo':rt.trend<0?'bajando':'estable');
   }).join('\n');
   try {
     var text = await callAI(
-      'Eres un asesor experto en negociación de carga aérea de flores (Ecuador→USA). Hablas directo y práctico, para gerencia. Respondes en español.',
-      [{role:'user', content: 'Con base en estos datos reales de mi operación, dame recomendaciones concretas para mi próxima negociación con las cargueras:\n\n' + data
-        + '\n\nDame máximo 5 recomendaciones accionables: con quién negociar, qué tarifa pedir en cada ruta, qué aerolíneas evitar y por qué. Sé específico con los números.'}]
+      'Eres un asesor experto en negociación de carga aérea de flores (Ecuador/Colombia→USA). El cliente contrata CARGUERAS (agencias de carga) que a su vez usan AEROLÍNEAS. Hablas directo y práctico, para gerencia. Respondes en español.',
+      [{role:'user', content: 'Con base en estos datos reales de mi operación, dame recomendaciones concretas para mi próxima negociación:\n\n' + data
+        + '\n\nDame máximo 6 recomendaciones accionables: con qué CARGUERA negociar y por qué, qué AEROLÍNEAS pedir o evitar, qué tarifa exigir en cada ruta. Sé específico con los números y distingue claramente entre carguera y aerolínea.'}]
     );
     box.innerHTML = '<div style="font-size:12px;line-height:1.6;color:var(--t1);white-space:pre-wrap;">' + esc(text) + '</div>';
   } catch(e) {
@@ -3044,12 +3129,17 @@ function applyColOrder(tableId) {
     order.forEach(function(oi){ if (thByOi[oi]) head.appendChild(thByOi[oi]); });
   }
 
-  // Reordenar cada fila del cuerpo para que coincida con el encabezado
+  // Reordenar cada fila del cuerpo para que coincida con el encabezado.
+  // Cada celda lleva su índice ORIGINAL en data-coi, así el reordenamiento es correcto
+  // sin importar cuántas veces se haya arrastrado (antes se descuadraba en el 2º arrastre).
   Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function(tr) {
     var cells = Array.prototype.slice.call(tr.children);
     if (cells.length !== order.length) return; // filas vacías (colspan) se saltan
-    // cells[i] corresponde a la columna original i (el tbody se genera en orden natural)
-    order.forEach(function(oi){ if (cells[oi]) tr.appendChild(cells[oi]); });
+    // Etiquetar celdas nuevas con su índice original
+    cells.forEach(function(td, i){ if (td.dataset.coi === undefined) td.dataset.coi = i; });
+    var byCoi = {};
+    cells.forEach(function(td){ byCoi[parseInt(td.dataset.coi)] = td; });
+    order.forEach(function(oi){ if (byCoi[oi]) tr.appendChild(byCoi[oi]); });
   });
 }
 
@@ -3200,12 +3290,25 @@ function renderCalendar(){
   for (var day=1; day<=daysInMonth; day++) {
     var fls = byDay[day] || [];
     var isToday = isCurrentMonth && today.getDate()===day;
-    h += '<div style="min-height:82px;border:1px solid '+(isToday?'var(--green)':'var(--border)')+';border-radius:8px;padding:5px;background:'+(isToday?'var(--lightgreen)':'var(--surf)')+';overflow:hidden;">';
+    h += '<div style="min-height:118px;border:1px solid '+(isToday?'var(--green)':'var(--border)')+';border-radius:8px;padding:5px;background:'+(isToday?'var(--lightgreen)':'var(--surf)')+';overflow:hidden;">';
     h += '<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--t2)')+';margin-bottom:3px;">'+day+'</div>';
     fls.slice(0,3).forEach(function(f){
       var c = STC[f.status] || '#9CA3AF';
-      var label = f.awb ? f.awb.split('-')[1] || f.awb : (f.num||'—');
-      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(f.awb||'')+' · '+esc(f.num||'')+' · '+esc(f.origin||'')+'→'+esc(f.dest||'')+'" style="cursor:pointer;font-size:9px;background:'+c+'22;color:'+c+';border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;">'+esc(label)+' '+esc(f.origin||'')+'→'+esc(f.dest||'')+'</div>';
+      var awb = f.awb || f.num || '—';
+      var boxes = parseInt(f.bsent)||0;
+      var tip = 'AWB ' + (f.awb||'—') + (f.num?' · Vuelo '+f.num:'') + '\n'
+        + (f.agName?'Carguera: '+f.agName+'\n':'')
+        + (f.airline?'Aerolínea: '+f.airline+'\n':'')
+        + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas';
+      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'18;border-left:3px solid '+c+';border-radius:4px;padding:4px 5px;margin-bottom:3px;overflow:hidden;">'
+        + '<div style="font-family:var(--mono);font-size:9.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(awb)+'</div>'
+        + '<div style="font-size:8.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;">'
+        + esc(f.origin||'?')+'→'+esc(f.dest||'?')
+        + (f.num?' · '+esc(f.num):'')
+        + '</div>'
+        + (f.agName?'<div style="font-size:8px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(f.agName)+'</div>':'')
+        + (boxes?'<div style="font-size:8px;color:var(--t3);font-weight:700;">'+boxes+' cajas</div>':'')
+        + '</div>';
     });
     if (fls.length > 3) h += '<div style="font-size:9px;color:var(--t3);padding-left:3px;">+'+(fls.length-3)+' más</div>';
     h += '</div>';
@@ -3961,16 +4064,28 @@ async function explainTrend(){
 function renderUrgent(){
   var fl = DB.flights;
   var items = [];
+  // Etiqueta completa: AWB (lo más importante) + vuelo + fecha
+  function tag(f) {
+    var awb = f.awb ? esc(f.awb) : (f.num ? esc(f.num) : 'Sin AWB');
+    var parts = ['<strong style="font-family:var(--mono);">' + awb + '</strong>'];
+    if (f.num && f.awb) parts.push('<span style="opacity:.75;">vuelo ' + esc(f.num) + '</span>');
+    if (f.etd) {
+      var d = new Date(f.etd);
+      if (!isNaN(d)) parts.push('<span style="opacity:.75;">' + d.toLocaleDateString('es-EC',{day:'2-digit',month:'short'}) + '</span>');
+    }
+    if (f.agName) parts.push('<span style="opacity:.75;">' + esc(f.agName) + '</span>');
+    return parts.join(' · ');
+  }
   fl.forEach(function(f){
-    var id = f.id, num = esc(f.num||'Sin vuelo');
+    var id = f.id, num = tag(f);
     // Vuelos demorados ahora
     if (f.status === 'delayed') {
-      items.push({ pri: 1, icon:'🔴', txt: num + ' (' + esc(f.origin)+'→'+esc(f.dest) + ') está DEMORADO', id: id });
+      items.push({ pri: 1, icon:'🔴', txt: num + ' — <strong>DEMORADO</strong> (' + esc(f.origin)+'→'+esc(f.dest) + ')', id: id });
     }
     // Cajas en hold USDA sin liberar
     var usda = parseInt(f.busda)||0, released = parseInt(f.busdaReleased)||0;
     if ((f.usdaHold || usda > 0) && !f.usdaFreed && released < usda) {
-      items.push({ pri: 2, icon:'🛃', txt: num + ': ' + (usda||'?') + ' cajas retenidas por USDA sin liberar', id: id });
+      items.push({ pri: 2, icon:'🛃', txt: num + ' — ' + (usda||'?') + ' cajas retenidas por USDA sin liberar', id: id });
     }
     // Cajas perdidas por aerolínea (posible reclamo)
     var lost = parseInt(f.blost)||0;
