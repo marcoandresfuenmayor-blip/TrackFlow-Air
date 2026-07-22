@@ -353,6 +353,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
       <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
       <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reportes</span></div>
+      <div class="ni" id="nav-intel" onclick="go('intel')"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg><span>Inteligencia</span></div>
       <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendario</span></div>
       <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Auditoría</span></div>
       <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
@@ -525,6 +526,29 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="card">
           <div class="ch"><span class="ct">💹 Evolución de tarifas por aerolínea</span><span style="font-size:10px;color:var(--t3);">Detecta si te están subiendo precios</span></div>
           <div style="padding:16px;" id="rate-history-body"><div class="ai-bubble" style="font-size:12px;">Cargando…</div></div>
+        </div>
+      </div>
+
+      <!-- INTELIGENCIA -->
+      <div class="screen" id="s-intel">
+        <div style="background:linear-gradient(135deg,var(--navy),var(--green));border-radius:14px;padding:18px 20px;margin-bottom:14px;color:#fff;">
+          <div style="font-size:16px;font-weight:800;margin-bottom:4px;">🧠 Centro de Inteligencia</div>
+          <div style="font-size:12px;opacity:.9;line-height:1.5;">Convierte tus datos en decisiones. Diseñado para negociar mejor y elegir la mejor carguera. Usa la información que ya capturas — sin ingresar nada nuevo.</div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="ch"><span class="ct">🏆 Desempeño por Aerolínea</span><span style="font-size:10px;color:var(--t3);">Precio vs. confiabilidad</span></div>
+          <div style="padding:14px 16px;" id="intel-scorecard"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="ch"><span class="ct">📉 Histórico de Negociación por Ruta</span><span style="font-size:10px;color:var(--t3);">Tu piso y techo para negociar</span></div>
+          <div style="padding:14px 16px;" id="intel-routes"></div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><span class="ct">🤖 Preparar Próxima Negociación</span><button class="btn xs pr" onclick="prepNegotiation()">Generar recomendaciones</button></div>
+          <div style="padding:14px 16px;" id="intel-ai"><div class="ai-bubble" style="font-size:12px;">Toca "Generar recomendaciones" para que la IA analice tu histórico y te diga con quién negociar, qué tarifa pedir y qué aerolíneas evitar.</div></div>
         </div>
       </div>
 
@@ -2484,6 +2508,205 @@ function dbSummary() {
 
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
 // Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
+// ══ CENTRO DE INTELIGENCIA ══
+// Scorecard: puntúa cada aerolínea combinando precio y confiabilidad
+function buildCarrierScorecard() {
+  var carriers = {};
+  DB.flights.forEach(function(f){
+    var a = f.airline || 'Sin aerolínea';
+    if (!carriers[a]) carriers[a] = { name:a, flights:0, boxes:0, rateSum:0, rateCount:0,
+      damaged:0, lost:0, delayed:0, delivered:0, sent:0 };
+    var c = carriers[a];
+    c.flights++;
+    c.sent += parseInt(f.bsent)||0;
+    c.boxes += parseInt(f.bsent)||0;
+    c.damaged += parseInt(f.bdamaged)||0;
+    c.lost += parseInt(f.blost)||0;
+    if (f.status === 'delayed') c.delayed++;
+    if (f.status === 'delivered') c.delivered++;
+    var r = parseFloat(f.rate)||0;
+    if (r>0){ c.rateSum += r; c.rateCount++; }
+  });
+  var list = Object.keys(carriers).map(function(k){ return carriers[k]; }).filter(function(c){ return c.flights > 0; });
+  if (!list.length) return [];
+  // Calcular métricas derivadas
+  list.forEach(function(c){
+    c.avgRate = c.rateCount>0 ? c.rateSum/c.rateCount : 0;
+    c.dmgPct = c.sent>0 ? (c.damaged/c.sent*100) : 0;
+    c.lostPct = c.sent>0 ? (c.lost/c.sent*100) : 0;
+    c.delayPct = c.flights>0 ? (c.delayed/c.flights*100) : 0;
+  });
+  // Puntaje: precio (40%) + daños (25%) + perdidas (20%) + demoras (15%)
+  // Normalizar cada métrica contra el rango del grupo (menor es mejor en todas)
+  var rates = list.map(function(c){return c.avgRate;}).filter(function(r){return r>0;});
+  var minRate = Math.min.apply(null, rates), maxRate = Math.max.apply(null, rates);
+  function normInv(val, min, max) { // 100 = mejor (menor valor), 0 = peor
+    if (max === min) return 100;
+    return Math.round((1 - (val - min)/(max - min)) * 100);
+  }
+  var maxDmg = Math.max.apply(null, list.map(function(c){return c.dmgPct;}).concat([0.01]));
+  var maxLost = Math.max.apply(null, list.map(function(c){return c.lostPct;}).concat([0.01]));
+  var maxDelay = Math.max.apply(null, list.map(function(c){return c.delayPct;}).concat([0.01]));
+  list.forEach(function(c){
+    var sPrice = c.avgRate>0 ? normInv(c.avgRate, minRate, maxRate) : 50;
+    var sDmg = normInv(c.dmgPct, 0, maxDmg);
+    var sLost = normInv(c.lostPct, 0, maxLost);
+    var sDelay = normInv(c.delayPct, 0, maxDelay);
+    c.score = Math.round(sPrice*0.40 + sDmg*0.25 + sLost*0.20 + sDelay*0.15);
+  });
+  list.sort(function(a,b){ return b.score - a.score; });
+  return list;
+}
+
+function renderScorecard() {
+  var box = document.getElementById('intel-scorecard');
+  if (!box) return;
+  var list = buildCarrierScorecard();
+  if (!list.length) {
+    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con aerolínea y tarifa para ver el desempeño comparativo.</div>';
+    return;
+  }
+  function scoreColor(s){ return s>=85?'#22A351':(s>=70?'#F59E0B':'#DC2626'); }
+  function scoreBadge(s){
+    var c = scoreColor(s);
+    return '<span style="display:inline-block;background:'+c+'22;color:'+c+';font-weight:800;font-size:13px;padding:4px 10px;border-radius:20px;min-width:44px;text-align:center;">'+s+'</span>';
+  }
+  var h = '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). Una aerolínea barata que daña mucha carga puede salir más cara al final.</div>';
+  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>Aerolínea</th><th>Puntaje</th><th>Vuelos</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th></tr></thead><tbody>';
+  list.forEach(function(c){
+    h += '<tr>'
+      + '<td><strong>'+esc(c.name)+'</strong></td>'
+      + '<td>'+scoreBadge(c.score)+'</td>'
+      + '<td>'+c.flights+'</td>'
+      + '<td>'+(c.avgRate>0?'$'+c.avgRate.toFixed(3):'—')+'</td>'
+      + '<td style="color:'+(c.dmgPct>1?'var(--red)':'var(--t2)')+';">'+c.dmgPct.toFixed(1)+'%</td>'
+      + '<td style="color:'+(c.lostPct>0.5?'var(--red)':'var(--t2)')+';">'+c.lostPct.toFixed(1)+'%</td>'
+      + '<td style="color:'+(c.delayPct>10?'var(--red)':'var(--t2)')+';">'+c.delayPct.toFixed(0)+'%</td>'
+      + '</tr>';
+  });
+  h += '</tbody></table></div>';
+  // Recomendación rápida
+  var best = list[0];
+  var cheapest = list.slice().sort(function(a,b){return a.avgRate-b.avgRate;}).filter(function(c){return c.avgRate>0;})[0];
+  if (best) {
+    h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">';
+    h += '<div style="flex:1;min-width:170px;background:#D1FAE5;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#065F46;font-weight:700;text-transform:uppercase;">Mejor en conjunto</div><div style="font-size:14px;font-weight:800;color:#065F46;">'+esc(best.name)+' ('+best.score+' pts)</div></div>';
+    if (cheapest && cheapest.name !== best.name) {
+      h += '<div style="flex:1;min-width:170px;background:var(--lightgreen);border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:var(--green);font-weight:700;text-transform:uppercase;">Más económica</div><div style="font-size:14px;font-weight:800;color:var(--green);">'+esc(cheapest.name)+' ($'+cheapest.avgRate.toFixed(3)+')</div></div>';
+    }
+    h += '</div>';
+  }
+  box.innerHTML = h;
+}
+
+// Histórico de negociación por ruta: piso, techo, promedio y tendencia
+function buildRouteHistory() {
+  var routes = {};
+  DB.flights.forEach(function(f){
+    var r = parseFloat(f.rate)||0;
+    if (r<=0) return;
+    var key = (f.origin||'?') + '→' + (f.dest||'?');
+    if (!routes[key]) routes[key] = { route:key, rates:[], byCarrier:{} };
+    var d = f.etd ? new Date(f.etd).getTime() : 0;
+    routes[key].rates.push({ rate:r, date:d, carrier:f.airline||'?', awb:f.awb });
+    var a = f.airline||'?';
+    if (!routes[key].byCarrier[a]) routes[key].byCarrier[a] = [];
+    routes[key].byCarrier[a].push({ rate:r, date:d });
+  });
+  return Object.keys(routes).map(function(k){
+    var rt = routes[k];
+    var vals = rt.rates.map(function(x){return x.rate;});
+    rt.min = Math.min.apply(null, vals);
+    rt.max = Math.max.apply(null, vals);
+    rt.avg = vals.reduce(function(s,v){return s+v;},0)/vals.length;
+    rt.count = vals.length;
+    // Mejor tarifa: con qué aerolínea
+    var bestEntry = rt.rates.slice().sort(function(a,b){return a.rate-b.rate;})[0];
+    rt.bestCarrier = bestEntry ? bestEntry.carrier : '';
+    // Tendencia: comparar promedio de la primera mitad vs segunda mitad (por fecha)
+    var sorted = rt.rates.slice().filter(function(x){return x.date>0;}).sort(function(a,b){return a.date-b.date;});
+    if (sorted.length >= 4) {
+      var half = Math.floor(sorted.length/2);
+      var firstAvg = sorted.slice(0,half).reduce(function(s,x){return s+x.rate;},0)/half;
+      var secondAvg = sorted.slice(half).reduce(function(s,x){return s+x.rate;},0)/(sorted.length-half);
+      rt.trend = secondAvg - firstAvg;
+    } else rt.trend = 0;
+    return rt;
+  }).sort(function(a,b){return b.count-a.count;});
+}
+
+function renderRouteHistory() {
+  var box = document.getElementById('intel-routes');
+  if (!box) return;
+  var routes = buildRouteHistory();
+  if (!routes.length) {
+    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con ruta y tarifa para ver tu histórico de negociación.</div>';
+    return;
+  }
+  var h = '';
+  routes.forEach(function(rt){
+    var trendTxt = '', trendColor = 'var(--t3)';
+    if (Math.abs(rt.trend) > 0.005) {
+      if (rt.trend > 0) { trendTxt = '▲ subiendo $'+rt.trend.toFixed(3); trendColor = 'var(--red)'; }
+      else { trendTxt = '▼ bajando $'+Math.abs(rt.trend).toFixed(3); trendColor = 'var(--green)'; }
+    } else trendTxt = '≈ estable';
+    h += '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+    h += '<div style="font-size:15px;font-weight:800;color:var(--t1);">'+esc(rt.route)+'</div>';
+    h += '<div style="font-size:11px;color:'+trendColor+';font-weight:700;">'+trendTxt+'</div>';
+    h += '</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;">';
+    h += '<div style="background:#D1FAE5;border-radius:8px;padding:8px 10px;"><div style="font-size:9px;color:#065F46;text-transform:uppercase;font-weight:700;">Tu mejor tarifa</div><div style="font-size:15px;font-weight:800;color:#065F46;">$'+rt.min.toFixed(3)+'</div><div style="font-size:9px;color:#065F46;">'+esc(rt.bestCarrier)+'</div></div>';
+    h += '<div style="background:var(--bg);border-radius:8px;padding:8px 10px;"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;font-weight:700;">Promedio</div><div style="font-size:15px;font-weight:800;color:var(--t1);">$'+rt.avg.toFixed(3)+'</div><div style="font-size:9px;color:var(--t3);">'+rt.count+' vuelos</div></div>';
+    h += '<div style="background:#FEE2E2;border-radius:8px;padding:8px 10px;"><div style="font-size:9px;color:#991B1B;text-transform:uppercase;font-weight:700;">Peor tarifa</div><div style="font-size:15px;font-weight:800;color:#991B1B;">$'+rt.max.toFixed(3)+'</div><div style="font-size:9px;color:#991B1B;">no aceptes esto</div></div>';
+    h += '</div>';
+    // Frase accionable
+    var margen = rt.avg - rt.min;
+    if (margen > 0.01) {
+      h += '<div style="font-size:11px;color:var(--t2);margin-top:10px;line-height:1.5;background:var(--lightgreen);border-radius:6px;padding:8px 10px;">💡 En <strong>'+esc(rt.route)+'</strong> tu mejor tarifa fue <strong>$'+rt.min.toFixed(3)+'</strong> con '+esc(rt.bestCarrier)+'. Pagas <strong>$'+rt.avg.toFixed(3)+'</strong> en promedio — hay margen de <strong>$'+margen.toFixed(3)+'/kg</strong> para negociar.</div>';
+    }
+    h += '</div>';
+  });
+  box.innerHTML = h;
+}
+
+// Resumen ejecutivo con IA para preparar negociación
+async function prepNegotiation() {
+  var box = document.getElementById('intel-ai');
+  box.innerHTML = '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Analizando tu histórico para preparar la negociación…</div>';
+  var scorecard = buildCarrierScorecard();
+  var routes = buildRouteHistory();
+  if (!scorecard.length || !routes.length) {
+    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Necesitas más vuelos registrados (con aerolínea, ruta y tarifa) para generar recomendaciones útiles.</div>';
+    return;
+  }
+  var data = 'DESEMPEÑO POR AEROLÍNEA:\n' + scorecard.map(function(c){
+    return '- ' + c.name + ': puntaje ' + c.score + '/100, tarifa prom $' + c.avgRate.toFixed(3) + '/kg, '
+      + c.dmgPct.toFixed(1) + '% dañadas, ' + c.lostPct.toFixed(1) + '% perdidas, ' + c.delayPct.toFixed(0) + '% demoras (' + c.flights + ' vuelos)';
+  }).join('\n');
+  data += '\n\nHISTÓRICO POR RUTA:\n' + routes.map(function(rt){
+    return '- ' + rt.route + ': mejor $' + rt.min.toFixed(3) + ' (' + rt.bestCarrier + '), promedio $' + rt.avg.toFixed(3) + ', peor $' + rt.max.toFixed(3) + ', tendencia ' + (rt.trend>0?'subiendo':rt.trend<0?'bajando':'estable');
+  }).join('\n');
+  try {
+    var text = await callAI(
+      'Eres un asesor experto en negociación de carga aérea de flores (Ecuador→USA). Hablas directo y práctico, para gerencia. Respondes en español.',
+      [{role:'user', content: 'Con base en estos datos reales de mi operación, dame recomendaciones concretas para mi próxima negociación con las cargueras:\n\n' + data
+        + '\n\nDame máximo 5 recomendaciones accionables: con quién negociar, qué tarifa pedir en cada ruta, qué aerolíneas evitar y por qué. Sé específico con los números.'}]
+    );
+    box.innerHTML = '<div style="font-size:12px;line-height:1.6;color:var(--t1);white-space:pre-wrap;">' + esc(text) + '</div>';
+  } catch(e) {
+    if (e.message === 'AI_OFF') box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">La IA está desactivada por privacidad. El scorecard y el histórico de arriba funcionan sin IA y ya te dan la base para negociar.</div>';
+    else if (e.message === 'NO_KEY') box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Agrega tu Groq API Key (gratis) en Configuración para las recomendaciones con IA. El scorecard y el histórico de arriba ya funcionan sin IA.</div>';
+    else box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">No se pudo generar: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderIntel() {
+  renderScorecard();
+  renderRouteHistory();
+}
+
+// ══ CENTRO DE INTELIGENCIA (fin) ══
 async function callAI(systemPrompt, messages) {
   if (aiPrivacy() === 'off') {
     throw new Error('AI_OFF');
@@ -3550,11 +3773,11 @@ function go(s) {
   screen=s;
   document.getElementById('s-'+s).classList.add('active');
   var cn=document.getElementById('nav-'+s); if(cn)cn.classList.add('active');
-  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',calendar:'Calendario de Vuelos',audit:'Auditoría',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
+  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',intel:'Centro de Inteligencia',calendar:'Calendario de Vuelos',audit:'Auditoría',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
   document.getElementById('pg-title').textContent=titles[s]||s;
   renderScreen(s);
 }
-function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));renderRateHistory();}else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
+function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));renderRateHistory();}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
 
 var SL={transit:'En tránsito',delivered:'Entregado',pending:'Pendiente',delayed:'Demorado'};
 var CL={confirmed:'Confirmado',partial:'Parcial',unconfirmed:'Sin confirmar'};
