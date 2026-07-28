@@ -558,7 +558,22 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
         <div class="card" style="margin-bottom:14px;">
           <div class="ch"><span class="ct">📉 Histórico de Negociación por Ruta</span><span style="font-size:10px;color:var(--t3);">Tu piso y techo para negociar</span></div>
-          <div style="padding:14px 16px;" id="intel-routes"></div>
+          <div style="padding:14px 16px;">
+            <div id="intel-routes"></div>
+            <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+              <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:8px;">📈 Tendencia en el tiempo</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                <select id="trend-scope" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);"></select>
+                <select id="trend-period" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
+                  <option value="month">Agrupar por mes</option>
+                  <option value="year">Agrupar por año</option>
+                  <option value="season">Agrupar por temporada</option>
+                </select>
+              </div>
+              <div style="height:240px;position:relative;"><canvas id="chart-trend-route"></canvas></div>
+              <div id="trend-empty" style="font-size:11px;color:var(--t3);text-align:center;padding:10px;display:none;"></div>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -2999,6 +3014,102 @@ function renderIntel() {
   renderCostCompare();
   renderSimulator();
   renderRouteHistory();
+  fillTrendScope();
+  renderTrendChart();
+}
+
+// Llena el selector de "qué ver" en el gráfico de tendencia: cada ruta y cada carguera
+function fillTrendScope(){
+  var sel = document.getElementById('trend-scope');
+  if (!sel) return;
+  var prev = sel.value;
+  var routes = {}, agencies = {};
+  DB.flights.forEach(function(f){
+    if (f.origin && f.dest) routes[f.origin+'→'+f.dest]=1;
+    if (f.agName) agencies[f.agName]=1;
+  });
+  var opts = '<option value="all">Todos los envíos</option>';
+  var rk = Object.keys(routes).sort();
+  var ak = Object.keys(agencies).sort();
+  if (rk.length) opts += '<optgroup label="Por ruta">' + rk.map(function(r){return '<option value="route:'+esc(r)+'">'+esc(r)+'</option>';}).join('') + '</optgroup>';
+  if (ak.length) opts += '<optgroup label="Por carguera">' + ak.map(function(a){return '<option value="agency:'+esc(a)+'">'+esc(a)+'</option>';}).join('') + '</optgroup>';
+  sel.innerHTML = opts;
+  if (prev) sel.value = prev;
+}
+
+// Etiqueta del período (mes/año/temporada) de un vuelo
+function trendBucket(f, mode){
+  var d = f.etd ? new Date(f.etd) : null;
+  if (!d || isNaN(d)) return null;
+  if (mode==='year') return String(d.getFullYear());
+  if (mode==='season') {
+    var s = flightSeason(f);
+    return d.getFullYear() + ' ' + (s==='alta'?'Alta':'Baja');
+  }
+  // mes: "2026-03"
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+var _trendChart = null;
+function renderTrendChart(){
+  var canvas = document.getElementById('chart-trend-route');
+  var empty = document.getElementById('trend-empty');
+  if (!canvas || typeof Chart==='undefined') return;
+  var scope = (document.getElementById('trend-scope')||{}).value || 'all';
+  var mode = (document.getElementById('trend-period')||{}).value || 'month';
+
+  // Filtrar vuelos según el scope elegido
+  var flights = DB.flights.filter(function(f){
+    var g = parseFloat(f.weight)||0, t = parseFloat(f.totalpaid)||0;
+    if (g<=0 || t<=0) return false;
+    if (scope==='all') return true;
+    if (scope.indexOf('route:')===0) return (f.origin+'→'+f.dest)===scope.slice(6);
+    if (scope.indexOf('agency:')===0) return (f.agName||'')===scope.slice(7);
+    return true;
+  });
+
+  // Agrupar por período y acumular (ponderado por peso)
+  var buckets = {};
+  flights.forEach(function(f){
+    var b = trendBucket(f, mode);
+    if (!b) return;
+    if (!buckets[b]) buckets[b] = { gross:0, charge:0, total:0, rateSum:0, rateN:0 };
+    var o = buckets[b];
+    o.gross += parseFloat(f.weight)||0;
+    o.charge += parseFloat(f.cweight)||0;
+    o.total += parseFloat(f.totalpaid)||0;
+    var r = parseFloat(f.rate)||0;
+    if (r>0){ o.rateSum += r; o.rateN++; }
+  });
+  var labels = Object.keys(buckets).sort();
+
+  if (_trendChart){ _trendChart.destroy(); _trendChart = null; }
+  if (!labels.length){
+    if(empty){ empty.style.display='block'; empty.textContent='Sin envíos con peso y total para graficar en esta selección.'; }
+    canvas.style.display='none';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  canvas.style.display='block';
+
+  var realArr = labels.map(function(l){ var o=buckets[l]; return o.gross>0? +(o.total/o.gross).toFixed(3):null; });
+  var factArr = labels.map(function(l){ var o=buckets[l]; return o.charge>0? +(o.total/o.charge).toFixed(3):null; });
+  var nomArr  = labels.map(function(l){ var o=buckets[l]; return o.rateN>0? +(o.rateSum/o.rateN).toFixed(3):null; });
+
+  _trendChart = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{ labels:labels, datasets:[
+      { label:'$/kg real', data:realArr, borderColor:'#1B7A3E', backgroundColor:'#1B7A3E22', tension:.3, spanGaps:true, pointRadius:4 },
+      { label:'$/kg facturable', data:factArr, borderColor:'#2563EB', backgroundColor:'#2563EB22', tension:.3, spanGaps:true, pointRadius:4 },
+      { label:'Tarifa nominal', data:nomArr, borderColor:'#D97706', backgroundColor:'#D9770622', tension:.3, spanGaps:true, borderDash:[5,4], pointRadius:3 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ font:{size:11}, usePointStyle:true, boxWidth:8 } },
+        tooltip:{ callbacks:{ label:function(ctx){ return ctx.dataset.label+': $'+(ctx.parsed.y!=null?ctx.parsed.y.toFixed(3):'—'); } } } },
+      scales:{ y:{ ticks:{ callback:function(v){return '$'+v.toFixed(2);}, font:{size:10} } },
+               x:{ ticks:{ font:{size:10} } } }
+    }
+  });
 }
 
 // ── BLOQUE 1: Factor volumétrico por carguera ──
