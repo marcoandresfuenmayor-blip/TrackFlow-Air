@@ -357,8 +357,6 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendario</span></div>
       <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Auditoría</span></div>
       <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
-      <div class="ni" id="nav-predictions" onclick="go('predictions')"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Predicciones IA</span></div>
-      <div class="ni" id="nav-assistant" onclick="go('assistant')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Asistente IA</span></div>
       <div class="ni" id="nav-notifications" onclick="go('notifications')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notificaciones</span><span class="nbadge" id="badge-notif">0</span></div>
       <div class="sb-sec" style="margin-top:6px;">Config</div>
       <div class="ni" id="nav-settings" onclick="go('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Configuración</span></div>
@@ -415,29 +413,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div id="urgent-list" style="display:flex;flex-direction:column;gap:7px;"></div>
         </div>
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">📊 Análisis Visual</span><span style="font-size:10px;color:var(--t3);">Actualizado en tiempo real</span></div>
-          <div id="dash-charts" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
-            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">Tarifa promedio por aerolínea ($/kg)</div><div style="height:200px;position:relative;"><canvas id="chart-rate"></canvas></div></div>
-            <div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">AWBs por puerto de origen</div><div style="height:200px;position:relative;"><canvas id="chart-port"></canvas></div></div>
-            <div style="grid-column:1/-1;">
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
-                <span style="font-size:12px;font-weight:700;color:var(--t2);">Cajas por período</span>
-                <select id="period-selector" onchange="renderDashCharts()" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);">
-                  <option value="week">Semana</option>
-                  <option value="month" selected>Mes</option>
-                  <option value="quarter">Trimestre</option>
-                  <option value="semester">Semestre</option>
-                </select>
-              </div>
-              <div style="height:220px;position:relative;"><canvas id="chart-volume"></canvas></div>
-            </div>
-            <div style="grid-column:1/-1;">
-              <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;text-align:center;">📈 Tendencia y proyección de envíos</div>
-              <div style="height:240px;position:relative;"><canvas id="chart-trend"></canvas></div>
-              <div id="trend-ai" style="margin-top:12px;font-size:12px;color:var(--t2);background:var(--lightgreen);border-radius:8px;padding:10px 14px;line-height:1.5;display:none;"></div>
-              <div style="text-align:center;margin-top:10px;"><button class="btn xs pr" onclick="explainTrend()">🤖 Interpretar tendencia con IA</button></div>
-            </div>
-          </div>
+          <div class="ch"><span class="ct">⚠️ Envíos que necesitan seguimiento</span><span style="font-size:10px;color:var(--t3);">Ordenados del más problemático</span></div>
+          <div style="padding:12px 16px;" id="dash-problems"></div>
         </div>
         <div class="card">
           <div class="ch"><span class="ct">Búsqueda IA — Groq</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
@@ -487,22 +464,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="screen" id="s-agencies">
         <div class="card">
           <div class="ch"><span class="ct">Agencias de Carga</span><button class="btn sm pr" onclick="openModal('agency')">+ Agregar Agencia</button></div>
-          <div class="tw"><table><thead><tr><th>Agencia</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Vuelos</th><th>Total Cajas</th><th>Tasa Conf.</th><th>Total Facturado</th><th></th></tr></thead><tbody id="agencies-tbody"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>Agencia</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Desempeño</th><th></th></tr></thead><tbody id="agencies-tbody"></tbody></table></div>
         </div>
       </div>
 
       <!-- PREDICTIONS -->
-      <div class="screen" id="s-predictions">
-        <div class="sg sg4">
-          <div class="sc"><div class="sl">Riesgo Promedio</div><div class="sv" id="pr-risk">—</div><div class="ss dn">—</div></div>
-          <div class="sc"><div class="sl">Alto Riesgo</div><div class="sv" id="pr-high">0</div><div class="ss dn">≥60% riesgo</div></div>
-          <div class="sc"><div class="sl">Cajas Sin Confirmar</div><div class="sv" id="pr-unc">0</div><div class="ss dn">—</div></div>
-          <div class="sc"><div class="sl">Tasa Puntualidad</div><div class="sv" id="pr-ot">—</div><div class="ss up">—</div></div>
-        </div>
-        <div class="card"><div class="ch"><span class="ct">Riesgo de Demora por Vuelo</span></div><div style="padding:14px 16px;" id="risk-bars"><div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div></div></div>
-      </div>
-
-      <!-- REPORTES -->
       <div class="screen" id="s-reports">
         <div class="card">
           <div class="ch">
@@ -523,10 +489,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <div id="report-ai" style="margin-top:14px;font-size:12px;color:var(--t2);background:var(--lightgreen);border-radius:8px;padding:10px 14px;line-height:1.5;display:none;"></div>
           </div>
         </div>
-        <div class="card">
-          <div class="ch"><span class="ct">💹 Evolución de tarifas por aerolínea</span><span style="font-size:10px;color:var(--t3);">Detecta si te están subiendo precios</span></div>
-          <div style="padding:16px;" id="rate-history-body"><div class="ai-bubble" style="font-size:12px;">Cargando…</div></div>
-        </div>
+        
       </div>
 
       <!-- INTELIGENCIA -->
@@ -562,8 +525,15 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <div id="intel-routes"></div>
             <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
               <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:8px;">📈 Tendencia en el tiempo</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:5px;">Toca para seleccionar una o varias rutas/cargueras y compararlas:</div>
+              <div id="trend-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-                <select id="trend-scope" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);"></select>
+                <select id="trend-metric" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
+                  <option value="real">$/kg real</option>
+                  <option value="fact">$/kg facturable</option>
+                  <option value="nom">Tarifa nominal</option>
+                  <option value="all">Las 3 métricas (una selección)</option>
+                </select>
                 <select id="trend-period" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
                   <option value="month">Agrupar por mes</option>
                   <option value="year">Agrupar por año</option>
@@ -2900,9 +2870,10 @@ function renderScorecard() {
 }
 
 // Histórico de negociación por ruta: piso, techo, promedio y tendencia
-function buildRouteHistory() {
+function buildRouteHistory(pred) {
   var routes = {};
   DB.flights.forEach(function(f){
+    if (pred && !pred(f)) return;
     var r = parseFloat(f.rate)||0;
     if (r<=0) return;
     var key = (f.origin||'?') + '→' + (f.dest||'?');
@@ -2935,15 +2906,37 @@ function buildRouteHistory() {
   }).sort(function(a,b){return b.count-a.count;});
 }
 
+var _rhPeriod = 'all';
+function setRHPeriod(v){ _rhPeriod = v; renderRouteHistory(); }
+function rhPred(){
+  var v = _rhPeriod;
+  if (v === 'all') return null;
+  if (v === 'alta' || v === 'baja') return function(f){ return flightSeason(f) === v; };
+  if (v === 'last90') return function(f){ var d = f.etd ? new Date(f.etd) : null; return d && !isNaN(d) && (Date.now() - d.getTime()) <= 90*86400000; };
+  if (v.indexOf('y:') === 0) { var y = parseInt(v.slice(2)); return function(f){ var d = f.etd ? new Date(f.etd) : null; return d && !isNaN(d) && d.getFullYear() === y; }; }
+  return null;
+}
 function renderRouteHistory() {
   var box = document.getElementById('intel-routes');
   if (!box) return;
-  var routes = buildRouteHistory();
+  // Selector de período: años presentes en los datos + temporadas + últimos 90 días
+  var years = {};
+  DB.flights.forEach(function(f){ var d = f.etd ? new Date(f.etd) : null; if (d && !isNaN(d)) years[d.getFullYear()] = 1; });
+  var opts = '<option value="all"'+(_rhPeriod==='all'?' selected':'')+'>Todas las fechas</option>'
+    + '<option value="last90"'+(_rhPeriod==='last90'?' selected':'')+'>Últimos 90 días</option>'
+    + Object.keys(years).sort().reverse().map(function(y){ return '<option value="y:'+y+'"'+(_rhPeriod==='y:'+y?' selected':'')+'>Año '+y+'</option>'; }).join('')
+    + '<option value="alta"'+(_rhPeriod==='alta'?' selected':'')+'>Solo temporada alta</option>'
+    + '<option value="baja"'+(_rhPeriod==='baja'?' selected':'')+'>Solo temporada baja</option>';
+  var selector = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;color:var(--t3);font-weight:700;">Período:</span>'
+    + '<select onchange="setRHPeriod(this.value)" style="flex:1;min-width:150px;max-width:240px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">'+opts+'</select>'
+    + '</div>';
+  var routes = buildRouteHistory(rhPred());
   if (!routes.length) {
-    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con ruta y tarifa para ver tu histórico de negociación.</div>';
+    box.innerHTML = selector + '<div class="ai-bubble" style="font-size:12px;">Sin vuelos con ruta y tarifa en el período elegido.</div>';
     return;
   }
-  var h = '';
+  var h = selector;
   routes.forEach(function(rt){
     var trendTxt = '', trendColor = 'var(--t3)';
     if (Math.abs(rt.trend) > 0.005) {
@@ -3014,27 +3007,46 @@ function renderIntel() {
   renderCostCompare();
   renderSimulator();
   renderRouteHistory();
-  fillTrendScope();
+  renderTrendChips();
   renderTrendChart();
 }
 
 // Llena el selector de "qué ver" en el gráfico de tendencia: cada ruta y cada carguera
-function fillTrendScope(){
-  var sel = document.getElementById('trend-scope');
-  if (!sel) return;
-  var prev = sel.value;
+// Chips de selección múltiple: rutas y cargueras para comparar en el gráfico
+var _trendSel = ['all'];
+function toggleTrendSel(key){
+  if (key === 'all') { _trendSel = ['all']; }
+  else {
+    var ai = _trendSel.indexOf('all'); if (ai > -1) _trendSel.splice(ai, 1);
+    var i = _trendSel.indexOf(key);
+    if (i > -1) { _trendSel.splice(i, 1); if (!_trendSel.length) _trendSel = ['all']; }
+    else _trendSel.push(key);
+  }
+  renderTrendChips();
+  renderTrendChart();
+}
+function trendSelLabel(key){
+  if (key === 'all') return 'Todos';
+  if (key.indexOf('route:') === 0) return key.slice(6);
+  if (key.indexOf('agency:') === 0) return key.slice(7);
+  return key;
+}
+function renderTrendChips(){
+  var box = document.getElementById('trend-chips');
+  if (!box) return;
   var routes = {}, agencies = {};
   DB.flights.forEach(function(f){
-    if (f.origin && f.dest) routes[f.origin+'→'+f.dest]=1;
-    if (f.agName) agencies[f.agName]=1;
+    if (f.origin && f.dest) routes[f.origin+'→'+f.dest] = 1;
+    if (f.agName) agencies[f.agName] = 1;
   });
-  var opts = '<option value="all">Todos los envíos</option>';
-  var rk = Object.keys(routes).sort();
-  var ak = Object.keys(agencies).sort();
-  if (rk.length) opts += '<optgroup label="Por ruta">' + rk.map(function(r){return '<option value="route:'+esc(r)+'">'+esc(r)+'</option>';}).join('') + '</optgroup>';
-  if (ak.length) opts += '<optgroup label="Por carguera">' + ak.map(function(a){return '<option value="agency:'+esc(a)+'">'+esc(a)+'</option>';}).join('') + '</optgroup>';
-  sel.innerHTML = opts;
-  if (prev) sel.value = prev;
+  var keys = ['all']
+    .concat(Object.keys(routes).sort().map(function(r){ return 'route:'+r; }))
+    .concat(Object.keys(agencies).sort().map(function(a){ return 'agency:'+a; }));
+  box.innerHTML = keys.map(function(k){
+    var on = _trendSel.indexOf(k) > -1;
+    var icon = k==='all' ? '' : (k.indexOf('route:')===0 ? '✈ ' : '🏢 ');
+    return '<button onclick="toggleTrendSel(\''+esc(k).replace(/'/g,"\\'")+'\')" style="border:1px solid '+(on?'var(--green)':'var(--border)')+';background:'+(on?'var(--green)':'transparent')+';color:'+(on?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .14s;">'+icon+esc(trendSelLabel(k))+'</button>';
+  }).join('');
 }
 
 // Etiqueta del período (mes/año/temporada) de un vuelo
@@ -3051,58 +3063,86 @@ function trendBucket(f, mode){
 }
 
 var _trendChart = null;
+var _trendChart2 = null;
+var TREND_COLORS = ['#1B7A3E','#2563EB','#D97706','#DC2626','#7C3AED','#0D9488','#DB2777','#65A30D'];
 function renderTrendChart(){
   var canvas = document.getElementById('chart-trend-route');
   var empty = document.getElementById('trend-empty');
-  if (!canvas || typeof Chart==='undefined') return;
-  var scope = (document.getElementById('trend-scope')||{}).value || 'all';
+  if (!canvas || typeof Chart === 'undefined') return;
   var mode = (document.getElementById('trend-period')||{}).value || 'month';
+  var metricSel = document.getElementById('trend-metric');
+  var metric = (metricSel||{}).value || 'real';
+  // "Las 3 métricas" solo tiene sentido con UNA selección; con varias se fuerza $/kg real
+  if (metric === 'all' && _trendSel.length > 1) { metric = 'real'; if (metricSel) metricSel.value = 'real'; }
 
-  // Filtrar vuelos según el scope elegido
-  var flights = DB.flights.filter(function(f){
-    var g = parseFloat(f.weight)||0, t = parseFloat(f.totalpaid)||0;
-    if (g<=0 || t<=0) return false;
-    if (scope==='all') return true;
-    if (scope.indexOf('route:')===0) return (f.origin+'→'+f.dest)===scope.slice(6);
-    if (scope.indexOf('agency:')===0) return (f.agName||'')===scope.slice(7);
-    return true;
-  });
+  // Agregación por selección: cada key produce sus buckets {periodo: acumulados}
+  function bucketsFor(key){
+    var b = {};
+    DB.flights.forEach(function(f){
+      var g = parseFloat(f.weight)||0, t = parseFloat(f.totalpaid)||0;
+      if (g<=0 || t<=0) return;
+      if (key !== 'all') {
+        if (key.indexOf('route:')===0 && (f.origin+'→'+f.dest) !== key.slice(6)) return;
+        if (key.indexOf('agency:')===0 && (f.agName||'') !== key.slice(7)) return;
+      }
+      var p = trendBucket(f, mode);
+      if (!p) return;
+      if (!b[p]) b[p] = { gross:0, charge:0, total:0, rateSum:0, rateN:0 };
+      b[p].gross += g;
+      b[p].charge += parseFloat(f.cweight)||0;
+      b[p].total += t;
+      var r = parseFloat(f.rate)||0;
+      if (r>0){ b[p].rateSum += r; b[p].rateN++; }
+    });
+    return b;
+  }
+  function val(o, m){
+    if (!o) return null;
+    if (m==='real') return o.gross>0 ? +(o.total/o.gross).toFixed(3) : null;
+    if (m==='fact') return o.charge>0 ? +(o.total/o.charge).toFixed(3) : null;
+    return o.rateN>0 ? +(o.rateSum/o.rateN).toFixed(3) : null;
+  }
+  var METRIC_LABEL = { real:'$/kg real', fact:'$/kg facturable', nom:'Tarifa nominal' };
 
-  // Agrupar por período y acumular (ponderado por peso)
-  var buckets = {};
-  flights.forEach(function(f){
-    var b = trendBucket(f, mode);
-    if (!b) return;
-    if (!buckets[b]) buckets[b] = { gross:0, charge:0, total:0, rateSum:0, rateN:0 };
-    var o = buckets[b];
-    o.gross += parseFloat(f.weight)||0;
-    o.charge += parseFloat(f.cweight)||0;
-    o.total += parseFloat(f.totalpaid)||0;
-    var r = parseFloat(f.rate)||0;
-    if (r>0){ o.rateSum += r; o.rateN++; }
-  });
-  var labels = Object.keys(buckets).sort();
+  var allBuckets = {};
+  _trendSel.forEach(function(k){ allBuckets[k] = bucketsFor(k); });
+  // Eje X: unión de todos los períodos, ordenada cronológicamente
+  var labelSet = {};
+  Object.keys(allBuckets).forEach(function(k){ Object.keys(allBuckets[k]).forEach(function(p){ labelSet[p]=1; }); });
+  var labels = Object.keys(labelSet).sort();
 
-  if (_trendChart){ _trendChart.destroy(); _trendChart = null; }
+  if (_trendChart2){ _trendChart2.destroy(); _trendChart2 = null; }
   if (!labels.length){
-    if(empty){ empty.style.display='block'; empty.textContent='Sin envíos con peso y total para graficar en esta selección.'; }
+    if (empty){ empty.style.display='block'; empty.textContent='Sin envíos con peso y total para graficar en esta selección.'; }
     canvas.style.display='none';
     return;
   }
-  if(empty) empty.style.display='none';
+  if (empty) empty.style.display='none';
   canvas.style.display='block';
 
-  var realArr = labels.map(function(l){ var o=buckets[l]; return o.gross>0? +(o.total/o.gross).toFixed(3):null; });
-  var factArr = labels.map(function(l){ var o=buckets[l]; return o.charge>0? +(o.total/o.charge).toFixed(3):null; });
-  var nomArr  = labels.map(function(l){ var o=buckets[l]; return o.rateN>0? +(o.rateSum/o.rateN).toFixed(3):null; });
+  var datasets = [];
+  if (metric === 'all') {
+    // Una sola selección, las 3 métricas
+    var b0 = allBuckets[_trendSel[0]];
+    datasets = [
+      { label:'$/kg real', data:labels.map(function(l){return val(b0[l],'real');}), borderColor:'#1B7A3E', backgroundColor:'#1B7A3E22', tension:.3, spanGaps:true, pointRadius:4 },
+      { label:'$/kg facturable', data:labels.map(function(l){return val(b0[l],'fact');}), borderColor:'#2563EB', backgroundColor:'#2563EB22', tension:.3, spanGaps:true, pointRadius:4 },
+      { label:'Tarifa nominal', data:labels.map(function(l){return val(b0[l],'nom');}), borderColor:'#D97706', backgroundColor:'#D9770622', tension:.3, spanGaps:true, borderDash:[5,4], pointRadius:3 }
+    ];
+  } else {
+    // Una línea por selección, la métrica elegida
+    _trendSel.forEach(function(k, i){
+      var col = TREND_COLORS[i % TREND_COLORS.length];
+      var b = allBuckets[k];
+      datasets.push({ label: trendSelLabel(k)+' — '+METRIC_LABEL[metric],
+        data: labels.map(function(l){ return val(b[l], metric); }),
+        borderColor: col, backgroundColor: col+'22', tension:.3, spanGaps:true, pointRadius:4 });
+    });
+  }
 
-  _trendChart = new Chart(canvas.getContext('2d'), {
+  _trendChart2 = new Chart(canvas.getContext('2d'), {
     type:'line',
-    data:{ labels:labels, datasets:[
-      { label:'$/kg real', data:realArr, borderColor:'#1B7A3E', backgroundColor:'#1B7A3E22', tension:.3, spanGaps:true, pointRadius:4 },
-      { label:'$/kg facturable', data:factArr, borderColor:'#2563EB', backgroundColor:'#2563EB22', tension:.3, spanGaps:true, pointRadius:4 },
-      { label:'Tarifa nominal', data:nomArr, borderColor:'#D97706', backgroundColor:'#D9770622', tension:.3, spanGaps:true, borderDash:[5,4], pointRadius:3 }
-    ]},
+    data:{ labels:labels, datasets:datasets },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ labels:{ font:{size:11}, usePointStyle:true, boxWidth:8 } },
         tooltip:{ callbacks:{ label:function(ctx){ return ctx.dataset.label+': $'+(ctx.parsed.y!=null?ctx.parsed.y.toFixed(3):'—'); } } } },
@@ -4057,73 +4097,7 @@ function renderCalendar(){
 }
 
 // ══ COMPARADOR / HISTORIAL DE TARIFAS ══
-function renderRateHistory(){
-  var box = document.getElementById('rate-history-body');
-  if (!box || typeof Chart === 'undefined') return;
-  // Agrupar tarifas por aerolínea a lo largo del tiempo
-  var series = {};
-  DB.flights.forEach(function(f){
-    var r = parseFloat(f.rate)||0;
-    var d = f.etd ? new Date(f.etd) : null;
-    if (r<=0 || !d || isNaN(d)) return;
-    var a = f.airline || 'Sin aerolínea';
-    if (!series[a]) series[a] = [];
-    series[a].push({ x: d.getTime(), y: r, awb: f.awb, route: (f.origin||'')+'→'+(f.dest||'') });
-  });
-  var names = Object.keys(series);
-  if (!names.length) {
-    box.innerHTML = '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con tarifa y ETD para ver la evolución de precios por aerolínea.</div>';
-    return;
-  }
-  box.innerHTML = '<div style="height:260px;position:relative;"><canvas id="chart-rate-history"></canvas></div><div id="rate-insights" style="margin-top:14px;"></div>';
-  var palette = ['#1B7A3E','#3B82F6','#F59E0B','#8B5CF6','#14B8A6','#DC2626','#22A351'];
-  var datasets = names.map(function(a, i){
-    series[a].sort(function(p,q){return p.x-q.x;});
-    return { label: a, data: series[a], borderColor: palette[i%palette.length],
-      backgroundColor: palette[i%palette.length]+'22', tension: 0.25, pointRadius: 4, fill: false };
-  });
-  if (_dashCharts.rateHist) { _dashCharts.rateHist.destroy(); }
-  _dashCharts.rateHist = new Chart(document.getElementById('chart-rate-history'), {
-    type: 'line',
-    data: { datasets: datasets },
-    options: { maintainAspectRatio:false, responsive:true,
-      plugins: { legend:{position:'bottom',labels:{font:{size:10},padding:8,usePointStyle:true}},
-        tooltip:{callbacks:{label:function(c){ var p=c.raw; return c.dataset.label+': $'+p.y.toFixed(3)+'/kg'+(p.awb?' ('+p.awb+' '+p.route+')':''); }}} },
-      scales: { x:{type:'time',time:{unit:'day',tooltipFormat:'dd/MM/yyyy'},ticks:{font:{size:9}}},
-        y:{beginAtZero:false,ticks:{font:{size:10},callback:function(v){return '$'+v;}}} } }
-  });
-  // Análisis: variación por aerolínea
-  var insights = '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;margin-bottom:8px;">Variación de tarifas</div>';
-  insights += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>Aerolínea</th><th>Envíos</th><th>Primera</th><th>Última</th><th>Variación</th><th>Mín</th><th>Máx</th><th>Promedio</th></tr></thead><tbody>';
-  names.forEach(function(a){
-    var pts = series[a];
-    var firstR = pts[0].y, lastR = pts[pts.length-1].y;
-    var diff = lastR - firstR, pct = firstR>0 ? (diff/firstR*100) : 0;
-    var vals = pts.map(function(p){return p.y;});
-    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-    var avg = vals.reduce(function(s,v){return s+v;},0)/vals.length;
-    var color = diff>0.001?'var(--red)':(diff<-0.001?'var(--green)':'var(--t2)');
-    var arrow = diff>0.001?'▲':(diff<-0.001?'▼':'=');
-    insights += '<tr><td><strong>'+esc(a)+'</strong></td><td>'+pts.length+'</td><td>$'+firstR.toFixed(3)+'</td><td>$'+lastR.toFixed(3)+'</td>'
-      + '<td><strong style="color:'+color+';">'+arrow+' '+(diff>=0?'+':'')+diff.toFixed(3)+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)</strong></td>'
-      + '<td>$'+min.toFixed(3)+'</td><td>$'+max.toFixed(3)+'</td><td>$'+avg.toFixed(3)+'</td></tr>';
-  });
-  insights += '</tbody></table></div>';
-  // Mejor y peor aerolínea por promedio
-  var avgs = names.map(function(a){
-    var vals = series[a].map(function(p){return p.y;});
-    return { name:a, avg: vals.reduce(function(s,v){return s+v;},0)/vals.length };
-  }).sort(function(p,q){return p.avg-q.avg;});
-  if (avgs.length > 1) {
-    insights += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">'
-      + '<div style="flex:1;min-width:180px;background:#D1FAE5;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#065F46;text-transform:uppercase;font-weight:700;">Más económica</div><div style="font-size:14px;font-weight:800;color:#065F46;">'+esc(avgs[0].name)+' — $'+avgs[0].avg.toFixed(3)+'/kg</div></div>'
-      + '<div style="flex:1;min-width:180px;background:#FEE2E2;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#991B1B;text-transform:uppercase;font-weight:700;">Más costosa</div><div style="font-size:14px;font-weight:800;color:#991B1B;">'+esc(avgs[avgs.length-1].name)+' — $'+avgs[avgs.length-1].avg.toFixed(3)+'/kg</div></div>'
-      + '</div>';
-    var savings = (avgs[avgs.length-1].avg - avgs[0].avg);
-    if (savings > 0.001) insights += '<div style="font-size:11px;color:var(--t2);margin-top:8px;text-align:center;">Diferencia de <strong>$'+savings.toFixed(3)+'/kg</strong> entre la más cara y la más barata. En un envío de 1,500 kg eso son <strong>$'+(savings*1500).toFixed(2)+'</strong> de diferencia.</div>';
-  }
-  document.getElementById('rate-insights').innerHTML = insights;
-}
+
 
 // ══ REPORTE DE PERÍODO (semanal/mensual) ══
 function buildReport(days) {
@@ -4644,11 +4618,11 @@ function go(s) {
   screen=s;
   document.getElementById('s-'+s).classList.add('active');
   var cn=document.getElementById('nav-'+s); if(cn)cn.classList.add('active');
-  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',intel:'Centro de Inteligencia',calendar:'Calendario de Vuelos',audit:'Auditoría',predictions:'Predicciones IA',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
+  var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',intel:'Centro de Inteligencia',calendar:'Calendario de Vuelos',audit:'Auditoría',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
   document.getElementById('pg-title').textContent=titles[s]||s;
   renderScreen(s);
 }
-function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='predictions')renderPred();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));renderRateHistory();}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
+function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
 
 var SL={transit:'En tránsito',delivered:'Entregado',pending:'Pendiente',delayed:'Demorado'};
 var CL={confirmed:'Confirmado',partial:'Parcial',unconfirmed:'Sin confirmar'};
@@ -4767,122 +4741,10 @@ function linearRegression(points) {
   return { m: m, b: b };
 }
 
-function renderDashCharts(){
-  if (typeof Chart === 'undefined') return;
-  var fl = DB.flights;
-  Object.keys(_dashCharts).forEach(function(k){ if(_dashCharts[k]) _dashCharts[k].destroy(); });
 
-  var green='#1B7A3E', greenL='#22A351', amber='#F59E0B', red='#DC2626', blue='#3B82F6', purple='#8B5CF6', teal='#14B8A6';
-  var palette = [green, blue, amber, purple, teal, red, greenL];
-
-  // ── 1) TARIFA PROMEDIO POR AEROLÍNEA ($/kg) ──
-  var rateByAir = {};
-  fl.forEach(function(f){
-    var r = parseFloat(f.rate)||0;
-    if (r > 0) {
-      var a = f.airline || 'Sin aerolínea';
-      if (!rateByAir[a]) rateByAir[a] = { sum: 0, count: 0 };
-      rateByAir[a].sum += r; rateByAir[a].count++;
-    }
-  });
-  var airLabels = Object.keys(rateByAir);
-  var airAvg = airLabels.map(function(a){ return (rateByAir[a].sum / rateByAir[a].count).toFixed(3); });
-  var ctxR = document.getElementById('chart-rate');
-  if (ctxR) _dashCharts.rate = new Chart(ctxR, {
-    type: 'bar',
-    data: { labels: airLabels, datasets: [{ label: '$/kg promedio', data: airAvg, backgroundColor: green, borderRadius: 5 }] },
-    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { display: false }, tooltip:{callbacks:{label:function(c){return '$'+c.raw+'/kg';}}} },
-      scales: { y: { beginAtZero: false, ticks:{font:{size:10},callback:function(v){return '$'+v;}} }, x:{ticks:{font:{size:9}}} } }
-  });
-
-  // ── 2) AWBs POR PUERTO DE ORIGEN ──
-  var byPort = {};
-  fl.forEach(function(f){ var o=f.origin||'—'; byPort[o]=(byPort[o]||0)+1; });
-  var portLabels = Object.keys(byPort), portData = portLabels.map(function(p){return byPort[p];});
-  var ctxP = document.getElementById('chart-port');
-  if (ctxP) _dashCharts.port = new Chart(ctxP, {
-    type: 'doughnut',
-    data: { labels: portLabels, datasets: [{ data: portData, backgroundColor: palette, borderWidth: 0 }] },
-    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { position: 'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} },
-      tooltip:{callbacks:{label:function(c){return c.label+': '+c.raw+' AWB';}}} }, cutout: '55%' }
-  });
-
-  // ── 3) CAJAS POR PERÍODO (con selector) ──
-  var period = (document.getElementById('period-selector')||{}).value || 'month';
-  var boxesByPeriod = {};
-  fl.forEach(function(f){
-    var refDate = f.etd || f.createdAt || f.modifiedAt;
-    var k = periodKey(refDate, period);
-    if (k) boxesByPeriod[k] = (boxesByPeriod[k]||0) + (parseInt(f.bsent)||0);
-  });
-  var perLabels = Object.keys(boxesByPeriod).sort();
-  var perData = perLabels.map(function(k){return boxesByPeriod[k];});
-  var ctxV = document.getElementById('chart-volume');
-  if (ctxV) _dashCharts.volume = new Chart(ctxV, {
-    type: 'bar',
-    data: { labels: perLabels, datasets: [{ label: 'Cajas enviadas', data: perData, backgroundColor: blue, borderRadius: 5 }] },
-    options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { display: false } }, scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
-  });
-
-  // ── 4) TENDENCIA Y PROYECCIÓN ──
-  // Usa las cajas por período y proyecta los próximos 3 períodos con regresión lineal
-  var trendLabels = perLabels.slice();
-  var trendActual = perData.slice();
-  var proj = linearRegression(perData);
-  var projData = perData.map(function(){ return null; }); // los reales van en otra serie
-  if (proj && perData.length >= 2) {
-    // Extender 3 períodos hacia el futuro
-    var lastIdx = perData.length - 1;
-    // Conectar la línea de proyección desde el último punto real
-    var trendLine = perData.map(function(v, i){ return Math.max(0, Math.round(proj.m*i + proj.b)); });
-    for (var j = 1; j <= 3; j++) {
-      var futureIdx = lastIdx + j;
-      trendLabels.push('Proy ' + j);
-      trendActual.push(null);
-      trendLine.push(Math.max(0, Math.round(proj.m*futureIdx + proj.b)));
-    }
-    _lastTrendData = { labels: trendLabels, actual: trendActual, line: trendLine, slope: proj.m, period: period };
-    var ctxT = document.getElementById('chart-trend');
-    if (ctxT) _dashCharts.trend = new Chart(ctxT, {
-      type: 'line',
-      data: { labels: trendLabels, datasets: [
-        { label: 'Cajas reales', data: trendActual, borderColor: green, backgroundColor: 'rgba(34,163,81,.1)', tension: 0.3, spanGaps: false, pointRadius: 4, fill: true },
-        { label: 'Tendencia / proyección', data: trendLine, borderColor: amber, borderDash: [6,5], tension: 0.3, pointRadius: 2, fill: false }
-      ] },
-      options: { maintainAspectRatio:false, responsive:true, plugins: { legend: { position:'bottom', labels:{font:{size:10},padding:8,usePointStyle:true} } },
-        scales: { y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:9}}} } }
-    });
-  } else {
-    _lastTrendData = null;
-    var ctxT2 = document.getElementById('chart-trend');
-    if (ctxT2 && _dashCharts.trend) _dashCharts.trend.destroy();
-  }
-}
 
 // La IA interpreta la tendencia calculada
-async function explainTrend(){
-  var box = document.getElementById('trend-ai');
-  box.style.display = 'block';
-  box.innerHTML = '<span class="dp"><span></span><span></span><span></span></span> Analizando tendencia…';
-  if (!_lastTrendData) { box.textContent = 'Necesitas al menos 2 períodos con datos para analizar la tendencia. Registra más envíos.'; return; }
-  var d = _lastTrendData;
-  var periodName = {week:'semana',month:'mes',quarter:'trimestre',semester:'semestre'}[d.period]||'período';
-  var realVals = d.actual.filter(function(v){return v!==null;});
-  var futureVals = d.line.slice(realVals.length);
-  var prompt = 'Analiza esta tendencia de envíos de carga de flores (cajas por ' + periodName + '). '
-    + 'Valores históricos reales: ' + JSON.stringify(realVals) + '. '
-    + 'Proyección calculada para los próximos 3 ' + periodName + 's: ' + JSON.stringify(futureVals) + '. '
-    + 'Pendiente de la tendencia: ' + d.slope.toFixed(1) + ' cajas por ' + periodName + '. '
-    + 'Da un análisis breve (máximo 4 frases) en español: si el volumen crece o baja, a qué ritmo, y una recomendación operativa accionable para Jet Fresh Flowers.';
-  try {
-    var text = await callAI('Eres analista de logística de carga aérea. Sé conciso, directo y práctico.', [{role:'user', content: prompt}]);
-    box.textContent = text;
-  } catch(e) {
-    if (e.message === 'AI_OFF') box.textContent = 'La IA está desactivada por privacidad. La proyección de arriba se calcula localmente y sigue funcionando.';
-    else if (e.message === 'NO_KEY') box.textContent = 'Agrega tu Groq API Key (gratis) en Configuración para el análisis con IA. La proyección visual de arriba ya funciona sin IA.';
-    else box.textContent = 'No se pudo analizar: ' + e.message;
-  }
-}
+
 
 // Panel de acciones urgentes: detecta lo que requiere atención inmediata
 function renderUrgent(){
@@ -4977,8 +4839,8 @@ function toggleTheme() {
   var current = CFG.theme === 'dark' ? 'light' : 'dark';
   CFG.theme = current; saveLocalCFG();
   applyTheme(current);
-  // Redibujar gráficos para que tomen los colores del nuevo tema
-  if (screen === 'dashboard') setTimeout(renderDashCharts, 50);
+  // Redibujar gráficos de Inteligencia si están visibles, para que tomen el nuevo tema
+  if (screen === 'intel') setTimeout(renderTrendChart, 50);
   toast(current === 'dark' ? '🌙 Modo oscuro activado' : '☀️ Modo claro activado', 'ok');
 }
 
@@ -5098,6 +4960,7 @@ function animateCount(id, target, prefix, decimals) {
 }
 
 function renderDash(){
+  renderProblemRanking();
   var fl=DB.flights, tc=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
   var sent=fl.reduce(function(s,f){return s+(parseInt(f.bsent)||0);},0), conf=fl.reduce(function(s,f){return s+(parseInt(f.bconf)||0);},0);
   var miss=fl.reduce(function(s,f){var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);return s+(d<0?Math.abs(d):0);},0);
@@ -5114,7 +4977,6 @@ function renderDash(){
   document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' vuelos':'—';
   var totalFbe=fl.reduce(function(s,f){return s+(parseFloat(f.fbe)||0);},0);
   if(document.getElementById('st-fbe')) animateCount('st-fbe', totalFbe, '', 2);
-  renderDashCharts();
   renderUrgent();
   renderToday();
   initDragCols('tbl-dash');
@@ -5151,69 +5013,60 @@ function renderFlights(){
 
 function renderAgencies(){
   var tb=document.getElementById('agencies-tbody');tb.innerHTML='';
-  if(!DB.agencies.length){tb.innerHTML=erow(9,'Sin agencias aún.');return;}
+  if(!DB.agencies.length){tb.innerHTML=erow(6,'Sin agencias aún.');return;}
   DB.agencies.forEach(function(a){
-    var fl=DB.flights.filter(function(f){return f.agId===a.id;});
-    var tb2=fl.reduce(function(s,f){return s+f.bsent;},0), cb=fl.reduce(function(s,f){return s+f.bconf;},0);
-    var rate=tb2>0?Math.round(cb/tb2*100):0, billed=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
-    var rc=rate>=90?'var(--green2)':rate>=70?'var(--amber)':'var(--red)';
     var tr=document.createElement('tr');tr.className='dr';
-    tr.innerHTML='<td><strong>'+esc(a.name)+'</strong></td><td>'+esc(a.contact||'—')+'</td><td>'+esc(a.phone||'—')+'</td><td>'+esc(a.email||'—')+'</td><td>'+fl.length+'</td><td>'+tb2+'</td><td><span style="font-weight:700;color:'+rc+';">'+rate+'%</span></td><td><strong style="color:var(--green2);">'+(billed>0?'$'+billed.toFixed(2):'—')+'</strong></td><td><div style="display:flex;gap:5px;"><button class="btn xs" onclick="event.stopPropagation();editAgencyFn(\''+a.id+'\')">Editar</button><button class="btn xs danger" onclick="event.stopPropagation();deleteAgencyFn(\''+a.id+'\')">Eliminar</button></div></td>';
+    tr.innerHTML='<td><strong>'+esc(a.name)+'</strong></td><td>'+esc(a.contact||'—')+'</td><td>'+esc(a.phone||'—')+'</td><td>'+esc(a.email||'—')+'</td>'
+      +'<td><button class="btn xs" style="background:var(--lightgreen);color:var(--green);border-color:var(--midgreen);" onclick="event.stopPropagation();viewAgencyPerf()">📊 Ver desempeño</button></td>'
+      +'<td><div style="display:flex;gap:5px;"><button class="btn xs" onclick="event.stopPropagation();editAgencyFn(\''+a.id+'\')">Editar</button><button class="btn xs danger" onclick="event.stopPropagation();deleteAgencyFn(\''+a.id+'\')">Eliminar</button></div></td>';
     document.getElementById('agencies-tbody').appendChild(tr);
   });
 }
 
-function renderPred(){
-  var fl=DB.flights;
-  var risks=fl.map(function(f){
-    var r=0, why=[];
-    if(f.status==='delayed'){ r+=45; why.push('demorado'); }
-    if(f.confst==='unconfirmed'){ r+=25; why.push('sin confirmar'); }
-    else if(f.confst==='partial'){ r+=12; why.push('confirmación parcial'); }
-    if(f.priority==='critical'){ r+=15; why.push('prioridad crítica'); }
-    else if(f.priority==='high'){ r+=8; why.push('prioridad alta'); }
-    // Incidencias reales
+// Salta a Inteligencia con el scorecard en dimensión carguera
+function viewAgencyPerf(){
+  _scDim = 'agency';
+  go('intel');
+}
+
+// Ranking de envíos con problemas (rescatado de Predicciones, sin porcentajes inventados)
+function renderProblemRanking(){
+  var box = document.getElementById('dash-problems');
+  if (!box) return;
+  var fl = DB.flights.filter(function(f){ return f.status !== 'delivered' || !f.completed; });
+  var ranked = fl.map(function(f){
+    var score = 0, why = [];
+    if (f.status==='delayed'){ score+=45; why.push('🔴 demorado'); }
+    if (f.confst==='unconfirmed'){ score+=25; why.push('sin confirmar'); }
+    else if (f.confst==='partial'){ score+=12; why.push('confirmación parcial'); }
     var lost=parseInt(f.blost)||0, dmg=parseInt(f.bdamaged)||0;
     var usda=parseInt(f.busda)||0, freed=parseInt(f.busdaReleased)||0;
-    if(lost>0){ r+=15; why.push(lost+' perdidas'); }
-    if(dmg>0){ r+=10; why.push(dmg+' dañadas'); }
-    if(usda>0 && !f.usdaFreed && freed<usda){ r+=20; why.push('hold USDA activo'); }
-    // Diferencia de tarifa
+    if (lost>0){ score+=15; why.push(lost+' perdidas'); }
+    if (dmg>0){ score+=10; why.push(dmg+' dañadas'); }
+    if (usda>0 && !f.usdaFreed && freed<usda){ score+=20; why.push('🛃 hold USDA'); }
+    if (f.reprogs && f.reprogs.length && !f.reprogAck){ score+=15; why.push('🔄 reprogramado'); }
+    if (!f.tempAck && typeof tempViolations==='function' && tempViolations(f).length){ score+=15; why.push('❄️ temperatura'); }
     var ra=parseFloat(f.rate)||0, re=parseFloat(f.rateExp)||0;
-    if(re>0 && ra>0 && Math.abs(ra-re)>0.001){ r+=8; why.push('tarifa ≠ esperada'); }
-    // Confirmación manual reduce el riesgo
-    if(f.completed) { r=Math.max(0, r-40); }
-    else if(f.arrived) { r=Math.max(0, r-25); }
-    return {f:f, r:Math.min(r,99), why:why};
-  }).sort(function(a,b){return b.r-a.r;});
-
-  var avg=risks.length>0?Math.round(risks.reduce(function(s,x){return s+x.r;},0)/risks.length):0;
-  var high=risks.filter(function(x){return x.r>=60;}).length;
-  var miss=fl.reduce(function(s,f){
-    var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);
-    return s+(d<0?Math.abs(d):0);
-  },0);
-  var del=fl.filter(function(f){return f.status==='delivered';}).length;
-  var ot=fl.length>0?Math.round(del/fl.length*100):0;
-  // FIX: son <div>, no inputs — usar textContent
-  function setTxt(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
-  setTxt('pr-risk', risks.length>0?avg+'%':'—');
-  setTxt('pr-high', high);
-  setTxt('pr-unc', miss);
-  setTxt('pr-ot', fl.length>0?ot+'%':'—');
-
-  var el=document.getElementById('risk-bars');
-  if(!risks.length){el.innerHTML='<div class="ai-bubble">Agrega vuelos para ver el análisis de riesgo.</div>';return;}
-  el.innerHTML='';
-  risks.forEach(function(x){
-    var c=x.r>=70?'var(--red)':x.r>=40?'var(--amber)':x.r>=20?'var(--green)':'var(--green2)';
-    var ident = x.f.awb || x.f.num || '—';
-    var row=document.createElement('div'); row.className='rb-row';
-    row.style.cursor='pointer';
-    row.onclick=function(){ openDetail(x.f.id); };
-    row.innerHTML='<span class="rb-lbl">'+esc(ident)+'<br><span style="font-family:var(--font);font-weight:400;font-size:10px;color:var(--t3);">'+esc(x.f.origin||'')+'→'+esc(x.f.dest||'')+(x.why.length?' · '+esc(x.why.join(', ')):'')+'</span></span><div class="rb-track"><div class="rb-fill" style="width:'+x.r+'%;background:'+c+'"></div></div><span class="rb-val" style="color:'+c+';">'+x.r+'%</span>';
-    el.appendChild(row);
-  });
+    if (re>0 && ra>0 && Math.abs(ra-re)>0.001){ score+=8; why.push('tarifa ≠ esperada'); }
+    if (f.completed) score = Math.max(0, score-40);
+    else if (f.arrived) score = Math.max(0, score-25);
+    return { f:f, score:score, why:why };
+  }).filter(function(x){ return x.score >= 20; })
+    .sort(function(a,b){ return b.score-a.score; })
+    .slice(0,5);
+  if (!ranked.length){
+    box.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px;">✓ Ningún envío con problemas pendientes. Todo bajo control.</div>';
+    return;
+  }
+  box.innerHTML = ranked.map(function(x){
+    var f = x.f;
+    var chips = x.why.map(function(w){ return '<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:9px;margin:1px 2px 1px 0;">'+w+'</span>'; }).join('');
+    return '<div onclick="openDetail(\''+f.id+'\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">'
+      + '<div style="min-width:0;"><div style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--t1);">'+esc(f.awb||f.num||'—')+'</div>'
+      + '<div style="font-size:10px;color:var(--t3);">'+esc(f.origin||'?')+'→'+esc(f.dest||'?')+(f.agName?' · '+esc(f.agName):'')+'</div></div>'
+      + '<div style="text-align:right;flex-shrink:0;max-width:60%;">'+chips+'</div>'
+      + '</div>';
+  }).join('');
 }
 
 function renderSettingsPage(){
@@ -5433,5 +5286,8 @@ window.onload = function() {
   document.head.appendChild(script);
 };
 </script>
+<button id="ai-fab" onclick="go('assistant')" title="Asistente IA — pregúntale a tus datos"
+  style="position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;border:none;box-shadow:0 4px 14px rgba(27,122,62,.4);cursor:pointer;font-size:22px;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;"
+  onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">💬</button>
 </body>
 </html>
