@@ -561,11 +561,6 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div style="padding:14px 16px;" id="intel-routes"></div>
         </div>
 
-        <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">📋 Checklist de Negociación</span><span style="font-size:10px;color:var(--t3);">Documentos que debes pedir a cada carguera</span></div>
-          <div style="padding:14px 16px;" id="intel-checklist"></div>
-        </div>
-
         <div class="card">
           <div class="ch"><span class="ct">🤖 Preparar Próxima Negociación</span><button class="btn xs pr" onclick="prepNegotiation()">Generar recomendaciones</button></div>
           <div style="padding:14px 16px;" id="intel-ai"><div class="ai-bubble" style="font-size:12px;">Toca "Generar recomendaciones" para que la IA analice tu histórico y te diga con quién negociar, qué tarifa pedir y qué aerolíneas evitar.</div></div>
@@ -809,12 +804,17 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <div id="f-temp-mia-conv" style="font-size:10px;color:var(--t3);margin-top:3px;min-height:14px;"></div>
           </div>
           <div class="field s2">
-            <label>Calculador de promedio <span style="font-size:9px;color:var(--t3);">pega las mediciones de MAS Customs separadas por coma o espacio</span></label>
-            <div style="display:flex;gap:6px;">
-              <input id="f-temp-readings" placeholder="Ej: 38, 40, 39, 41, 38" style="flex:1;">
-              <button type="button" class="btn xs" onclick="calcTempAvg()" style="white-space:nowrap;">Promediar → Miami</button>
+            <label>Calculador de promedio <span style="font-size:9px;color:var(--t3);">pega las mediciones (carguera o MAS Customs) separadas por coma o espacio</span></label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <input id="f-temp-readings" placeholder="Ej: 38, 40, 39, 41, 38" style="flex:1;min-width:150px;">
+              <button type="button" class="btn xs" onclick="calcTempAvg('orig')" style="white-space:nowrap;">Promediar → Origen</button>
+              <button type="button" class="btn xs" onclick="calcTempAvg('mia')" style="white-space:nowrap;">Promediar → Miami</button>
             </div>
             <div id="f-temp-readings-out" style="font-size:10px;color:var(--t3);margin-top:3px;min-height:14px;"></div>
+          </div>
+          <div class="field s2">
+            <label>Observaciones de cadena de frío <span style="font-size:9px;color:var(--t3);">opcional: estado del termógrafo, hielo, empaque, etc.</span></label>
+            <input id="f-temp-notes" placeholder="Ej: termógrafo roto, caja 12 sin gel pack, reporte de finca incompleto…">
           </div>
         </div>
         <div id="f-temp-alert" style="display:none;margin-top:8px;border-radius:8px;padding:9px 12px;font-size:11px;line-height:1.5;"></div>
@@ -1689,11 +1689,19 @@ async function handleAWBUpload(e) {
 function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
+  // Layouts colombianos (LATAM Cargo Colombia) imprimen decimales con COMA: "1,38" "329,82".
+  // Convertir a punto SOLO cuando la coma va seguida de 1-2 dígitos (decimal),
+  // sin tocar comas de miles tipo "3,262.58" (3 dígitos después).
+  clean = clean.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
 
   // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
-  var airlineMatch = clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+  var airlineMatch = clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
     || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
-  if (airlineMatch) result.airline = airlineMatch[1].trim();
+  if (airlineMatch) {
+    result.airline = airlineMatch[1].trim();
+    // Razón social → nombre comercial (LATAM Cargo Colombia opera como "Línea Aérea Carguera de Colombia SA")
+    if (/LINEA\s*AEREA\s*CARGUERA/i.test(result.airline)) result.airline = 'LATAM CARGO';
+  }
 
   // ── ORIGEN ── varias estrategias
   var originMatch = clean.match(/^\d{3}\s*\|\s*([A-Z]{3})\s*\|/)
@@ -1705,17 +1713,30 @@ function extractAWBFields(text) {
     originMatch = originMatch[1];
   }
   if (originMatch) result.origin = (typeof originMatch === 'string' ? originMatch : originMatch[1]).toUpperCase();
-  // Detección por nombre de ciudad/aeropuerto conocido
+  // PRIORIDAD 1: la ciudad justo después del rótulo "Airport of Departure"
+  // (evita falsos positivos con la DIRECCIÓN del shipper, ej: Apollo con oficina
+  //  en el aeropuerto José María Córdova pero embarcando desde BOGOTÁ)
+  if (!result.origin) {
+    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,60}?(QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|JOSE\s*MARIA\s*CORDOVA|GUAYAQUIL)/i);
+    if (lblOrigin) {
+      var city = lblOrigin[1].toUpperCase();
+      if (/QUITO/.test(city)) result.origin = 'UIO';
+      else if (/BOGOT/.test(city)) result.origin = 'BOG';
+      else result.origin = /GUAYAQUIL/.test(city) ? 'GYE' : 'MDE';
+    }
+  }
+  // PRIORIDAD 2: el prefijo del AWB trae el código del aeropuerto de origen
+  // ("985 MDE 63760550" o pegado "985BOG63838622")
+  if (!result.origin) {
+    var awbOrigin = clean.match(/\b\d{3}\s*([A-Z]{3})\s*\d{7,8}\b/);
+    if (awbOrigin) result.origin = awbOrigin[1].toUpperCase();
+  }
+  // PRIORIDAD 3: escaneo por nombre de ciudad/aeropuerto en cualquier parte
   if (!result.origin) {
     if (/QUITO|MARISCAL\s*SUCRE/i.test(clean)) result.origin = 'UIO';
-    else if (/MEDELL[IÍ]N|JOSE\s*MARIA\s*CORDOVA|RIONEGRO/i.test(clean)) result.origin = 'MDE';
     else if (/BOGOT[AÁ]|EL\s*DORADO/i.test(clean)) result.origin = 'BOG';
+    else if (/MEDELL[IÍ]N|JOSE\s*MARIA\s*CORDOVA|RIONEGRO/i.test(clean)) result.origin = 'MDE';
     else if (/GUATEMALA/i.test(clean)) result.origin = 'GUAT';
-  }
-  // Respaldo: el prefijo del AWB trae el aeropuerto de origen ("985 MDE 63760550" → MDE)
-  if (!result.origin) {
-    var awbOrigin = clean.match(/\b\d{3}\s+([A-Z]{3})\s+\d{7,8}\b/);
-    if (awbOrigin) result.origin = awbOrigin[1].toUpperCase();
   }
 
   // ── DESTINO ── captura ciudad antes de "Requested" o "Amount"
@@ -2750,13 +2771,14 @@ function buildCarrierScorecard(dim) {
   DB.flights.forEach(function(f){
     var a = dim === 'agency' ? (f.agName || 'Sin carguera') : (f.airline || 'Sin aerolínea');
     if (!carriers[a]) carriers[a] = { name:a, flights:0, boxes:0, rateSum:0, rateCount:0,
-      damaged:0, lost:0, delayed:0, delivered:0, sent:0, partners:{} };
+      damaged:0, lost:0, delayed:0, delivered:0, sent:0, reprogged:0, partners:{} };
     var c = carriers[a];
     c.flights++;
     c.sent += parseInt(f.bsent)||0;
     c.boxes += parseInt(f.bsent)||0;
     c.damaged += parseInt(f.bdamaged)||0;
     c.lost += parseInt(f.blost)||0;
+    if (f.reprogs && f.reprogs.length) c.reprogged++;
     if (f.status === 'delayed') c.delayed++;
     if (f.status === 'delivered') c.delivered++;
     var r = parseFloat(f.rate)||0;
@@ -2773,6 +2795,7 @@ function buildCarrierScorecard(dim) {
     c.dmgPct = c.sent>0 ? (c.damaged/c.sent*100) : 0;
     c.lostPct = c.sent>0 ? (c.lost/c.sent*100) : 0;
     c.delayPct = c.flights>0 ? (c.delayed/c.flights*100) : 0;
+    c.reprogPct = c.flights>0 ? (c.reprogged/c.flights*100) : 0;
   });
   // Puntaje: precio (40%) + daños (25%) + perdidas (20%) + demoras (15%)
   // Normalizar cada métrica contra el rango del grupo (menor es mejor en todas)
@@ -2826,7 +2849,7 @@ function renderScorecard() {
   var h = tabs;
   h += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). '
     + (dim==='agency' ? 'Evalúa a tus <strong>cargueras</strong>: quién te consigue mejor precio y menos problemas.' : 'Evalúa a las <strong>aerolíneas</strong>: una barata que daña mucha carga puede salir más cara.') + '</div>';
-  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
+  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>% Reprog.</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
   list.forEach(function(c){
     var partners = Object.keys(c.partners).sort(function(a,b){return c.partners[b]-c.partners[a];})
       .slice(0,3).map(function(p){ return esc(p)+' ('+c.partners[p]+')'; }).join(', ') || '—';
@@ -2839,6 +2862,7 @@ function renderScorecard() {
       + '<td style="color:'+(c.dmgPct>1?'var(--red)':'var(--t2)')+';">'+c.dmgPct.toFixed(1)+'%</td>'
       + '<td style="color:'+(c.lostPct>0.5?'var(--red)':'var(--t2)')+';">'+c.lostPct.toFixed(1)+'%</td>'
       + '<td style="color:'+(c.delayPct>10?'var(--red)':'var(--t2)')+';">'+c.delayPct.toFixed(0)+'%</td>'
+      + '<td style="color:'+(c.reprogPct>10?'var(--red)':'var(--t2)')+';" title="Envíos que la carguera reprogramó tras confirmar">'+c.reprogPct.toFixed(0)+'%</td>'
       + '<td style="font-size:10px;color:var(--t3);">'+partners+'</td>'
       + '</tr>';
   });
@@ -2975,7 +2999,6 @@ function renderIntel() {
   renderCostCompare();
   renderSimulator();
   renderRouteHistory();
-  renderChecklist();
 }
 
 // ── BLOQUE 1: Factor volumétrico por carguera ──
@@ -3161,27 +3184,6 @@ function runSimulator() {
   out.innerHTML = h;
 }
 
-// ── BLOQUE 4: Checklist de negociación ──
-function renderChecklist() {
-  var box = document.getElementById('intel-checklist');
-  if (!box) return;
-  var docs = [
-    ['Tarifa con quiebres de peso', 'Air Cargo Tariff Sheet / Rate breaks (+45, +100, +300, +500, +1000 kg). El documento que más plata mueve.'],
-    ['Divisor volumétrico', 'Dimensional Weight Divisor. El estándar IATA es 6,000 cm³/kg. Si aplican 5,000, te cobran más por el mismo volumen.'],
-    ['Método de cálculo del peso facturable', '¿Miden cada caja o aplican un factor fijo? Pregunta directa a cada carguera.'],
-    ['Desglose de recargos', 'Fuel surcharge (FSC) y security (SSC): ¿están dentro de la tarifa o se facturan aparte?']
-  ];
-  var h = '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Estos son los 4 documentos que debes pedir a cada carguera. Con ellos dejas de comparar a ciegas.</div>';
-  docs.forEach(function(d,i){
-    h += '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:'+(i<docs.length-1?'1px solid var(--border)':'none')+';">'
-      + '<div style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--lightgreen);color:var(--green);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</div>'
-      + '<div><div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">'+d[0]+'</div>'
-      + '<div style="font-size:11px;color:var(--t3);line-height:1.5;">'+d[1]+'</div></div>'
-      + '</div>';
-  });
-  box.innerHTML = h;
-}
-
 var _ccRoute='all', _ccSeason='all';
 function setCCRoute(v){ _ccRoute=v; renderCostCompare(); }
 function setCCSeason(v){ _ccSeason=v; renderCostCompare(); }
@@ -3248,7 +3250,75 @@ function tempDetailRows(f){
   return S2('❄️ Cadena de frío')
     + R2('Temp. en origen', fmtTemp(f.tempOrig, f.tempOrigUnit||'C'))
     + R2('Temp. en Miami (llegada)', fmtTemp(f.tempMia, f.tempMiaUnit||'F'))
-    + R2('Rango seguro', min+'–'+max+'°C');
+    + R2('Rango seguro', min+'–'+max+'°C')
+    + (f.tempNotes ? R2('Observaciones', esc(f.tempNotes)) : '')
+    + (tempViolations(f).length
+        ? R2('Alerta', f.tempAck
+            ? '<span style="color:var(--green);font-weight:700;">✓ Atendida'+(f.tempAckAt?' ('+fmtD(f.tempAckAt)+')':'')+'</span>'
+            : '<span style="color:var(--red);font-weight:700;">⚠ Pendiente de atender</span>')
+        : '');
+}
+
+// Nota simple de auditoría (para acciones puntuales como confirmar arribo o atender alerta)
+function auditNote(f, user, text){
+  if (!DB.audit) DB.audit = [];
+  DB.audit.unshift({
+    id: 'aud_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    at: new Date().toISOString(),
+    user: user || 'Sistema',
+    flightId: f.id, awb: f.awb || '', num: f.num || '',
+    action: 'update',
+    changes: [{ field:'—', from:'—', to:text }]
+  });
+  if (DB.audit.length > 500) DB.audit = DB.audit.slice(0, 500);
+  persistDB();
+}
+
+// Violaciones de temperatura de un vuelo. Devuelve [] si todo está en rango.
+// Distingue DÓNDE falló: origen = responsabilidad de la carguera; Miami = transporte (MAS).
+function tempViolations(f){
+  var min = CFG.tempMin!==undefined?CFG.tempMin:1;
+  var max = CFG.tempMax!==undefined?CFG.tempMax:8;
+  var out = [];
+  [
+    { key:'tempOrig', unitKey:'tempOrigUnit', defUnit:'C', where:'ORIGEN'+(f.origin?' ('+f.origin+')':''), resp:'carguera'+(f.agName?' '+f.agName:'') },
+    { key:'tempMia',  unitKey:'tempMiaUnit',  defUnit:'F', where:'MIAMI', resp:'transporte en Miami (MAS)' }
+  ].forEach(function(p){
+    var c = tempInC(f[p.key], f[p.unitKey]||p.defUnit);
+    if (c===null) return;
+    if (c < min || c > max) {
+      var fh = cToF(c);
+      var dir = c < min ? 'por DEBAJO' : 'por ENCIMA';
+      out.push({
+        short: p.where+' '+c.toFixed(1)+'°C',
+        txt: 'Temp. '+p.where+' <strong>'+c.toFixed(1)+'°C / '+fh.toFixed(1)+'°F</strong> '+dir+' del rango ('+min+'–'+max+'°C) — responsable: '+esc(p.resp)
+      });
+    }
+  });
+  return out;
+}
+
+// Marca la alerta de reprogramación como atendida (ya se reorganizó con fincas/Miami)
+function ackReprog(id){
+  var f = DB.flights.find(function(x){return x.id===id;});
+  if (!f) return;
+  f.reprogAck = true;
+  auditNote(f, null, 'Reprogramación de itinerario marcada como atendida');
+  persistDB();
+  renderScreen(screen);
+  toast('✓ Reprogramación atendida: '+(f.awb||f.num), 'ok');
+}
+
+// Marca la alerta de temperatura como atendida (ya se trabajó con MAS / la carguera)
+function ackTempAlert(id){
+  var f = DB.flights.find(function(x){return x.id===id;});
+  if (!f) return;
+  f.tempAck = true;
+  f.tempAckAt = new Date().toISOString();
+  auditNote(f, null, 'Alerta de temperatura marcada como cumplida');
+  persistDB();
+  renderScreen(screen);
+  toast('✓ Alerta de temperatura atendida: '+(f.awb||f.num), 'ok');
 }
 
 // ── CADENA DE FRÍO: conversión C↔F, promedio y alerta ──
@@ -3276,18 +3346,20 @@ function onTempChange(which){
   checkTempAlert();
 }
 
-function calcTempAvg(){
+function calcTempAvg(target){
+  target = target || 'mia';
   var raw = gv('f-temp-readings');
   var out = document.getElementById('f-temp-readings-out');
   if (!raw.trim()) { if(out) out.textContent='Pega las mediciones primero.'; return; }
   var nums = raw.split(/[\s,;]+/).map(function(x){return parseFloat(x);}).filter(function(x){return !isNaN(x);});
   if (!nums.length) { if(out) out.textContent='No se detectaron números válidos.'; return; }
   var avg = nums.reduce(function(s,v){return s+v;},0)/nums.length;
-  // El promedio se coloca en el campo Miami respetando su unidad actual
-  sv('f-temp-mia', avg.toFixed(1));
-  var unit = gv('f-temp-mia-unit');
-  if(out) out.innerHTML = '<span style="color:var(--green);">✓ Promedio de '+nums.length+' mediciones: <strong>'+avg.toFixed(1)+' °'+unit+'</strong> (colocado en Miami)</span>';
-  onTempChange('mia');
+  // El promedio se coloca en el campo elegido respetando su unidad actual
+  sv('f-temp-'+target, avg.toFixed(1));
+  var unit = gv('f-temp-'+target+'-unit');
+  var lbl = target==='orig' ? 'Origen' : 'Miami';
+  if(out) out.innerHTML = '<span style="color:var(--green);">✓ Promedio de '+nums.length+' mediciones: <strong>'+avg.toFixed(1)+' °'+unit+'</strong> (colocado en '+lbl+')</span>';
+  onTempChange(target);
 }
 
 function checkTempAlert(){
@@ -3496,9 +3568,12 @@ function onAgencyChange(id) {
 function populateConsignees() {
   var sel = document.getElementById('f-consignee');
   sel.innerHTML = '<option value="">Seleccionar…</option>';
-  (CFG.consignees||'MAS Customs,Delivery Plus').split(',').map(function(s){return s.trim();}).filter(Boolean).forEach(function(c){
+  var names = (CFG.consignees||'MAS Customs,Delivery Plus').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  names.forEach(function(c){
     var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
   });
+  // El primero de la lista (MAS Customs) queda seleccionado por defecto en envíos nuevos
+  if (!sel.value && names.length) sel.value = names[0];
 }
 
 // ══ CALCULATIONS ══
@@ -4275,7 +4350,7 @@ function calcAll() {
 
 // ══ CLEAR FORM ══
 function clearFlightForm() {
-  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-fbe','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes','f-claim-amount','f-claim-recovered','f-claim-ref','f-claim-date','f-claim-deadline','f-claim-notes','f-temp-orig','f-temp-mia','f-temp-readings'].forEach(function(i){sv(i,'');});
+  ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-fbe','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes','f-claim-amount','f-claim-recovered','f-claim-ref','f-claim-date','f-claim-deadline','f-claim-notes','f-temp-orig','f-temp-mia','f-temp-readings','f-temp-notes'].forEach(function(i){sv(i,'');});
   var ta=document.getElementById('f-temp-alert'); if(ta)ta.style.display='none';
   ['f-temp-orig-conv','f-temp-mia-conv','f-temp-readings-out'].forEach(function(i){var e=document.getElementById(i);if(e)e.textContent='';});
   sv('f-claim-status','none');
@@ -4333,7 +4408,7 @@ async function saveFlight() {
     bsent:parseInt(gv('f-bsent'))||0, bconf:parseInt(gv('f-bconf'))||0, bmiss:(parseInt(gv('f-bconf'))||0)-(parseInt(gv('f-bsent'))||0), confst:gv('f-confst'),
     weight:gv('f-weight'), cweight:gv('f-cweight'),
     fbe: parseFloat(gv('f-fbe'))||0, ctype:gv('f-ctype'), handling:gv('f-handling'),
-    tempOrig:gv('f-temp-orig'), tempOrigUnit:gv('f-temp-orig-unit'), tempMia:gv('f-temp-mia'), tempMiaUnit:gv('f-temp-mia-unit'), tempReadings:gv('f-temp-readings'),
+    tempOrig:gv('f-temp-orig'), tempOrigUnit:gv('f-temp-orig-unit'), tempMia:gv('f-temp-mia'), tempMiaUnit:gv('f-temp-mia-unit'), tempReadings:gv('f-temp-readings'), tempNotes:gv('f-temp-notes'),
     commodity:gv('f-commodity'), hs:gv('f-hs'),
     rateBase:gv('f-rate'), rate:(parseFloat(gv('f-rate'))||0)+(parseFloat(gv('f-myc'))||0)+(parseFloat(gv('f-esc'))||0), rateExp:gv('f-rate-exp'), wcharge:gv('f-wcharge'), valcharge:gv('f-valcharge'), tax:gv('f-tax'),
     maa:gv('f-maa'), awc:gv('f-awc'), myc:gv('f-myc'), esc:gv('f-esc'),
@@ -4374,6 +4449,38 @@ async function saveFlight() {
     if (existing) {
       prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed;
       oldSnapshot = JSON.parse(JSON.stringify(existing)); // copia para auditoría
+      // Preservar el rastreo en vivo y el estado de alertas al editar (no se pierden al guardar)
+      ['liveStatus','liveArrActual','liveArrEstimated','liveArrTerminal','liveLastCheck','liveArrivedConfirmed','liveArrivedInferred','arrivedTime','tempAck','tempAckAt','tempNotified','reprogs','reprogAck'].forEach(function(k){
+        if (existing[k]!==undefined && f[k]===undefined) f[k]=existing[k];
+      });
+      // Si cambiaron las temperaturas, la alerta se reactiva (nueva situación = nueva revisión)
+      if ((existing.tempOrig||'') !== (f.tempOrig||'') || (existing.tempMia||'') !== (f.tempMia||'')) {
+        f.tempAck = false; f.tempNotified = false;
+      }
+      // ── DETECCIÓN DE REPROGRAMACIÓN ──
+      // Si el envío YA estaba confirmado y cambia el vuelo, la fecha o la hora de salida,
+      // es una reprogramación del itinerario (responsabilidad de la carguera, no del vuelo).
+      var wasConfirmed = existing.confst === 'confirmed';
+      var flightChanged = (existing.num||'') !== (f.num||'');
+      var etdChanged = (existing.etd||'') !== (f.etd||'');
+      if (wasConfirmed && (flightChanged || etdChanged)) {
+        if (!f.reprogs) f.reprogs = (existing.reprogs || []).slice();
+        var chg = [];
+        if (flightChanged) chg.push('vuelo '+(existing.num||'—')+' → '+(f.num||'—'));
+        if (etdChanged) {
+          var od = existing.etd ? new Date(existing.etd) : null;
+          var nd = f.etd ? new Date(f.etd) : null;
+          var fmt = function(d){ return d&&!isNaN(d) ? d.toLocaleString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'; };
+          chg.push('salida '+fmt(od)+' → '+fmt(nd));
+        }
+        f.reprogs.push({ at:new Date().toISOString(), by:cb||'', changes:chg.join(' · '),
+          agency:f.agName||existing.agName||'' });
+        f.reprogAck = false; // nueva reprogramación = alerta activa
+        pushNotif('🔄 REPROGRAMACIÓN: '+(f.awb||f.num||num)+' — '+(f.agName||'carguera')+' cambió el itinerario ('+chg.join(' · ')+')', '#D97706');
+      } else if (existing.reprogs) {
+        f.reprogs = existing.reprogs; // conservar historial previo
+        if (f.reprogAck===undefined) f.reprogAck = existing.reprogAck;
+      }
     }
   }
   // Calcular estado automático según ETD/ETA vs hora actual (o confirmación manual)
@@ -4382,6 +4489,12 @@ async function saveFlight() {
   f.manualDelivered = !!(f.arrived || f.completed); // marca que fue confirmado manualmente
   if (isEdit) { var idx=DB.flights.findIndex(function(x){return x.id===editFlId;}); if(idx>=0)DB.flights[idx]=f; }
   else { DB.flights.unshift(f); pushNotif('Nuevo envío: '+num+' ('+origin+'→'+dest+') por '+cb, f.confst==='unconfirmed'?'#D97706':'#1B7A3E'); }
+  // Alerta de cadena de frío: notificar una sola vez si hay temperatura fuera de rango
+  var tviol0 = tempViolations(f);
+  if (tviol0.length && !f.tempNotified && !f.tempAck) {
+    f.tempNotified = true;
+    pushNotif('❄️ TEMPERATURA FUERA DE RANGO: '+(f.awb||num)+' — '+tviol0.map(function(v){return v.short;}).join(' · ')+'. Revisa el panel de alertas.', '#DC2626');
+  }
   // Registrar en auditoría
   logAudit(oldSnapshot, f, cb, isEdit ? 'update' : 'create');
   closeModal('new');
@@ -4449,15 +4562,49 @@ function arrivalCell(f) {
       + '<button onclick="event.stopPropagation();confirmArrival(\''+f.id+'\')" title="Confirmar llegada real (MAS Customs ya avisó)" style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:9px;font-weight:700;padding:3px 6px;cursor:pointer;">✓ Confirmar</button>'
       + '</span>';
   }
+  // Para vuelos aún no arribados: botón manual "✓ Marcar arribo" (doble-check con MAS, sin editar)
+  var manualBtn = (f.status !== 'delivered')
+    ? '<button onclick="event.stopPropagation();markArrivedManual(\''+f.id+'\')" title="Marcar como arribado a Miami (confirmación manual)" style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:9px;font-weight:700;padding:3px 7px;cursor:pointer;white-space:nowrap;">✓ Marcar arribo</button>'
+    : '';
   var s = (f.liveStatus||'').toLowerCase();
-  if (s === 'enroute' || s === 'departed') return '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">✈ En ruta</span>';
-  if (s === 'delayed') return '<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">🔴 Demorado</span>';
+  function withBtn(badge){ return manualBtn ? '<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">'+badge+manualBtn+'</span>' : badge; }
+  if (s === 'enroute' || s === 'departed') return withBtn('<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">✈ En ruta</span>');
+  if (s === 'delayed') return withBtn('<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">🔴 Demorado</span>');
   if (s === 'canceled') return '<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;">❌ Cancelado</span>';
-  if (f.liveLastCheck) return '<span style="font-size:10px;color:var(--t3);">🕐 Programado</span>';
-  return '<span style="font-size:10px;color:var(--t3);" title="Sin rastreo — agrega AeroDataBox API Key en Configuración">—</span>';
+  if (f.liveLastCheck) return withBtn('<span style="font-size:10px;color:var(--t3);">🕐 Programado</span>');
+  return withBtn('<span style="font-size:10px;color:var(--t3);" title="Sin rastreo — agrega AeroDataBox API Key en Configuración">—</span>');
+}
+
+// Marca manualmente un vuelo como arribado a Miami (un clic, sin abrir edición)
+function markArrivedManual(id){
+  var f = DB.flights.find(function(x){return x.id===id;});
+  if (!f) return;
+  f.status = 'delivered';
+  f.manualDelivered = true;
+  f.liveArrivedConfirmed = true;
+  f.liveArrivedInferred = false;
+  if (!f.arrivedTime) f.arrivedTime = new Date().toISOString();
+  auditNote(f, null, 'Arribo marcado manualmente (botón en columna)');
+  persistDB();
+  renderScreen(screen);
+  updateBadges();
+  toast('✓ Marcado como arribado: '+(f.awb||f.num), 'ok');
 }
 
 function livBtn(num,id){return '<button class="btn xs" style="background:var(--lightgreen);color:var(--green);border-color:var(--midgreen);" onclick="event.stopPropagation();checkLive(\''+esc(num)+'\',\''+id+'\')">✈ Live</button>';}
+
+// Historial de reprogramaciones para el detalle del vuelo
+function reprogDetailRows(f){
+  if (!f.reprogs || !f.reprogs.length) return '';
+  var S2 = function(t){ return '<div style="grid-column:1/-1;font-size:11px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 2px;">'+t+'</div>'; };
+  var R2 = function(l,v){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;"><span style="color:var(--t3);">'+l+'</span><span style="text-align:right;color:var(--t1);">'+v+'</span></div>'; };
+  var rows = S2('🔄 Reprogramaciones ('+f.reprogs.length+')');
+  f.reprogs.forEach(function(rp,i){
+    var when = rp.at ? fmtD(rp.at) : '';
+    rows += R2('#'+(i+1)+' '+esc(rp.agency||''), '<span style="font-size:11px;">'+esc(rp.changes)+'</span><br><span style="font-size:9px;color:var(--t3);">'+esc(when)+(rp.by?' · '+esc(rp.by):'')+'</span>');
+  });
+  return rows;
+}
 
 // Confirma un arribo inferido como llegada real definitiva (cuando MAS Customs avisa)
 function confirmArrival(id){
@@ -4467,7 +4614,7 @@ function confirmArrival(id){
   f.liveArrivedInferred = false;
   f.status = 'delivered';
   if (!f.arrivedTime) f.arrivedTime = new Date().toISOString();
-  logAudit('Arribo confirmado', 'AWB '+(f.awb||f.num)+' confirmado como llegada real');
+  auditNote(f, null, 'Arribo confirmado como llegada real (botón Confirmar)');
   persistDB();
   renderScreen(screen);
   updateBadges();
@@ -4653,6 +4800,20 @@ function renderUrgent(){
     if ((f.usdaHold || usda > 0) && !f.usdaFreed && released < usda) {
       items.push({ pri: 2, icon:'🛃', txt: num + ' — ' + (usda||'?') + ' cajas retenidas por USDA sin liberar', id: id });
     }
+    // Temperatura fuera de rango (cadena de frío) sin atender
+    if (!f.tempAck) {
+      var tviol = tempViolations(f);
+      if (tviol.length) {
+        items.push({ pri: 2, icon:'❄️', txt: num + ' — ' + tviol.map(function(v){return v.txt;}).join('<br>'), id: id,
+          btn: '<button onclick="event.stopPropagation();ackTempAlert(\''+id+'\')" title="Ya se trabajó con MAS/carguera — silenciar esta alerta" style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:9px;font-weight:700;padding:3px 8px;cursor:pointer;white-space:nowrap;">✓ Cumplido</button>' });
+      }
+    }
+    // Reprogramación de itinerario sin atender (responsabilidad de la carguera)
+    if (f.reprogs && f.reprogs.length && !f.reprogAck) {
+      var last = f.reprogs[f.reprogs.length-1];
+      items.push({ pri: 2, icon:'🔄', txt: num + ' — <strong>REPROGRAMADO</strong> por '+esc(f.agName||'carguera')+': '+esc(last.changes), id: id,
+        btn: '<button onclick="event.stopPropagation();ackReprog(\''+id+'\')" title="Ya reorganicé fincas/Miami con el nuevo itinerario — silenciar" style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:9px;font-weight:700;padding:3px 8px;cursor:pointer;white-space:nowrap;">✓ Cumplido</button>' });
+    }
     // Cajas perdidas por aerolínea (posible reclamo)
     var lost = parseInt(f.blost)||0;
     if (lost > 0 && (!f.claimStatus || f.claimStatus === 'none')) {
@@ -4686,7 +4847,7 @@ function renderUrgent(){
   panel.style.display = 'block';
   list.innerHTML = items.slice(0, 8).map(function(it){
     return '<div onclick="openDetail(\''+it.id+'\')" style="cursor:pointer;font-size:12px;color:#7F1D1D;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(252,165,165,.3);">'
-      + '<span style="font-size:14px;">'+it.icon+'</span><span>'+it.txt+'</span><span style="margin-left:auto;font-size:10px;color:#B91C1C;">Ver →</span></div>';
+      + '<span style="font-size:14px;">'+it.icon+'</span><span>'+it.txt+'</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px;">'+(it.btn||'')+'<span style="font-size:10px;color:#B91C1C;">Ver →</span></span></div>';
   }).join('');
   if (items.length > 8) list.innerHTML += '<div style="font-size:10px;color:#B91C1C;padding-top:4px;">+ '+(items.length-8)+' más…</div>';
 }
@@ -4991,7 +5152,7 @@ function openDetail(id){
   document.getElementById('detail-title').textContent=f.num+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
-  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd))+R('ETA',fmtD(f.eta))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
   if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
   document.getElementById('detail-body').innerHTML=b;
   document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
@@ -5006,7 +5167,7 @@ function openEditFlight(id){
   sv('f-num',f.num); sv('f-airline',f.airline); sv('f-origin',f.origin); sv('f-dest',f.dest); sv('f-etd',f.etd); sv('f-eta',f.eta); sv('f-status',f.status); sv('f-priority',f.priority);
   sv('f-agency',f.agId); if(f.agId)onAgencyChange(f.agId); sv('f-awb',f.awb); sv('f-agcontact',f.agcontact); sv('f-agphone',f.agphone); sv('f-agemail',f.agemail);
   sv('f-bsent',f.bsent||''); sv('f-bconf',f.bconf||''); sv('f-bmiss',f.bmiss||''); sv('f-confst',f.confst); sv('f-weight',f.weight); sv('f-cweight',f.cweight); sv('f-fbe', f.fbe||''); sv('f-ctype',f.ctype||'Perecedero'); sv('f-handling',f.handling||'Mantener refrigerado'); sv('f-commodity',f.commodity||''); sv('f-hs',f.hs||'');
-  sv('f-temp-orig',f.tempOrig||''); sv('f-temp-orig-unit',f.tempOrigUnit||'C'); sv('f-temp-mia',f.tempMia||''); sv('f-temp-mia-unit',f.tempMiaUnit||'F'); sv('f-temp-readings',f.tempReadings||'');
+  sv('f-temp-orig',f.tempOrig||''); sv('f-temp-orig-unit',f.tempOrigUnit||'C'); sv('f-temp-mia',f.tempMia||''); sv('f-temp-mia-unit',f.tempMiaUnit||'F'); sv('f-temp-readings',f.tempReadings||''); sv('f-temp-notes',f.tempNotes||'');
   onTempChange('orig'); onTempChange('mia');
   sv('f-rate',f.rateBase!==undefined?f.rateBase:f.rate); sv('f-rate-exp',f.rateExp||''); sv('f-wcharge',f.wcharge); sv('f-valcharge',f.valcharge); sv('f-tax',f.tax); sv('f-maa',f.maa); sv('f-awc',f.awc); sv('f-myc',f.myc); sv('f-esc',f.esc); sv('f-ochagent',f.ochagent); sv('f-ochcarrier',f.ochcarrier); sv('f-totalpaid',f.totalpaid); sv('f-totalcoll',f.totalcoll);
   // Los cargos guardados son la fuente de verdad: marcarlos para que no se recalculen
