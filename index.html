@@ -2272,7 +2272,7 @@ function autoUpdateAllStatuses() {
 var AIRLINE_ICAO = {
   '5Y':'GTI',  // Atlas Air
   'UC':'LCO',  // LAN / LATAM Cargo Chile
-  'XL':'LCO',  // LATAM Ecuador (opera los vuelos de Apollo Ecuador)
+  'XL':'LNE',  // LATAM Airlines Ecuador (opera los vuelos de Apollo Ecuador, ej. XL0316)
   'QT':'TPA',  // Avianca Cargo (ex Tampa)
   'AV':'AVA'   // Avianca
 };
@@ -2292,9 +2292,17 @@ async function fetchAeroStatus(flightNum, dateISO) {
   // El código IATA de aerolínea puede ser 2 caracteres alfanuméricos (ej. "5Y", "XL", "UC")
   var candidates = [raw];
   var m = raw.match(/^([0-9A-Z]{2})(\d+)$/);
-  if (m && AIRLINE_ICAO[m[1]]) {
-    var icao = AIRLINE_ICAO[m[1]] + m[2];
-    if (icao !== raw) candidates.push(icao);
+  if (m) {
+    var prefix = m[1], number = m[2];
+    var numNoZeros = String(parseInt(number, 10)); // "0212" → "212"
+    // Variante IATA sin ceros a la izquierda (AeroDataBox suele usarla: XL0212 → XL212)
+    if (numNoZeros !== number) candidates.push(prefix + numNoZeros);
+    // Variante(s) con ICAO
+    if (AIRLINE_ICAO[prefix]) {
+      var icao = AIRLINE_ICAO[prefix];
+      if (icao + number !== raw) candidates.push(icao + number);
+      if (numNoZeros !== number) candidates.push(icao + numNoZeros);
+    }
   }
 
   var lastEmpty = false;
