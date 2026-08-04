@@ -1701,10 +1701,10 @@ function normalizeAirline(name) {
 // ── Tabla de aeropuertos: nombre del aeropuerto/ciudad → código de puerto ──
 // Se busca el nombre en el AWB y se asocia al código. Ampliable agregando filas.
 var AIRPORTS = [
-  { code:'UIO', patterns:/MARISCAL\s*SUCRE|QUITO/i },
-  { code:'BOG', patterns:/EL\s*DORADO|BOGOT[AÁ]/i },
-  { code:'MDE', patterns:/JOSE\s*MARIA\s*CORDOVA|RIONEGRO|MEDELL[IÍ]N/i },
-  { code:'GYE', patterns:/JOSE\s*JOAQUIN\s*DE\s*OLMEDO|GUAYAQUIL/i }
+  { code:'UIO', patterns:/MARISCAL\s*SUCRE|TABABELA|\bQUITO\b|\bUIO\b|\bSEQM\b|\bSEQU\b/i },
+  { code:'BOG', patterns:/EL\s*DORADO|BOGOT[AÁ]|\bBOG\b|\bSKBO\b/i },
+  { code:'MDE', patterns:/JOS[EÉ]\s*MAR[IÍ]A\s*C[OÓ]RDOVA|RIONEGRO|MEDELL[IÍ]N|\bMDE\b|\bSKRG\b/i },
+  { code:'GYE', patterns:/JOS[EÉ]\s*JOAQU[IÍ]N\s*DE\s*OLMEDO|GUAYAQUIL|\bGYE\b|\bSEGU\b/i }
 ];
 function airportToCode(text) {
   for (var i=0; i<AIRPORTS.length; i++) {
@@ -1733,7 +1733,7 @@ function extractAWBFields(text) {
   //  (evita el falso positivo con la DIRECCIÓN del shipper: Apollo tiene oficina en
   //   el aeropuerto José María Córdova pero puede embarcar desde BOGOTÁ)
   if (!result.origin) {
-    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,80}?(MARISCAL\s*SUCRE|EL\s*DORADO|JOSE\s*MARIA\s*CORDOVA|JOSE\s*JOAQUIN\s*DE\s*OLMEDO|QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|GUAYAQUIL)/i);
+    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,80}?(MARISCAL\s*SUCRE|EL\s*DORADO|JOS[EÉ]\s*MAR[IÍ]A\s*C[OÓ]RDOVA|JOS[EÉ]\s*JOAQU[IÍ]N\s*DE\s*OLMEDO|QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|GUAYAQUIL)/i);
     if (lblOrigin) result.origin = airportToCode(lblOrigin[1]);
   }
   // PRIORIDAD 2: el prefijo del AWB trae el código IATA del aeropuerto de origen
@@ -2268,31 +2268,67 @@ function autoUpdateAllStatuses() {
 // A diferencia del cálculo por horario, esto consulta el estado real del vuelo.
 // Endpoint por número de vuelo y fecha: /flights/number/{num}/{date}
 // Requiere CFG.aeroKey (RapidAPI key). Plan Basic ~$0/mes con límite, o desde $5/mes.
+// Mapa IATA → ICAO para aerolíneas de carga (AeroDataBox suele indexar por ICAO)
+var AIRLINE_ICAO = {
+  '5Y':'GTI',  // Atlas Air
+  'UC':'LCO',  // LAN / LATAM Cargo Chile
+  'XL':'LCO',  // LATAM Ecuador (opera los vuelos de Apollo Ecuador)
+  'QT':'TPA',  // Avianca Cargo (ex Tampa)
+  'AV':'AVA'   // Avianca
+};
+
+// Consulta AeroDataBox por número de vuelo y fecha.
+// Prueba primero el código tal cual (IATA); si viene vacío, reintenta con ICAO.
 async function fetchAeroStatus(flightNum, dateISO) {
-  if (!CFG.aeroKey) return null;
-  var cleanNum = (flightNum||'').replace(/\s/g,'').replace(/[-\/]\d{1,2}$/,'').toUpperCase();
-  if (!cleanNum) return null;
+  if (!CFG.aeroKey) return { error: 'nokey' };
+  var raw = (flightNum||'').replace(/\s/g,'').toUpperCase();
+  raw = raw.replace(/[\/]\d{1,2}$/,'');                // quita "/29" (día tras barra)
+  raw = raw.replace(/^([0-9A-Z]{2})-(\d+)$/, '$1$2');  // "5Y-8626" → "5Y8626" (guion interno)
+  raw = raw.replace(/[-]\d{1,2}$/,'');                  // quita "-8" (día tras guion, si quedó)
+  if (!raw) return { error: 'nonum' };
   var date = (dateISO || new Date().toISOString()).slice(0,10);
-  var url = 'https://aerodatabox.p.rapidapi.com/flights/number/' + encodeURIComponent(cleanNum) + '/' + date
-    + '?withAircraftImage=false&withLocation=false';
-  try {
-    var res = await fetch(url, {
-      headers: {
-        'x-rapidapi-key': CFG.aeroKey,
-        'x-rapidapi-host': 'aerodatabox.p.rapidapi.com'
-      }
-    });
-    if (!res.ok) {
+
+  // Genera los códigos a probar: el original y su equivalente ICAO
+  // El código IATA de aerolínea puede ser 2 caracteres alfanuméricos (ej. "5Y", "XL", "UC")
+  var candidates = [raw];
+  var m = raw.match(/^([0-9A-Z]{2})(\d+)$/);
+  if (m && AIRLINE_ICAO[m[1]]) {
+    var icao = AIRLINE_ICAO[m[1]] + m[2];
+    if (icao !== raw) candidates.push(icao);
+  }
+
+  var lastEmpty = false;
+  for (var i=0; i<candidates.length; i++) {
+    var cleanNum = candidates[i];
+    var url = 'https://aerodatabox.p.rapidapi.com/flights/number/' + encodeURIComponent(cleanNum) + '/' + date
+      + '?withAircraftImage=false&withLocation=false';
+    try {
+      var res = await fetch(url, {
+        headers: {
+          'x-rapidapi-key': CFG.aeroKey,
+          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com'
+        }
+      });
       if (res.status === 429) return { error: 'limit' };
       if (res.status === 401 || res.status === 403) return { error: 'auth' };
-      return { error: 'http_' + res.status };
+      // 204 = sin contenido, o body vacío: el vuelo no tiene datos con ESE código.
+      // Intentamos el siguiente candidato (p.ej. ICAO) antes de rendirnos.
+      if (res.status === 204) { lastEmpty = true; continue; }
+      if (!res.ok) return { error: 'http_' + res.status };
+      var text = await res.text();
+      if (!text || !text.trim()) { lastEmpty = true; continue; }
+      var data;
+      try { data = JSON.parse(text); }
+      catch(parseErr) { lastEmpty = true; continue; }
+      if (!data || !data.length) { lastEmpty = true; continue; }
+      return { flights: data, usedCode: cleanNum };
+    } catch(e) {
+      // Falla real de red/conexión (distinta de "sin datos")
+      return { error: 'network' };
     }
-    var data = await res.json();
-    if (!data || !data.length) return { error: 'notfound' };
-    return { flights: data };
-  } catch(e) {
-    return { error: 'network' };
   }
+  // Ningún candidato trajo datos: no es error de red, simplemente no hay info del vuelo
+  return { error: 'notfound' };
 }
 
 // Normaliza la respuesta de AeroDataBox a nuestro formato interno
