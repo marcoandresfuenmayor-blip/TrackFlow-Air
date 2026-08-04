@@ -327,7 +327,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       </svg>
       Iniciar sesión con Microsoft
     </button>
-    <div class="login-note">Usa tu cuenta de Jet Fresh Flowers Distributors.<br>La primera vez pedirá permiso — acepta para continuar.</div>
+    <button class="login-btn" onclick="signInTest()" style="background:var(--t3);margin-top:10px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+      Entrar en modo prueba
+    </button>
+    <div class="login-note">Usa tu cuenta de Jet Fresh Flowers Distributors.<br>La primera vez pedirá permiso — acepta para continuar.<br><span style="color:var(--t3);opacity:.8;">"Modo prueba" es temporal, para probar sin correo.</span></div>
   </div>
 </div>
 
@@ -1100,6 +1104,14 @@ async function signIn() {
   }
 }
 
+// MODO PRUEBA (temporal): entra sin autenticación con Microsoft, para probar en
+// navegación privada sin correo. Quitar cuando el correo esté resuelto.
+async function signInTest() {
+  currentUser = { name: 'Usuario de prueba', username: 'prueba@local' };
+  window._testMode = true;
+  await initApp();
+}
+
 async function signOut() {
   if (!confirm('¿Cerrar sesión?')) return;
   await msalInstance.logoutPopup();
@@ -1109,6 +1121,7 @@ async function signOut() {
 }
 
 async function getToken() {
+  if (window._testMode) return null; // modo prueba: sin token de Microsoft
   try {
     var result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
     accessToken = result.accessToken;
@@ -1671,6 +1684,35 @@ async function handleAWBUpload(e) {
 }
 
 // ══ EXTRACCIÓN GRATUITA DE CAMPOS AWB (sin IA) — basado en el formato estándar IATA AWB ══
+// ── Normalización de aerolíneas: unifica variantes a un nombre único ──
+// LAN CARGO SA, LATAM CARGO y LÍNEA AÉREA CARGUERA DE COLOMBIA son la misma → "LAN CARGO"
+function normalizeAirline(name) {
+  if (!name) return name;
+  var n = name.toUpperCase().trim();
+  if (/LAN\s*CARGO|LATAM|LINEA\s*AEREA\s*CARGUERA/.test(n)) return 'LAN CARGO';
+  if (/ATLAS/.test(n)) return 'ATLAS';
+  if (/AVIANCA|TAMPA/.test(n)) return 'AVIANCA';
+  if (/AMERICAN/.test(n)) return 'AMERICAN AIRLINES';
+  if (/\bCOPA\b/.test(n)) return 'COPA';
+  if (/\bUNITED\b/.test(n)) return 'UNITED';
+  return name.trim();
+}
+
+// ── Tabla de aeropuertos: nombre del aeropuerto/ciudad → código de puerto ──
+// Se busca el nombre en el AWB y se asocia al código. Ampliable agregando filas.
+var AIRPORTS = [
+  { code:'UIO', patterns:/MARISCAL\s*SUCRE|QUITO/i },
+  { code:'BOG', patterns:/EL\s*DORADO|BOGOT[AÁ]/i },
+  { code:'MDE', patterns:/JOSE\s*MARIA\s*CORDOVA|RIONEGRO|MEDELL[IÍ]N/i },
+  { code:'GYE', patterns:/JOSE\s*JOAQUIN\s*DE\s*OLMEDO|GUAYAQUIL/i }
+];
+function airportToCode(text) {
+  for (var i=0; i<AIRPORTS.length; i++) {
+    if (AIRPORTS[i].patterns.test(text)) return AIRPORTS[i].code;
+  }
+  return null;
+}
+
 function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
@@ -1680,48 +1722,29 @@ function extractAWBFields(text) {
   clean = clean.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
 
   // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
-  var airlineMatch = clean.match(/\b(ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+  var airlineMatch = clean.match(/\b(ATLAS\s*CARGO|ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
     || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
   if (airlineMatch) {
-    result.airline = airlineMatch[1].trim();
-    // Razón social → nombre comercial (LATAM Cargo Colombia opera como "Línea Aérea Carguera de Colombia SA")
-    if (/LINEA\s*AEREA\s*CARGUERA/i.test(result.airline)) result.airline = 'LATAM CARGO';
+    result.airline = normalizeAirline(airlineMatch[1].trim());
   }
 
-  // ── ORIGEN ── varias estrategias
-  var originMatch = clean.match(/^\d{3}\s*\|\s*([A-Z]{3})\s*\|/)
-    || clean.match(/MARISCAL\s*SUCRE/i) ? 'UIO' : null;
-  if (!originMatch) {
-    var om2 = clean.match(/Airport\s*of\s*Departure[^A-Z]*?\b([A-Z]{3})\b/i);
-    if (om2) originMatch = om2[1];
-  } else if (typeof originMatch !== 'string') {
-    originMatch = originMatch[1];
-  }
-  if (originMatch) result.origin = (typeof originMatch === 'string' ? originMatch : originMatch[1]).toUpperCase();
-  // PRIORIDAD 1: la ciudad justo después del rótulo "Airport of Departure"
-  // (evita falsos positivos con la DIRECCIÓN del shipper, ej: Apollo con oficina
-  //  en el aeropuerto José María Córdova pero embarcando desde BOGOTÁ)
+  // ── ORIGEN ── prioridad clara, usando la tabla de aeropuertos centralizada
+  // PRIORIDAD 1: la ciudad/aeropuerto justo después del rótulo "Airport of Departure"
+  //  (evita el falso positivo con la DIRECCIÓN del shipper: Apollo tiene oficina en
+  //   el aeropuerto José María Córdova pero puede embarcar desde BOGOTÁ)
   if (!result.origin) {
-    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,60}?(QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|JOSE\s*MARIA\s*CORDOVA|GUAYAQUIL)/i);
-    if (lblOrigin) {
-      var city = lblOrigin[1].toUpperCase();
-      if (/QUITO/.test(city)) result.origin = 'UIO';
-      else if (/BOGOT/.test(city)) result.origin = 'BOG';
-      else result.origin = /GUAYAQUIL/.test(city) ? 'GYE' : 'MDE';
-    }
+    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,80}?(MARISCAL\s*SUCRE|EL\s*DORADO|JOSE\s*MARIA\s*CORDOVA|JOSE\s*JOAQUIN\s*DE\s*OLMEDO|QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|GUAYAQUIL)/i);
+    if (lblOrigin) result.origin = airportToCode(lblOrigin[1]);
   }
-  // PRIORIDAD 2: el prefijo del AWB trae el código del aeropuerto de origen
-  // ("985 MDE 63760550" o pegado "985BOG63838622")
+  // PRIORIDAD 2: el prefijo del AWB trae el código IATA del aeropuerto de origen
+  //  ("985 MDE 63760550" o pegado "985BOG63838622")
   if (!result.origin) {
     var awbOrigin = clean.match(/\b\d{3}\s*([A-Z]{3})\s*\d{7,8}\b/);
     if (awbOrigin) result.origin = awbOrigin[1].toUpperCase();
   }
-  // PRIORIDAD 3: escaneo por nombre de ciudad/aeropuerto en cualquier parte
+  // PRIORIDAD 3: buscar cualquier nombre de aeropuerto conocido en todo el texto
   if (!result.origin) {
-    if (/QUITO|MARISCAL\s*SUCRE/i.test(clean)) result.origin = 'UIO';
-    else if (/BOGOT[AÁ]|EL\s*DORADO/i.test(clean)) result.origin = 'BOG';
-    else if (/MEDELL[IÍ]N|JOSE\s*MARIA\s*CORDOVA|RIONEGRO/i.test(clean)) result.origin = 'MDE';
-    else if (/GUATEMALA/i.test(clean)) result.origin = 'GUAT';
+    result.origin = airportToCode(clean) || undefined;
   }
 
   // ── DESTINO ── captura ciudad antes de "Requested" o "Amount"
@@ -1752,7 +1775,8 @@ function extractAWBFields(text) {
     result.flightnum = (flightFullDate[1] + flightFullDate[2]).toUpperCase();
     result.departureDateFull = flightFullDate[3]; // fecha ISO completa: no hay que deducir el mes
   }
-  var flightMatch = clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s*(\d{3,5})\s*[-\/]\s*(\d{1,2})/i)   // 5Y 8620-8 o 5Y8620/8 (díg+letra + núm + día)
+  var flightMatch = clean.match(/\b([A-Z]{2})\s*(\d{3,4})\s*[-\/]\s*(\d{1,2})\b/)   // XL0316/29 (2 letras + num + dia)
+    || clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s*(\d{3,5})\s*[-\/]\s*(\d{1,2})/i)   // 5Y 8620-8 o 5Y8620/8 (díg+letra + núm + día)
     || clean.match(/Flight[\/\s]*Date\s+([A-Z])\s*(\d{4,6})\s*[-\/]\s*(\d{1,2})/i)                   // M 38506/02 o M38506-02 (letra + núm + día)
     || clean.match(/\b(\d[A-Z])\s*(\d{3,5})\s*[-\/]\s*(\d{1,2})\b/)                                   // 5Y 8620-8 sin etiqueta (díg+letra)
     || clean.match(/\b([A-Z])\s*(\d{4,6})\s*[-\/]\s*(\d{1,2})\b/);                                    // M38506/02 sin etiqueta (letra)
@@ -1776,7 +1800,7 @@ function extractAWBFields(text) {
   // Layout LATAM/Colombia: el nombre de la carguera va entre el nº AWB y su NIT
   // ("985-63760550 K&M HANDLING COLOMBIA SAS 900973730-8")
   if (!result.agencyName) {
-    var agColMatch = clean.match(/\d{3}-\d{7,8}\s+([A-Z][A-Z&\s\.]{4,38}?(?:SAS|S\.A\.S\.?|LTDA|S\.A\.))\s+\d{6,12}/);
+    var agColMatch = clean.match(/\d{3}-\d{7,8}\s+(?:Issued by:?\s+)?([A-Z][A-Z&\s\.]{4,38}?(?:SAS|S\.A\.S\.?|LTDA|S\.A\.))\s/);
     if (agColMatch) result.agencyName = agColMatch[1].trim();
   }
 
@@ -1811,7 +1835,7 @@ function extractAWBFields(text) {
 
   // Layout LATAM sin etiquetas: fila "214 977.00 1196.00 1.48 1770.08"
   // (piezas + peso bruto + peso facturable + tarifa + total, todos juntos)
-  var fullRow = clean.match(/\b(\d{1,4})\s+(\d{2,5}\.\d{2})\s+(\d{2,5}\.\d{1,2})\s+(\d\.\d{2})\s+(\d{2,7}\.\d{2})\b/);
+  var fullRow = clean.match(/\b(\d{1,4})\s+(\d{2,5}\.\d{2})\s+(\d{2,5}\.\d{1,2})\s+(\d\.\d{2})\s+(\d{2,7}\.\d{1,2})\b/);
   if (fullRow) {
     var frPieces = parseInt(fullRow[1]), frGross = parseFloat(fullRow[2]),
         frCharge = parseFloat(fullRow[3]), frRate = parseFloat(fullRow[4]);
