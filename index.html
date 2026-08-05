@@ -354,12 +354,12 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
     <nav class="sb-nav">
       <div class="sb-sec">Operaciones</div>
       <div class="ni active" id="nav-dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Dashboard</span><span class="nbadge" id="badge-alert" style="display:none">!</span></div>
-      <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
-      <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
-      <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reportes</span></div>
       <div class="ni" id="nav-intel" onclick="go('intel')"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg><span>Inteligencia</span></div>
+      <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reportes</span></div>
+      <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
       <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendario</span></div>
       <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Auditoría</span></div>
+      <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
       <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
       <div class="ni" id="nav-notifications" onclick="go('notifications')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notificaciones</span><span class="nbadge" id="badge-notif">0</span></div>
       <div class="sb-sec" style="margin-top:6px;">Config</div>
@@ -385,7 +385,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
   <div class="main">
     <div class="topbar">
       <span class="tb-title" id="pg-title">Dashboard</span>
-      <div class="srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" onkeydown="if(event.key==='Enter')doSearch()"></div>
+      <div class="srch" style="position:relative;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
       <button class="tb-btn" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema claro/oscuro"><span id="theme-icon">🌙</span></button>
       <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
@@ -4723,7 +4723,7 @@ function arrivalCell(f) {
   function withBtn(badge){ return manualBtn ? '<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">'+badge+manualBtn+'</span>' : badge; }
   if (s === 'enroute' || s === 'departed') return withBtn('<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">✈ En ruta</span>');
   if (s === 'delayed') return withBtn('<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">🔴 Demorado</span>');
-  if (s === 'canceled') return '<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;">❌ Cancelado</span>';
+  if (s === 'canceled') return withBtn('<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;">❌ Cancelado</span>');
   if (f.liveLastCheck) return withBtn('<span style="font-size:10px;color:var(--t3);">🕐 Programado</span>');
   return withBtn('<span style="font-size:10px;color:var(--t3);" title="Sin rastreo — agrega AeroDataBox API Key en Configuración">—</span>');
 }
@@ -5230,11 +5230,79 @@ function openEditFlight(id){
 }
 
 // ══ SEARCH ══
+// Panel de ayuda contextual: muestra la guía de la pantalla actual
+function toggleHelp(){
+  var panel=document.getElementById('help-panel');
+  if(!panel) return;
+  if(panel.style.display==='block'){ panel.style.display='none'; return; }
+  var content=document.getElementById('help-content');
+  var guides={
+    dashboard:'<strong>📊 Dashboard</strong><br>Tu vista de HOY.<br><br>• <strong>Buscador (arriba):</strong> escribe un AWB, vuelo o carguera y aparecen resultados al instante. Toca uno para ver su detalle.<br>• <strong>Vuelos de hoy:</strong> toca cualquiera para abrir su detalle. El botón "✓ Marcar arribo" confirma la llegada a Miami.<br>• <strong>Tarjetas de números:</strong> toca "Alertas de tarifa" para ir a los envíos afectados.<br>• <strong>Requiere tu atención:</strong> alertas de temperatura, reprogramación, USDA. El botón "✓ Cumplido" las silencia.',
+    intel:'<strong>🧠 Inteligencia</strong><br>Tu centro de negociación.<br><br>• <strong>Desempeño por carguera:</strong> compara precio y confiabilidad.<br>• <strong>Factor volumétrico:</strong> cuánto infla cada carguera el peso.<br>• <strong>Comparador $/kg:</strong> filtra por ruta y temporada para comparar limpio.<br>• <strong>Tendencia:</strong> toca los chips para comparar varias rutas/cargueras a la vez.<br>• <strong>Histórico por ruta:</strong> filtra por período para ver tu piso y techo de tarifa.',
+    reports:'<strong>📄 Reportes</strong><br>Para gerencia y correo.<br><br>• Elige el período y genera el reporte.<br>• Puedes enviarlo por correo o exportarlo.',
+    flights:'<strong>✈️ Vuelos</strong><br>Todos tus envíos.<br><br>• <strong>Pestañas (Todos/Tránsito/Pendiente/Entregado):</strong> filtran la lista.<br>• <strong>✈ Live:</strong> consulta el estado real del vuelo en AeroDataBox.<br>• <strong>✓ Marcar arribo:</strong> confirma llegada manualmente.<br>• Toca cualquier fila para ver o editar el envío.<br>• <strong>Columnas:</strong> personaliza cuáles ver con el botón "Columnas".',
+    calendar:'<strong>📅 Calendario</strong><br>Tus vuelos por fecha.<br><br>• Toca cualquier envío para abrir su detalle completo.',
+    audit:'<strong>🔍 Auditoría</strong><br>Registro de cambios.<br><br>• Cada acción (crear, editar, confirmar arribo) queda registrada con fecha y usuario.',
+    agencies:'<strong>👥 Agencias</strong><br>Directorio de cargueras.<br><br>• Guarda contacto, teléfono y email de cada una.<br>• "📊 Ver desempeño" te lleva a su análisis en Inteligencia.'
+  };
+  content.innerHTML=(guides[screen]||guides.dashboard)
+    + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);">💬 ¿Más dudas? Usa el asistente IA (botón verde) para preguntar sobre tus datos.</div>';
+  panel.style.display='block';
+}
+
 function doSearch(){
   var q=document.getElementById('srch-inp').value.toLowerCase(); if(!q)return;
-  var m=DB.flights.filter(function(f){return(f.num&&f.num.toLowerCase().includes(q))||(f.awb&&f.awb.toLowerCase().includes(q))||(f.agName&&f.agName.toLowerCase().includes(q))||(f.createdby&&f.createdby.toLowerCase().includes(q));});
-  if(m.length===1)openDetail(m[0].id); else if(m.length>1)go('flights'); else aiAsk('Buscar: '+q);
+  var m=searchFlights(q);
+  if(m.length===1){ closeSearchResults(); openDetail(m[0].id); }
+  else if(m.length>1){ closeSearchResults(); go('flights'); }
 }
+
+// Búsqueda: filtra por número de vuelo, AWB, agencia, origen, destino, creador
+function searchFlights(q){
+  q = (q||'').toLowerCase().trim();
+  if(!q) return [];
+  return DB.flights.filter(function(f){
+    return (f.num&&f.num.toLowerCase().includes(q))
+      || (f.awb&&f.awb.toLowerCase().includes(q))
+      || (f.agName&&f.agName.toLowerCase().includes(q))
+      || (f.origin&&f.origin.toLowerCase().includes(q))
+      || (f.dest&&f.dest.toLowerCase().includes(q))
+      || (f.airline&&f.airline.toLowerCase().includes(q))
+      || (f.createdby&&f.createdby.toLowerCase().includes(q));
+  });
+}
+
+// Búsqueda en vivo: muestra resultados al instante en el desplegable
+function liveSearch(q){
+  var box=document.getElementById('srch-results');
+  if(!box) return;
+  q=(q||'').trim();
+  if(!q){ closeSearchResults(); return; }
+  var m=searchFlights(q).slice(0,8);
+  if(!m.length){
+    box.style.display='block';
+    box.innerHTML='<div style="padding:14px;font-size:12px;color:var(--t3);text-align:center;">Sin resultados para "'+esc(q)+'"</div>';
+    return;
+  }
+  box.style.display='block';
+  box.innerHTML=m.map(function(f){
+    var estado = f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':f.status==='delayed'?'Demorado':'Pendiente';
+    return '<div onclick="closeSearchResults();openDetail(\''+f.id+'\')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--lightgreen)\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<div style="min-width:0;"><div style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--t1);">'+esc(f.awb||f.num||'—')+'</div>'
+      + '<div style="font-size:10px;color:var(--t3);">'+esc(f.origin||'?')+'→'+esc(f.dest||'?')+(f.agName?' · '+esc(f.agName):'')+'</div></div>'
+      + '<span style="font-size:9px;color:var(--t3);white-space:nowrap;">'+esc(estado)+'</span>'
+      + '</div>';
+  }).join('');
+}
+function closeSearchResults(){
+  var box=document.getElementById('srch-results');
+  if(box){ box.style.display='none'; box.innerHTML=''; }
+}
+// Cerrar resultados al hacer clic fuera
+document.addEventListener('click',function(e){
+  var s=document.querySelector('.srch');
+  if(s && !s.contains(e.target)) closeSearchResults();
+});
 
 // ══ FILTERS ══
 function dashF(el,v){document.querySelectorAll('#s-dashboard .ftab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');dashFlt=v;renderDash();}
@@ -5357,5 +5425,15 @@ window.onload = function() {
 <button id="ai-fab" onclick="go('assistant')" title="Asistente IA — pregúntale a tus datos"
   style="position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;border:none;box-shadow:0 4px 14px rgba(27,122,62,.4);cursor:pointer;font-size:22px;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;"
   onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">💬</button>
+<button id="help-fab" onclick="toggleHelp()" title="Ayuda — cómo usar TrackFlow Air"
+  style="position:fixed;bottom:84px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--surf);color:var(--green);border:2px solid var(--green);box-shadow:0 4px 14px rgba(0,0,0,.15);cursor:pointer;font-size:24px;font-weight:800;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;"
+  onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">?</button>
+<div id="help-panel" style="display:none;position:fixed;bottom:146px;right:22px;width:340px;max-width:calc(100vw - 44px);max-height:70vh;overflow-y:auto;background:var(--surf);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);z-index:901;padding:0;">
+  <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surf);border-radius:14px 14px 0 0;">
+    <span style="font-size:14px;font-weight:800;color:var(--green);">❓ Guía rápida</span>
+    <button onclick="toggleHelp()" style="background:none;border:none;font-size:20px;color:var(--t3);cursor:pointer;">×</button>
+  </div>
+  <div id="help-content" style="padding:14px 16px;font-size:12px;line-height:1.6;color:var(--t2);"></div>
+</div>
 </body>
 </html>
