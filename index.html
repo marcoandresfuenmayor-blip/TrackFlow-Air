@@ -385,7 +385,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
   <div class="main">
     <div class="topbar">
       <span class="tb-title" id="pg-title">Dashboard</span>
-      <div class="srch" style="position:relative;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
+      <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
       <button class="tb-btn" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema claro/oscuro"><span id="theme-icon">🌙</span></button>
       <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
@@ -396,13 +396,21 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div id="backup-alert" style="display:none;"></div>
       <!-- DASHBOARD -->
       <div class="screen active" id="s-dashboard">
-        <div id="today-panel" style="display:none;background:linear-gradient(135deg,#F0FAF4,#E8F5EE);border:1.5px solid var(--midgreen);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="font-size:14px;font-weight:800;color:var(--green);display:flex;align-items:center;gap:7px;">📅 Vuelos de hoy</div>
-            <span id="today-count" style="font-size:11px;color:var(--t2);font-weight:600;"></span>
+        <!-- Saludo + resumen del día -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div id="dash-greet" style="font-size:18px;font-weight:800;color:var(--t1);">Hola</div>
+            <div id="dash-daysummary" style="font-size:12px;color:var(--t3);margin-top:2px;">Cargando resumen del día…</div>
           </div>
-          <div id="today-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
+
+        <!-- LO URGENTE PRIMERO -->
+        <div id="urgent-panel" style="display:none;background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:800;color:#991B1B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">🚨 Requiere tu atención</div>
+          <div id="urgent-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+        </div>
+
+        <!-- Tarjetas de números con contexto -->
         <div class="sg sg5">
           <div class="sc" onclick="go('flights')" style="cursor:pointer;" title="Ver todos los vuelos"><div class="sl">Total Vuelos</div><div class="sv" id="st-fl">0</div><div class="ss neu" id="st-fl-s">—</div></div>
           <div class="sc" onclick="dashFbyStatus('delivered')" style="cursor:pointer;" title="Ver confirmados"><div class="sl">Cajas Confirmadas</div><div class="sv" id="st-conf">0</div><div class="ss up" id="st-conf-s">—</div></div>
@@ -411,15 +419,63 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="sc"><div class="sl">Costo Total AWB</div><div class="sv" id="st-cost" style="font-size:17px;">$0</div><div class="ss up" id="st-cost-s">—</div></div>
           <div class="sc"><div class="sl">Total FBE (Full Boxes)</div><div class="sv" id="st-fbe">0</div><div class="ss neu" id="st-fbe-s">cajas equivalentes</div></div>
         </div>
+
         <div class="alert-card" id="rate-alert-card"><div class="alert-title">⚠ Diferencias de Tarifa — la tarifa real difiere de la esperada</div><div id="rate-alert-list"></div></div>
-        <div id="urgent-panel" style="display:none;background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
-          <div style="font-size:13px;font-weight:800;color:#991B1B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">🚨 Requiere tu atención</div>
-          <div id="urgent-list" style="display:flex;flex-direction:column;gap:7px;"></div>
+
+        <!-- Vuelos de hoy con barra de progreso -->
+        <div id="today-panel" style="display:none;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:800;color:var(--green);display:flex;align-items:center;gap:7px;">📅 Seguimiento en vivo</div>
+            <span id="today-count" style="font-size:11px;color:var(--t3);">toca un vuelo para ver detalle</span>
+          </div>
+          <div id="today-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
-        <div class="card" style="margin-bottom:14px;">
+
+        <!-- Gráficos operativos del día -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="ch"><span class="ct">📊 Panorama de hoy</span><span style="font-size:10px;color:var(--t3);">Estado operativo en vivo</span></div>
+          <div style="padding:14px 16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Estado de la flota</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">dónde está cada envío ahora</div>
+                <div style="height:150px;position:relative;"><canvas id="chart-fleet"></canvas></div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Cadena de frío hoy</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">temperatura vs. rango seguro</div>
+                <div style="height:150px;position:relative;"><canvas id="chart-coldchain"></canvas></div>
+                <div id="coldchain-empty" style="display:none;font-size:10px;color:var(--t3);text-align:center;padding:30px 10px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Envíos que necesitan seguimiento -->
+        <div class="card" style="margin-bottom:16px;">
           <div class="ch"><span class="ct">⚠️ Envíos que necesitan seguimiento</span><span style="font-size:10px;color:var(--t3);">Ordenados del más problemático</span></div>
           <div style="padding:12px 16px;" id="dash-problems"></div>
         </div>
+
+        <!-- Decisiones rápidas -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="card" style="margin:0;">
+            <div style="padding:14px 16px;">
+              <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:4px;">💡 Decisión rápida</div>
+              <div style="font-size:12px;color:var(--t3);line-height:1.5;margin-bottom:10px;">¿Con qué carguera conviene tu próximo envío?</div>
+              <button class="btn sm" style="width:100%;" onclick="go('intel')">Ver Inteligencia →</button>
+            </div>
+          </div>
+          <div class="card" style="margin:0;">
+            <div style="padding:14px 16px;">
+              <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:4px;">💬 Pregunta a tus datos</div>
+              <div style="font-size:12px;color:var(--t3);line-height:1.5;margin-bottom:10px;">Consulta en lenguaje natural con la IA.</div>
+              <button class="btn sm" style="width:100%;" onclick="go('assistant')">Abrir asistente →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Búsqueda IA Groq -->
         <div class="card">
           <div class="ch"><span class="ct">Búsqueda IA — Groq</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
           <div style="padding:12px 15px;display:flex;flex-direction:column;gap:9px;">
@@ -436,13 +492,6 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             </div>
             <div id="ai-result" class="ai-bubble">Pregúntame sobre tus vuelos, agencias, guías AWB, costos o estado de carga.</div>
           </div>
-        </div>
-        <div class="card">
-          <div class="ch">
-            <span class="ct">Vuelos Recientes</span>
-            <div class="ca"><div style="display:flex;gap:4px;"><span class="ftab active" onclick="dashF(this,'all')">Todos</span><span class="ftab" onclick="dashF(this,'transit')">En tránsito</span><span class="ftab" onclick="dashF(this,'pending')">Pendiente</span><span class="ftab" onclick="dashF(this,'delivered')">Entregado</span></div><button class="btn xs" onclick="resetColOrder('tbl-dash')" title="Restablecer el orden original de las columnas">↺ Columnas</button></div>
-          </div>
-          <div class="tw"><table id="tbl-dash"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Ruta</th><th>Agencia</th><th>Cajas</th><th>Costo Total</th><th>Creado Por</th><th>Live</th><th>Arribo Real</th><th>Estado</th><th>Archivos</th><th></th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -506,6 +555,31 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="card" style="margin-bottom:14px;">
           <div class="ch"><span class="ct">🏆 Desempeño por Aerolínea</span><span style="font-size:10px;color:var(--t3);">Precio vs. confiabilidad</span></div>
           <div style="padding:14px 16px;" id="intel-scorecard"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="ch"><span class="ct">📊 Volumen por Puerto de Origen</span><span style="font-size:10px;color:var(--t3);">Cuánta carga mueves y desde dónde</span></div>
+          <div style="padding:14px 16px;">
+            <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Tu volumen es tu palanca de negociación: quien más carga mueve, mejores tarifas puede pedir. Aquí ves cuántas cajas y FBE sale de cada puerto.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Cajas por puerto</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">total de piezas enviadas</div>
+                <div style="height:150px;position:relative;"><canvas id="chart-boxes-port"></canvas></div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">FBE por puerto</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">cajas equivalentes (full box)</div>
+                <div style="height:150px;position:relative;"><canvas id="chart-fbe-port"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Volumen mensual por puerto</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">cajas apiladas — ve de dónde crece tu carga</div>
+              <div style="height:180px;position:relative;"><canvas id="chart-vol-monthly"></canvas></div>
+            </div>
+            <div id="vol-empty" style="display:none;font-size:11px;color:var(--t3);text-align:center;padding:20px;"></div>
+          </div>
         </div>
 
         <div class="card" style="margin-bottom:14px;">
@@ -3071,6 +3145,7 @@ async function prepNegotiation() {
 
 function renderIntel() {
   renderScorecard();
+  renderVolumeCharts();
   renderVolFactor();
   renderCostCompare();
   renderSimulator();
@@ -3078,6 +3153,80 @@ function renderIntel() {
   renderTrendChips();
   renderTrendChart();
 }
+
+// ── GRÁFICOS DE VOLUMEN POR PUERTO (cajas, FBE, mensual apilado) ──
+var _volCharts = { boxes:null, fbe:null, monthly:null };
+function renderVolumeCharts(){
+  if (typeof Chart === 'undefined') return;
+  var empty = document.getElementById('vol-empty');
+  var byPort = {};
+  DB.flights.forEach(function(f){
+    var p = (f.origin||'').toUpperCase().trim();
+    if (!p) return;
+    if (!byPort[p]) byPort[p] = { boxes:0, fbe:0 };
+    byPort[p].boxes += parseInt(f.bsent)||parseInt(f.boxes_conf)||0;
+    byPort[p].fbe += parseFloat(f.fbe)||0;
+  });
+  var ports = Object.keys(byPort).sort(function(a,b){ return byPort[b].boxes - byPort[a].boxes; });
+
+  ['boxes','fbe','monthly'].forEach(function(k){ if(_volCharts[k]){ _volCharts[k].destroy(); _volCharts[k]=null; } });
+
+  if (!ports.length){
+    if(empty){ empty.style.display='block'; empty.textContent='Registra vuelos con puerto de origen y cajas para ver el volumen.'; }
+    return;
+  }
+  if(empty) empty.style.display='none';
+
+  var PORT_COLORS = { UIO:'#1B7A3E', MED:'#2563EB', MDE:'#2563EB', BOG:'#D97706', GYE:'#7C3AED' };
+  function colorFor(p){ return PORT_COLORS[p] || '#6B7280'; }
+  var txt = '#6B7280', grid = 'rgba(0,0,0,0.06)';
+
+  _volCharts.boxes = new Chart(document.getElementById('chart-boxes-port').getContext('2d'), {
+    type:'bar',
+    data:{ labels:ports, datasets:[{ data:ports.map(function(p){return byPort[p].boxes;}),
+      backgroundColor:ports.map(colorFor), borderRadius:6, barThickness:40 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString('es-EC')+' cajas';}}}},
+      scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:txt}}, y:{grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
+  });
+
+  _volCharts.fbe = new Chart(document.getElementById('chart-fbe-port').getContext('2d'), {
+    type:'bar',
+    data:{ labels:ports, datasets:[{ data:ports.map(function(p){return +byPort[p].fbe.toFixed(1);}),
+      backgroundColor:ports.map(colorFor), borderRadius:6, barThickness:40 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString('es-EC')+' FBE';}}}},
+      scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:txt}}, y:{grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
+  });
+
+  var byMonth = {};
+  DB.flights.forEach(function(f){
+    var p = (f.origin||'').toUpperCase().trim();
+    if (!p || !f.etd) return;
+    var d = new Date(f.etd); if (isNaN(d)) return;
+    var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if (!byMonth[key]) byMonth[key] = {};
+    byMonth[key][p] = (byMonth[key][p]||0) + (parseInt(f.bsent)||parseInt(f.boxes_conf)||0);
+  });
+  var months = Object.keys(byMonth).sort();
+  var monthLabels = months.map(function(m){
+    var parts = m.split('-'); var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return mn[parseInt(parts[1])-1]+' '+parts[0].slice(2);
+  });
+  var datasets = ports.map(function(p){
+    return { label:p, data:months.map(function(m){ return byMonth[m][p]||0; }),
+      backgroundColor:colorFor(p), borderRadius:3, stack:'vol' };
+  });
+  _volCharts.monthly = new Chart(document.getElementById('chart-vol-monthly').getContext('2d'), {
+    type:'bar',
+    data:{ labels:monthLabels, datasets:datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom',labels:{font:{size:11},color:txt,boxWidth:10,padding:10}} },
+      scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:txt}},
+               y:{stacked:true,grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
+  });
+}
+
 
 // Llena el selector de "qué ver" en el gráfico de tendencia: cada ruta y cada carguera
 // Chips de selección múltiple: rutas y cargueras para comparar en el gráfico
@@ -4688,6 +4837,10 @@ function go(s) {
   var cn=document.getElementById('nav-'+s); if(cn)cn.classList.add('active');
   var titles={dashboard:'Dashboard',flights:'Vuelos',agencies:'Agencias de Carga',reports:'Reportes',intel:'Centro de Inteligencia',calendar:'Calendario de Vuelos',audit:'Auditoría',assistant:'Asistente IA',notifications:'Notificaciones',settings:'Configuración'};
   document.getElementById('pg-title').textContent=titles[s]||s;
+  // El buscador solo tiene sentido en Vuelos — se oculta en las demás pantallas
+  var srch=document.querySelector('.srch');
+  if(srch) srch.style.display = (s==='flights') ? '' : 'none';
+  closeSearchResults();
   renderScreen(s);
 }
 function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
@@ -5033,6 +5186,8 @@ function renderDash(){
   var sent=fl.reduce(function(s,f){return s+(parseInt(f.bsent)||0);},0), conf=fl.reduce(function(s,f){return s+(parseInt(f.bconf)||0);},0);
   var miss=fl.reduce(function(s,f){var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);return s+(d<0?Math.abs(d):0);},0);
   var rateAlerts=fl.filter(function(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;return e>0&&a>0&&Math.abs(a-e)>0.001;});
+  // Saludo según la hora + resumen del día
+  renderGreeting();
   // Animar los números para que "suban" — da sensación dinámica
   animateCount('st-fl', fl.length);
   document.getElementById('st-fl-s').textContent=fl.length>0?fl.length+' total':'Sin vuelos aún';
@@ -5047,21 +5202,100 @@ function renderDash(){
   if(document.getElementById('st-fbe')) animateCount('st-fbe', totalFbe, '', 2);
   renderUrgent();
   renderToday();
-  initDragCols('tbl-dash');
   var alertCard=document.getElementById('rate-alert-card'), alertList=document.getElementById('rate-alert-list');
   if(rateAlerts.length>0){alertCard.classList.add('show');alertList.innerHTML=rateAlerts.map(function(f){return'<div class="alert-item">✈ '+esc(f.num)+' ('+esc(f.origin)+'→'+esc(f.dest)+'): Tarifa real $'+parseFloat(f.rate).toFixed(3)+'/kg vs Esperada $'+parseFloat(f.rateExp).toFixed(3)+'/kg — Dif: $'+(parseFloat(f.rate)-parseFloat(f.rateExp)).toFixed(3)+'</div>';}).join('');}
   else alertCard.classList.remove('show');
   var ab=document.getElementById('badge-alert'); ab.style.display=rateAlerts.length>0?'':'none'; ab.textContent=rateAlerts.length;
-  var filtered=dashFlt==='all'?fl:fl.filter(function(f){return f.status===dashFlt;});
-  var tb=document.getElementById('dash-tbody'); tb.innerHTML='';
-  if(!filtered.length){tb.innerHTML=erow(13,'Sin vuelos aún — clic en + Nuevo Envío para agregar.');return;}
-  filtered.slice(0,12).forEach(function(f){
-    var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'<span style="color:var(--t3);font-size:10px;">—</span>';
-    var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
-    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'→'+esc(f.dest)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bconf+'/'+f.bsent+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+( f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+arrivalCell(f)+rateDiff(f)+'</td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+pod+'</td><td>'+viewBtn(f.id)+'</td>';
-    tb.appendChild(tr);
+  renderDashCharts();
+}
+
+// Saludo según hora del día + resumen operativo
+function renderGreeting(){
+  var g = document.getElementById('dash-greet');
+  var s = document.getElementById('dash-daysummary');
+  if (!g) return;
+  var h = new Date().getHours();
+  var saludo = h<12 ? 'Buenos días' : (h<19 ? 'Buenas tardes' : 'Buenas noches');
+  var nombre = (currentUser && (currentUser.name||currentUser.username)) ? (currentUser.name||currentUser.username).split(' ')[0].split('/')[0] : '';
+  g.textContent = saludo + (nombre ? ', ' + nombre : '');
+  // Resumen: vuelos de hoy + alertas
+  var today = new Date(); today.setHours(0,0,0,0);
+  var tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  var hoyN = DB.flights.filter(function(f){ var d=f.etd?new Date(f.etd):(f.eta?new Date(f.eta):null); return d&&!isNaN(d)&&d>=today&&d<tomorrow; }).length;
+  var alertasN = DB.flights.filter(function(f){
+    return (!f.tempAck && typeof tempViolations==='function' && tempViolations(f).length)
+      || (f.reprogs && f.reprogs.length && !f.reprogAck);
+  }).length;
+  var fecha = new Date().toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'short'});
+  var partes = [fecha];
+  partes.push(hoyN>0 ? hoyN+' vuelo'+(hoyN>1?'s':'')+' hoy' : 'sin vuelos hoy');
+  if (alertasN>0) partes.push(alertasN+' necesita'+(alertasN>1?'n':'')+' acción');
+  s.textContent = partes.join(' · ');
+}
+
+// Gráficos operativos del Dashboard: estado de la flota + cadena de frío de hoy
+var _dashCharts = { fleet:null, cold:null };
+function renderDashCharts(){
+  if (typeof Chart === 'undefined') return;
+  // ── Estado de la flota (dona) ──
+  var counts = { transit:0, pending:0, delivered:0, delayed:0 };
+  DB.flights.forEach(function(f){
+    var s = f.status||'pending';
+    if (s==='delivered') counts.delivered++;
+    else if (s==='delayed') counts.delayed++;
+    else if (s==='transit') counts.transit++;
+    else counts.pending++;
   });
-  applyColOrder('tbl-dash');
+  var fleetData=[], fleetLabels=[], fleetColors=[];
+  if(counts.transit){fleetLabels.push('En ruta');fleetData.push(counts.transit);fleetColors.push('#2563EB');}
+  if(counts.pending){fleetLabels.push('Programado');fleetData.push(counts.pending);fleetColors.push('#D97706');}
+  if(counts.delivered){fleetLabels.push('Arribado');fleetData.push(counts.delivered);fleetColors.push('#1B7A3E');}
+  if(counts.delayed){fleetLabels.push('Demorado');fleetData.push(counts.delayed);fleetColors.push('#DC2626');}
+  var txt='#6B7280';
+  if(_dashCharts.fleet){_dashCharts.fleet.destroy();_dashCharts.fleet=null;}
+  var fleetCanvas=document.getElementById('chart-fleet');
+  if(fleetCanvas && fleetData.length){
+    _dashCharts.fleet=new Chart(fleetCanvas.getContext('2d'),{
+      type:'doughnut',
+      data:{labels:fleetLabels,datasets:[{data:fleetData,backgroundColor:fleetColors,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+        plugins:{legend:{position:'right',labels:{font:{size:11},color:txt,boxWidth:10,padding:8}}}}
+    });
+  }
+  // ── Cadena de frío de hoy (barras con alerta) ──
+  var today=new Date();today.setHours(0,0,0,0);
+  var tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
+  var min=CFG.tempMin!==undefined?CFG.tempMin:1, max=CFG.tempMax!==undefined?CFG.tempMax:8;
+  var coldFlights=DB.flights.filter(function(f){
+    var d=f.etd?new Date(f.etd):null;
+    var isToday=d&&!isNaN(d)&&d>=today&&d<tomorrow;
+    var hasTemp=(f.tempOrig!==''&&f.tempOrig!=null)||(f.tempMia!==''&&f.tempMia!=null);
+    return isToday&&hasTemp;
+  });
+  var coldEmpty=document.getElementById('coldchain-empty');
+  var coldCanvas=document.getElementById('chart-coldchain');
+  if(_dashCharts.cold){_dashCharts.cold.destroy();_dashCharts.cold=null;}
+  if(!coldFlights.length){
+    if(coldCanvas)coldCanvas.style.display='none';
+    if(coldEmpty){coldEmpty.style.display='block';coldEmpty.textContent='Sin registros de temperatura en los vuelos de hoy.';}
+    return;
+  }
+  if(coldCanvas)coldCanvas.style.display='block';
+  if(coldEmpty)coldEmpty.style.display='none';
+  var labels=coldFlights.map(function(f){return (f.awb||f.num||'—').slice(-7);});
+  // Usa la temperatura de Miami si existe, si no la de origen — en °C
+  var temps=coldFlights.map(function(f){
+    var c=tempInC(f.tempMia!==''&&f.tempMia!=null?f.tempMia:f.tempOrig, (f.tempMia!==''&&f.tempMia!=null?f.tempMiaUnit:f.tempOrigUnit)||'C');
+    return c!=null?+c.toFixed(1):null;
+  });
+  var colors=temps.map(function(t){return (t!=null&&(t<min||t>max))?'#DC2626':'#1B7A3E';});
+  _dashCharts.cold=new Chart(coldCanvas.getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:temps,backgroundColor:colors,borderRadius:4,barThickness:24}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+'°C (rango '+min+'–'+max+'°C)';}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:txt}},y:{grid:{color:'rgba(0,0,0,0.06)'},ticks:{font:{size:10},color:txt},suggestedMin:0,suggestedMax:Math.max(max+2,12)}}}
+  });
 }
 
 function renderFlights(){
