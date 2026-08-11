@@ -177,6 +177,16 @@ tbody tr:hover{background:var(--lightgreen)!important;}
 .tw::-webkit-scrollbar-thumb{background:#B7D9C4;border-radius:5px;border:2px solid #F0F7F3;}
 .tw::-webkit-scrollbar-thumb:hover{background:var(--green2);}
 .tw{scrollbar-width:thin;scrollbar-color:#B7D9C4 #F0F7F3;}
+/* Variante para tablas muy anchas/largas (Vuelos): alto fijo + scroll interno,
+   así la barra horizontal queda siempre visible sin bajar al final de la tabla */
+.tw-tall{overflow:auto;max-height:calc(100vh - 220px);max-width:100%;min-width:0;-webkit-overflow-scrolling:touch;}
+.tw-tall::-webkit-scrollbar{height:12px;width:12px;-webkit-appearance:none;}
+.tw-tall::-webkit-scrollbar-track{background:#F0F7F3;border-radius:6px;}
+.tw-tall::-webkit-scrollbar-thumb{background:#B7D9C4;border-radius:6px;border:2px solid #F0F7F3;}
+.tw-tall::-webkit-scrollbar-thumb:hover{background:var(--green2);}
+.tw-tall{scrollbar-width:thin;scrollbar-color:#B7D9C4 #F0F7F3;}
+/* Encabezado pegajoso: se queda arriba al hacer scroll vertical dentro de la tabla */
+.tw-tall thead th{position:sticky;top:0;z-index:2;background:var(--surf);box-shadow:0 1px 0 var(--border);}
 table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px;}
 th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:#F6FBF8;border-bottom:1px solid var(--border);white-space:nowrap;cursor:grab;user-select:none;position:relative;}
 th[draggable="true"]:active{cursor:grabbing;}
@@ -511,7 +521,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#DC2626;"></span>ETA vencida sin arribo</span>
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#22A351;"></span>Arribó ✓</span>
           </div>
-          <div class="tw"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>FBE</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Arribo Real</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
+          <div class="tw tw-tall"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>FBE</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Arribo Real</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1855,18 +1865,22 @@ function extractAWBFields(text) {
   }
 
   // ── ORIGEN ── prioridad clara, usando la tabla de aeropuertos centralizada
-  // PRIORIDAD 1: la ciudad/aeropuerto justo después del rótulo "Airport of Departure"
-  //  (evita el falso positivo con la DIRECCIÓN del shipper: Apollo tiene oficina en
-  //   el aeropuerto José María Córdova pero puede embarcar desde BOGOTÁ)
-  if (!result.origin) {
-    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,80}?(MARISCAL\s*SUCRE|EL\s*DORADO|JOS[EÉ]\s*MAR[IÍ]A\s*C[OÓ]RDOVA|JOS[EÉ]\s*JOAQU[IÍ]N\s*DE\s*OLMEDO|QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|GUAYAQUIL)/i);
-    if (lblOrigin) result.origin = airportToCode(lblOrigin[1]);
-  }
-  // PRIORIDAD 2: el prefijo del AWB trae el código IATA del aeropuerto de origen
-  //  ("985 MDE 63760550" o pegado "985BOG63838622")
+  // PRIORIDAD 1: el prefijo del AWB trae el código IATA del aeropuerto de origen.
+  //  Es lo más confiable: va pegado al número de guía ("992 UIO 01601375" o "985BOG63838622").
   if (!result.origin) {
     var awbOrigin = clean.match(/\b\d{3}\s*([A-Z]{3})\s*\d{7,8}\b/);
-    if (awbOrigin) result.origin = awbOrigin[1].toUpperCase();
+    if (awbOrigin) {
+      var code = awbOrigin[1].toUpperCase();
+      // Validar que sea un aeropuerto conocido (evita capturar 3 letras al azar)
+      if (['UIO','BOG','MDE','GYE','MED'].indexOf(code) >= 0) result.origin = code;
+    }
+  }
+  // PRIORIDAD 2: la ciudad/aeropuerto tras el rótulo "Airport of Departure"
+  //  (rango amplio: el texto del PDF intercala otros rótulos entre la etiqueta y el valor,
+  //   a veces 90-120 caracteres de por medio)
+  if (!result.origin) {
+    var lblOrigin = clean.match(/Airport\s*of\s*Departure[\s\S]{0,160}?(MARISCAL\s*SUCRE|EL\s*DORADO|JOS[EÉ]\s*MAR[IÍ]A\s*C[OÓ]RDOVA|JOS[EÉ]\s*JOAQU[IÍ]N\s*DE\s*OLMEDO|QUITO|BOGOT[AÁ]|MEDELL[IÍ]N|RIONEGRO|GUAYAQUIL)/i);
+    if (lblOrigin) result.origin = airportToCode(lblOrigin[1]);
   }
   // PRIORIDAD 3: buscar cualquier nombre de aeropuerto conocido en todo el texto
   if (!result.origin) {
