@@ -385,8 +385,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
   <div class="main">
     <div class="topbar">
       <span class="tb-title" id="pg-title">Dashboard</span>
+      <div style="flex:1;min-width:20px;"></div>
       <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
-      <button class="tb-btn" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
+      <button class="tb-btn" style="margin-left:auto;" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema claro/oscuro"><span id="theme-icon">🌙</span></button>
       <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
     </div>
@@ -561,8 +562,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="card" style="margin-bottom:14px;">
           <div class="ch"><span class="ct">📊 Volumen por Puerto de Origen</span><span style="font-size:10px;color:var(--t3);">Cuánta carga mueves y desde dónde</span></div>
           <div style="padding:14px 16px;">
-            <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Tu volumen es tu palanca de negociación: quien más carga mueve, mejores tarifas puede pedir. Aquí ves cuántas cajas y FBE sale de cada puerto.</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Tu volumen es tu palanca de negociación: quien más carga mueve, mejores tarifas puede pedir. Aquí ves cuántas cajas, FBE y kilos salen de cada puerto.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Cajas por puerto</div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">total de piezas enviadas</div>
@@ -572,6 +573,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">FBE por puerto</div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">cajas equivalentes (full box)</div>
                 <div style="height:150px;position:relative;"><canvas id="chart-fbe-port"></canvas></div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Kg por puerto</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">peso bruto total (kg)</div>
+                <div style="height:150px;position:relative;"><canvas id="chart-kg-port"></canvas></div>
               </div>
             </div>
             <div>
@@ -708,9 +714,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 <button class="btn xs" onclick="showAIPayload()" style="width:100%;margin-top:8px;">👁 Ver exactamente qué se enviaría</button>
               </div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">✈ Rastreo REAL de arribos (AeroDataBox)</div>
-                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Confirma automáticamente si tus guías llegaron a Miami — sin revisar portal por portal. Consíguela en RapidAPI → busca "AeroDataBox" → suscríbete (plan Basic gratuito con límite, o desde $5/mes). <a href="https://rapidapi.com/aedbx-aedbx/api/aerodatabox" target="_blank" style="color:var(--green);">Abrir AeroDataBox ↗</a></div>
-                <div class="field"><label>AeroDataBox API Key (RapidAPI)</label><input id="cfg-aero" type="password" placeholder="Tu x-rapidapi-key"></div>
+                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">✈ Rastreo REAL de arribos (AviationStack)</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Confirma automáticamente si tus guías llegaron a Miami — sin revisar portal por portal. Consíguela gratis en aviationstack.com → crea tu cuenta → copia tu "API Access Key" (plan gratuito: 100 consultas/mes). <a href="https://aviationstack.com/" target="_blank" style="color:var(--green);">Abrir AviationStack ↗</a><br><span style="color:#B45309;">⚠️ El plan gratuito usa http; si abres la app en https puede que el navegador bloquee el rastreo. Para uso continuo, considera el plan de pago (da https) o pruébalo primero.</span></div>
+                <div class="field"><label>AviationStack API Access Key</label><input id="cfg-aviation" type="password" placeholder="Tu access_key de aviationstack.com"></div>
                 <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:6px;"><input type="checkbox" id="cfg-autoscan" style="width:15px;height:15px;accent-color:var(--green);"> Rastrear arribos automáticamente</label>
                 <div class="field" style="margin-top:8px;"><label>Frecuencia del rastreo automático</label><select id="cfg-scan-hours" onchange="onScanFreqChange()">
                   <option value="1">Cada 1 hora (más preciso, más consumo)</option>
@@ -1158,7 +1164,7 @@ var dashFlt = 'all';
 var flsFlt = 'all';
 var chatHist = [];
 var DB = { flights: [], agencies: [] };
-var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light', highSeasons: [{from:120,to:214,label:'San Valentín'},{from:415,to:511,label:'Día de la Madre'}], tempMin: 1, tempMax: 8 };
+var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', aviationKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light', highSeasons: [{from:120,to:214,label:'San Valentín'},{from:415,to:511,label:'Día de la Madre'}], tempMin: 1, tempMax: 8 };
 var pendingPOD = null; // {name, data, type}
 
 function loadLocalCFG() {
@@ -1233,11 +1239,11 @@ async function initApp() {
   if (!window._arrivalInterval) {
     var scanMs = (parseInt(CFG.scanHours) || 2) * 60 * 60000;
     window._arrivalInterval = setInterval(function(){
-      if (CFG.aeroKey && CFG.autoScanArrivals !== false) scanArrivals(true);
+      if (CFG.aviationKey && CFG.autoScanArrivals !== false) scanArrivals(true);
     }, scanMs);
   }
   // Primer escaneo al abrir (tras 5s, si aplica)
-  if (CFG.aeroKey && CFG.autoScanArrivals !== false) {
+  if (CFG.aviationKey && CFG.autoScanArrivals !== false) {
     setTimeout(function(){ scanArrivals(true); }, 5000);
   }
 }
@@ -1323,9 +1329,9 @@ async function sendEmail(subject, message, flightNum) {
 
 async function sendTestEmail() {
   // Guardar primero la config actual para usar los valores del formulario
-  CFG.aeroKey=gv('cfg-aero'); var asc2=document.getElementById('cfg-autoscan'); CFG.autoScanArrivals=asc2?asc2.checked:true;
+  CFG.aviationKey=gv('cfg-aviation'); var asc2=document.getElementById('cfg-autoscan'); CFG.autoScanArrivals=asc2?asc2.checked:true;
   var newHours=parseInt(gv('cfg-scan-hours'))||2;
-  if(newHours!==CFG.scanHours){CFG.scanHours=newHours; if(window._arrivalInterval){clearInterval(window._arrivalInterval); window._arrivalInterval=setInterval(function(){if(CFG.aeroKey&&CFG.autoScanArrivals!==false)scanArrivals(true);}, newHours*60*60000);}}
+  if(newHours!==CFG.scanHours){CFG.scanHours=newHours; if(window._arrivalInterval){clearInterval(window._arrivalInterval); window._arrivalInterval=setInterval(function(){if(CFG.aviationKey&&CFG.autoScanArrivals!==false)scanArrivals(true);}, newHours*60*60000);}}
   CFG.emailServiceId=gv('cfg-email-service'); CFG.emailTemplateId=gv('cfg-email-template');
   CFG.emailPublicKey=gv('cfg-email-key'); CFG.notifyEmails=gv('cfg-notify-emails');
   if (!emailConfigured()) { toast('Completa los 3 datos de EmailJS y al menos un correo.', 'err'); return; }
@@ -1766,6 +1772,7 @@ function normalizeAirline(name) {
   var n = name.toUpperCase().trim();
   if (/LAN\s*CARGO|LATAM|LINEA\s*AEREA\s*CARGUERA/.test(n)) return 'LAN CARGO';
   if (/ATLAS/.test(n)) return 'ATLAS';
+  if (/DHL/.test(n)) return 'DHL AERO EXPRESO';
   if (/AVIANCA|TAMPA/.test(n)) return 'AVIANCA';
   if (/AMERICAN/.test(n)) return 'AMERICAN AIRLINES';
   if (/\bCOPA\b/.test(n)) return 'COPA';
@@ -1841,7 +1848,7 @@ function extractAWBFields(text) {
   clean = clean.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
 
   // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
-  var airlineMatch = clean.match(/\b(ATLAS\s*CARGO|ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+  var airlineMatch = clean.match(/\b(DHL\s*AERO\s*EXPRESO|ATLAS\s*CARGO|ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
     || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
   if (airlineMatch) {
     result.airline = normalizeAirline(airlineMatch[1].trim());
@@ -1895,6 +1902,7 @@ function extractAWBFields(text) {
     result.departureDateFull = flightFullDate[3]; // fecha ISO completa: no hay que deducir el mes
   }
   var flightMatch = clean.match(/\b([A-Z]{2})\s*(\d{3,4})\s*[-\/]\s*(\d{1,2})\b/)   // XL0316/29 (2 letras + num + dia)
+    || clean.match(/\b([A-Z]\d)\s*(\d{3,4})\s*[-\/]\s*(\d{1,2})\b/)   // W8 1510-7 (letra+dígito + num + dia)
     || clean.match(/Flight[\/\s]*Date\s+(\d[A-Z])\s*(\d{3,5})\s*[-\/]\s*(\d{1,2})/i)   // 5Y 8620-8 o 5Y8620/8 (díg+letra + núm + día)
     || clean.match(/Flight[\/\s]*Date\s+([A-Z])\s*(\d{4,6})\s*[-\/]\s*(\d{1,2})/i)                   // M 38506/02 o M38506-02 (letra + núm + día)
     || clean.match(/\b(\d[A-Z])\s*(\d{3,5})\s*[-\/]\s*(\d{1,2})\b/)                                   // 5Y 8620-8 sin etiqueta (díg+letra)
@@ -1998,7 +2006,7 @@ function extractAWBFields(text) {
     /FULL\s*BOX(?:ES)?\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
     /CAJAS?\s*(?:FULL|COMPLETAS?)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
     /FULL\s*[:\-]\s*(\d+(?:[.,]\d+)?)/i,
-    /\bFB\b\s*[:\-]\s*(\d+(?:[.,]\d+)?)/i,
+    /\bFB\b\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
     /(\d+(?:[.,]\d+)?)\s*FULL\s*BOX(?:ES)?/i,
     /(\d+(?:[.,]\d+)?)\s*CAJAS?\s*(?:FULL|COMPLETAS?)/i
   ];
@@ -2149,6 +2157,19 @@ function extractAWBFields(text) {
       result.total_prepaid = result.total_prepaid || result.total_collect;
       result.total_collect = 0;
     }
+  }
+
+  // Layout DHL/K+N: los recargos vienen como "MYC US$ 0.200 = 216.200 MCC US$ ... = 2.000 CCC ... = 52.000"
+  // Si no se detectó "other_carrier", sumamos todos esos recargos con formato "= NNN"
+  if (result.other_carrier === undefined) {
+    var surchargeSum = 0, foundSurcharge = false;
+    var surRe = /(?:MYC|MCC|CCC|MAA|ESC|SCC|FSC|SSC|AWB|AWA)\s*(?:US\$|USD|\$)?\s*[\d.]+\s*=\s*([\d.]+)/gi;
+    var sm;
+    while ((sm = surRe.exec(clean)) !== null) {
+      surchargeSum += parseFloat(sm[1]) || 0;
+      foundSurcharge = true;
+    }
+    if (foundSurcharge && surchargeSum > 0) result.other_carrier = parseFloat(surchargeSum.toFixed(2));
   }
 
   // Red de seguridad 0: detectar si Prepaid y Collect salieron intercambiados.
@@ -2383,128 +2404,106 @@ function autoUpdateAllStatuses() {
   if (changed) { persistDB(); renderScreen(screen); updateBadges(); }
 }
 
-// ══ AERODATABOX — detección REAL de arribos (vía RapidAPI) ══
+// ══ AVIATIONSTACK — detección REAL de arribos ══
 // A diferencia del cálculo por horario, esto consulta el estado real del vuelo.
-// Endpoint por número de vuelo y fecha: /flights/number/{num}/{date}
-// Requiere CFG.aeroKey (RapidAPI key). Plan Basic ~$0/mes con límite, o desde $5/mes.
-// Mapa IATA → ICAO para aerolíneas de carga (AeroDataBox suele indexar por ICAO)
-var AIRLINE_ICAO = {
-  '5Y':'GTI',  // Atlas Air
-  'UC':'LCO',  // LAN / LATAM Cargo Chile
-  'XL':'LNE',  // LATAM Airlines Ecuador (opera los vuelos de Apollo Ecuador, ej. XL0316)
-  'QT':'TPA',  // Avianca Cargo (ex Tampa)
-  'AV':'AVA'   // Avianca
-};
+// Endpoint: /v1/flights?access_key=KEY&flight_iata=XXXX
+// Acepta el código IATA directamente (no necesita conversión a ICAO — ventaja sobre AeroDataBox).
+// Requiere CFG.aviationKey. Plan gratuito: 100 consultas/mes.
 
-// Consulta AeroDataBox por número de vuelo y fecha.
-// Prueba primero el código tal cual (IATA); si viene vacío, reintenta con ICAO.
+// Consulta AviationStack por número de vuelo IATA.
+// Devuelve { flights:[...] } normalizado, o { error:'...' }.
 async function fetchAeroStatus(flightNum, dateISO) {
-  if (!CFG.aeroKey) return { error: 'nokey' };
+  if (!CFG.aviationKey) return { error: 'nokey' };
   var raw = (flightNum||'').replace(/\s/g,'').toUpperCase();
   raw = raw.replace(/[\/]\d{1,2}$/,'');                // quita "/29" (día tras barra)
-  raw = raw.replace(/^([0-9A-Z]{2})-(\d+)$/, '$1$2');  // "5Y-8626" → "5Y8626" (guion interno)
-  raw = raw.replace(/[-]\d{1,2}$/,'');                  // quita "-8" (día tras guion, si quedó)
+  raw = raw.replace(/^([0-9A-Z]{2})-(\d+)$/, '$1$2');  // "5Y-8626" → "5Y8626"
+  raw = raw.replace(/[-]\d{1,2}$/,'');                  // quita "-8" (día tras guion)
   if (!raw) return { error: 'nonum' };
-  var date = (dateISO || new Date().toISOString()).slice(0,10);
 
-  // Genera los códigos a probar: el original y su equivalente ICAO
-  // El código IATA de aerolínea puede ser 2 caracteres alfanuméricos (ej. "5Y", "XL", "UC")
+  // AviationStack usa flight_iata. Probamos el código tal cual y sin ceros a la izquierda.
   var candidates = [raw];
   var m = raw.match(/^([0-9A-Z]{2})(\d+)$/);
   if (m) {
-    var prefix = m[1], number = m[2];
-    var numNoZeros = String(parseInt(number, 10)); // "0212" → "212"
-    // Variante IATA sin ceros a la izquierda (AeroDataBox suele usarla: XL0212 → XL212)
-    if (numNoZeros !== number) candidates.push(prefix + numNoZeros);
-    // Variante(s) con ICAO
-    if (AIRLINE_ICAO[prefix]) {
-      var icao = AIRLINE_ICAO[prefix];
-      if (icao + number !== raw) candidates.push(icao + number);
-      if (numNoZeros !== number) candidates.push(icao + numNoZeros);
-    }
+    var numNoZeros = m[1] + String(parseInt(m[2], 10)); // "W80212" → "W8212"
+    if (numNoZeros !== raw) candidates.push(numNoZeros);
   }
 
-  var lastEmpty = false;
-  var hit429 = false;
+  // El plan gratuito de AviationStack sólo permite http (no https). Como la app suele correr
+  // en https (GitHub Pages), el navegador bloquea "mixed content". Detectamos y avisamos.
+  var proto = (location.protocol === 'https:') ? 'https://' : 'http://';
+  var wantDate = dateISO ? (new Date(dateISO)).toISOString().slice(0,10) : null;
+  var today = new Date().toISOString().slice(0,10);
+
+  var anyEmpty = false;
   for (var i=0; i<candidates.length; i++) {
-    var cleanNum = candidates[i];
-    var url = 'https://aerodatabox.p.rapidapi.com/flights/number/' + encodeURIComponent(cleanNum) + '/' + date
-      + '?withAircraftImage=false&withLocation=false';
-    // Espaciar las llamadas para no disparar el límite de tasa (rate limit) del plan gratuito
-    if (i > 0) await new Promise(function(r){ setTimeout(r, 1100); });
-    var res = null, attempt = 0;
-    while (attempt < 2) {
-      try {
-        res = await fetch(url, {
-          headers: {
-            'x-rapidapi-key': CFG.aeroKey,
-            'x-rapidapi-host': 'aerodatabox.p.rapidapi.com'
-          }
-        });
-      } catch(e) {
-        return { error: 'network' };  // falla real de conexión
-      }
-      // 429 = demasiadas solicitudes por segundo (NO es cuota mensual agotada).
-      // Esperamos y reintentamos una vez antes de rendirnos.
-      if (res.status === 429) {
-        hit429 = true;
-        attempt++;
-        if (attempt < 2) { await new Promise(function(r){ setTimeout(r, 2500); }); continue; }
-        break;
-      }
-      break; // cualquier otro status: salir del reintento
+    var code = candidates[i];
+    // flight_status no se fija: queremos cualquier estado (scheduled/active/landed).
+    var url = proto + 'api.aviationstack.com/v1/flights?access_key=' + encodeURIComponent(CFG.aviationKey)
+      + '&flight_iata=' + encodeURIComponent(code) + '&limit=20';
+    if (i > 0) await new Promise(function(r){ setTimeout(r, 900); });
+    var res;
+    try {
+      res = await fetch(url);
+    } catch(e) {
+      // En https con plan gratuito (http), el navegador bloquea → cae aquí
+      if (location.protocol === 'https:') return { error: 'mixed' };
+      return { error: 'network' };
     }
-    if (res.status === 429) { continue; } // pasar al siguiente candidato (ya reintentado)
-    if (res.status === 401 || res.status === 403) return { error: 'auth' };
-    // 204 = sin contenido, o body vacío: el vuelo no tiene datos con ESE código.
-    // Intentamos el siguiente candidato (p.ej. ICAO) antes de rendirnos.
-    if (res.status === 204) { lastEmpty = true; continue; }
+    if (res.status === 429) return { error: 'ratelimit' };
+    if (res.status === 401) return { error: 'auth' };
     if (!res.ok) return { error: 'http_' + res.status };
     var text = await res.text();
-    if (!text || !text.trim()) { lastEmpty = true; continue; }
-    var data;
-    try { data = JSON.parse(text); }
-    catch(parseErr) { lastEmpty = true; continue; }
-    if (!data || !data.length) { lastEmpty = true; continue; }
-    return { flights: data, usedCode: cleanNum };
+    if (!text || !text.trim()) { anyEmpty = true; continue; }
+    var json;
+    try { json = JSON.parse(text); }
+    catch(e) { anyEmpty = true; continue; }
+    // AviationStack devuelve errores dentro del JSON (no como status HTTP)
+    if (json.error) {
+      var code2 = (json.error.code || json.error.type || '').toString().toLowerCase();
+      if (code2.indexOf('usage_limit')>=0 || code2.indexOf('rate')>=0 || code2.indexOf('quota')>=0) return { error: 'limit' };
+      if (code2.indexOf('access')>=0 || code2.indexOf('invalid_access_key')>=0 || code2.indexOf('key')>=0) return { error: 'auth' };
+      if (code2.indexOf('https')>=0) return { error: 'mixed' };
+      return { error: 'api' };
+    }
+    var data = (json.data || []);
+    if (!data.length) { anyEmpty = true; continue; }
+    // Preferir el vuelo cuya fecha coincida con la buscada; si no, el más reciente.
+    var chosen = data;
+    if (wantDate) {
+      var exact = data.filter(function(fl){ return fl.flight_date === wantDate; });
+      if (exact.length) chosen = exact;
+    }
+    return { flights: chosen, usedCode: code };
   }
-  // Si topamos el límite de tasa (429) y ningún candidato trajo datos, informarlo como tal
-  if (hit429) return { error: 'ratelimit' };
-  // Ningún candidato trajo datos: no es error de red, simplemente no hay info del vuelo
   return { error: 'notfound' };
 }
 
-// Normaliza la respuesta de AeroDataBox a nuestro formato interno
+// Normaliza la respuesta de AviationStack a nuestro formato interno
 function parseAeroFlight(af, expectedDest) {
-  // af.status: Unknown, Expected, EnRoute, Arrived, Departed, Delayed, Canceled, Diverted...
-  var arr = af.arrival || {}, dep = af.departure || {};
-  var statusRaw = (af.status || '').toLowerCase();
+  var dep = af.departure || {}, arr = af.arrival || {};
+  var statusRaw = (af.flight_status || '').toLowerCase(); // scheduled, active, landed, cancelled, incident, diverted
   var out = {
-    statusRaw: af.status || 'Unknown',
-    depAirport: (dep.airport && (dep.airport.iata || dep.airport.icao)) || '',
-    arrAirport: (arr.airport && (arr.airport.iata || arr.airport.icao)) || '',
-    // IMPORTANTE: preferir la hora LOCAL del aeropuerto, no UTC.
-    // AeroDataBox devuelve ambas; mostrar UTC como si fuera local desfasaba las horas
-    // (ej: salida 8:30am Bogotá se mostraba como 1:30pm porque BOG es UTC-5).
-    depScheduled: (dep.scheduledTime && (dep.scheduledTime.local || dep.scheduledTime.utc)) || null,
-    depActual: (dep.actualTime && (dep.actualTime.local || dep.actualTime.utc)) || (dep.revisedTime && (dep.revisedTime.local || dep.revisedTime.utc)) || null,
-    arrScheduled: (arr.scheduledTime && (arr.scheduledTime.local || arr.scheduledTime.utc)) || null,
-    arrActual: (arr.actualTime && (arr.actualTime.local || arr.actualTime.utc)) || null,
-    arrEstimated: (arr.predictedTime && (arr.predictedTime.local || arr.predictedTime.utc)) || (arr.revisedTime && (arr.revisedTime.local || arr.revisedTime.utc)) || null,
+    statusRaw: af.flight_status || 'unknown',
+    depAirport: (dep.iata || dep.icao || '') ,
+    arrAirport: (arr.iata || arr.icao || '') ,
+    depScheduled: dep.scheduled || null,
+    depActual: dep.actual || dep.estimated || null,
+    arrScheduled: arr.scheduled || null,
+    arrActual: arr.actual || null,
+    arrEstimated: arr.estimated || arr.estimated_runway || null,
     arrTerminal: arr.terminal || '',
-    arrivedReal: statusRaw === 'arrived',
-    enRoute: statusRaw === 'enroute' || statusRaw === 'departed',
+    arrivedReal: statusRaw === 'landed',
+    enRoute: statusRaw === 'active',
     arrivedInferred: false,
     inferredArrTime: null
   };
-  if (out.arrActual && !out.arrivedReal) out.arrivedReal = true; // hay hora real de aterrizaje
+  if (arr.actual && !out.arrivedReal) out.arrivedReal = true; // hay hora real de aterrizaje
 
   // ── INFERENCIA DE ARRIBO (clave para carga) ──
-  // Las aerolíneas cargueras suelen registrar el DESPEGUE pero no siempre el aterrizaje,
-  // así que el vuelo queda "Despegó" para siempre (caso real: L71810 aterrizó según
-  // FlightAware pero AeroDataBox nunca lo actualizó). Solución: si despegó y ya pasó
-  // la hora estimada de llegada + margen de 2.5h, se considera ARRIBADO (inferido).
-  if (!out.arrivedReal && (statusRaw === 'enroute' || statusRaw === 'departed')) {
+  // Igual que antes: si el vuelo despegó (active) y ya pasó la hora estimada de llegada
+  // + margen de 2.5h, se considera ARRIBADO (inferido), porque las cargueras a veces
+  // no registran el aterrizaje.
+  if (!out.arrivedReal && statusRaw === 'active') {
     var refArr = out.arrEstimated || out.arrScheduled;
     if (refArr) {
       var hoursPast = (Date.now() - new Date(refArr).getTime()) / 3600000;
@@ -2525,23 +2524,21 @@ function onScanFreqChange() {
   var hours = parseInt(gv('cfg-scan-hours')) || 2;
   var box = document.getElementById('scan-usage');
   if (!box) return;
-  // Cada consulta al endpoint de vuelo (Tier 3) cuesta 6 unidades. Plan Basic gratis = 600 unidades/mes.
-  var UNITS_PER_CALL = 6;
-  var FREE_UNITS = 600;
+  // AviationStack: cada consulta = 1 request. Plan gratuito = 100 requests/mes.
+  var FREE_CALLS = 100;
   var perMonth = DB.flights.length || 0;
   // Cada vuelo se consulta ~(ventana de 13h / frecuencia) veces mientras está por llegar
   var checksPerFlight = Math.max(1, Math.ceil(13 / hours));
   var flightsBase = perMonth > 0 ? perMonth : 77; // 77 = operación típica estimada
   var monthlyCalls = flightsBase * checksPerFlight;
-  var monthlyUnits = monthlyCalls * UNITS_PER_CALL;
-  var pct = Math.round(monthlyUnits / FREE_UNITS * 100);
-  var maxFlightsFree = Math.floor(FREE_UNITS / (checksPerFlight * UNITS_PER_CALL));
-  var color = monthlyUnits > FREE_UNITS ? 'var(--red)' : (monthlyUnits > FREE_UNITS*0.8 ? '#B45309' : 'var(--green)');
-  var msg = '<strong>Estimado con ' + flightsBase + ' vuelos/mes:</strong> ~' + monthlyCalls + ' consultas × 6 = <strong>' + monthlyUnits + ' unidades/mes</strong>';
+  var pct = Math.round(monthlyCalls / FREE_CALLS * 100);
+  var maxFlightsFree = Math.floor(FREE_CALLS / checksPerFlight);
+  var color = monthlyCalls > FREE_CALLS ? 'var(--red)' : (monthlyCalls > FREE_CALLS*0.8 ? '#B45309' : 'var(--green)');
+  var msg = '<strong>Estimado con ' + flightsBase + ' vuelos/mes:</strong> ~<strong>' + monthlyCalls + ' consultas/mes</strong>';
   if (perMonth === 0) msg += ' <span style="color:var(--t3);">(sin vuelos aún; 77 es una operación típica)</span>';
-  msg += '<br>Plan Basic gratuito: <strong>600 unidades/mes</strong> · <strong style="color:'+color+';">' + pct + '% del límite</strong>';
-  if (monthlyUnits > FREE_UNITS) {
-    msg += '<br><span style="color:var(--red);">⚠ Excede el plan gratuito. Con esta frecuencia el gratis alcanza para ~<strong>' + maxFlightsFree + ' vuelos/mes</strong>. Para tu volumen completo, el plan Pro (~$5.35/mes) da margen de sobra.</span>';
+  msg += '<br>Plan gratuito AviationStack: <strong>100 consultas/mes</strong> · <strong style="color:'+color+';">' + pct + '% del límite</strong>';
+  if (monthlyCalls > FREE_CALLS) {
+    msg += '<br><span style="color:var(--red);">⚠ Excede el plan gratuito (100/mes). A esta frecuencia el gratis alcanza para ~<strong>' + maxFlightsFree + ' vuelos/mes</strong>. El gratuito sirve para PROBAR; para uso continuo necesitarás un plan de pago de AviationStack.</span>';
   } else {
     msg += '<br><span style="color:var(--green);">✓ Cabe en el plan gratuito (alcanza para ~' + maxFlightsFree + ' vuelos/mes a esta frecuencia).</span>';
   }
@@ -2550,8 +2547,8 @@ function onScanFreqChange() {
 
 // Estima el consumo mensual de consultas (fin)
 async function scanArrivals(silent) {
-  if (!CFG.aeroKey) {
-    if (!silent) toast('Agrega tu AeroDataBox API Key en Configuración para el rastreo real de arribos.', 'err');
+  if (!CFG.aviationKey) {
+    if (!silent) toast('Agrega tu AviationStack API Key en Configuración para el rastreo real de arribos.', 'err');
     return;
   }
   if (_aeroScanRunning) return;
@@ -2582,7 +2579,7 @@ async function scanArrivals(silent) {
     return;
   }
 
-  if (!silent) toast('Rastreando ' + candidates.length + ' vuelo(s) en AeroDataBox…', 'ok');
+  if (!silent) toast('Rastreando ' + candidates.length + ' vuelo(s) en AviationStack…', 'ok');
   var updated = 0, arrived = 0, limitHit = false;
 
   for (var i = 0; i < candidates.length; i++) {
@@ -2592,7 +2589,7 @@ async function scanArrivals(silent) {
     var result = await fetchAeroStatus(f.num, f.etd);
     if (!result) continue;
     if (result.error === 'limit' || result.error === 'ratelimit') { limitHit = true; break; }
-    if (result.error === 'auth') { if(!silent) toast('API Key de AeroDataBox inválida. Revísala en Configuración.', 'err'); break; }
+    if (result.error === 'auth') { if(!silent) toast('API Key de AviationStack inválida. Revísala en Configuración.', 'err'); break; }
     if (result.error) continue;
 
     // Elegir el vuelo cuyo destino coincida con el nuestro (mismo número puede tener varios tramos)
@@ -2683,9 +2680,9 @@ async function checkLive(num, flightId) {
     + '</div>';
 
   // SEGUNDO: intentar el estado REAL con AeroDataBox (fuente confiable de arribos)
-  if (CFG.aeroKey) {
+  if (CFG.aviationKey) {
     document.getElementById('live-body').innerHTML = autoBox
-      + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Consultando estado real en AeroDataBox…</div>';
+      + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Consultando estado real en AviationStack…</div>';
     var aero = await fetchAeroStatus(num, f && f.etd);
     if (aero && aero.flights) {
       // Elegir el tramo cuyo destino coincida
@@ -2708,22 +2705,28 @@ async function checkLive(num, flightId) {
       }
       return;
     } else if (aero && aero.error === 'auth') {
-      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;color:var(--red);">La API Key de AeroDataBox no es válida. Revísala en Configuración.</div>';
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;color:var(--red);">La API Key de AviationStack no es válida. Revísala en Configuración.</div>';
       return;
     } else if (aero && aero.error === 'limit') {
-      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">Se alcanzó el límite de consultas de AeroDataBox por ahora. El estado de arriba se calcula por horario.</div>';
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">Se alcanzó el límite mensual de consultas de AviationStack (100/mes en el plan gratuito). El estado de arriba se calcula por horario.</div>';
       return;
     } else if (aero && aero.error === 'ratelimit') {
-      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">⏱️ AeroDataBox recibió muchas consultas seguidas (límite por segundo del plan gratuito). <strong>Tu cuota mensual NO se ha agotado</strong> — espera unos 30 segundos y vuelve a tocar "Live". El estado de arriba se calcula por horario mientras tanto.</div>';
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">⏱️ AviationStack recibió muchas consultas seguidas. Espera unos segundos y vuelve a tocar "Live". El estado de arriba se calcula por horario mientras tanto.</div>';
+      return;
+    } else if (aero && aero.error === 'mixed') {
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;color:var(--red);">⚠️ El plan gratuito de AviationStack usa conexión insegura (http) y el navegador la bloquea en un sitio https. Para rastreo en vivo necesitas el plan de pago de AviationStack (que da https), o abrir la app en http. El estado de arriba se calcula por horario.</div>';
       return;
     } else if (aero && aero.error === 'notfound') {
-      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AeroDataBox no encontró el vuelo <strong>' + esc(num) + '</strong> en la fecha del ETD. Verifica el número de vuelo y la fecha. El estado de arriba es una estimación por horario.</div>';
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AviationStack no tiene datos del vuelo <strong>' + esc(num) + '</strong> para esta fecha. Puede que no cubra esta aerolínea de carga, o que el vuelo no esté en su base. El estado de arriba es una estimación por horario.</div>';
+      return;
+    } else if (aero && aero.error === 'api') {
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AviationStack devolvió un error al consultar. El estado de arriba se calcula por horario.</div>';
       return;
     }
     // Cualquier otro error (red, HTTP): avisar con claridad — la key SÍ está configurada
     var errCode = (aero && aero.error) ? aero.error : 'desconocido';
     document.getElementById('live-body').innerHTML = autoBox
-      + '<div class="ai-bubble" style="font-size:11px;">No se pudo consultar AeroDataBox en este momento (error: ' + esc(errCode) + '). '
+      + '<div class="ai-bubble" style="font-size:11px;">No se pudo consultar AviationStack en este momento (error: ' + esc(errCode) + '). '
       + (errCode === 'network' ? 'Revisa tu conexión a internet e intenta de nuevo.' : 'El servicio puede estar temporalmente saturado o el vuelo no está cubierto para esta fecha. Intenta de nuevo en unos minutos.')
       + ' El estado de arriba se calcula por horario.</div>';
     return;
@@ -2731,7 +2734,7 @@ async function checkLive(num, flightId) {
 
   // Sin AeroDataBox configurado: mostrar solo la estimación por horario
   document.getElementById('live-body').innerHTML = autoBox
-    + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula con el ETD/ETA registrado. Para <strong>arribos reales confirmados</strong> (dato oficial del aeropuerto), agrega tu <strong>AeroDataBox API Key</strong> en Configuración — es el rastreo confiable de llegadas a Miami para MAS Customs.</div>';
+    + '<div class="ai-bubble" style="font-size:11px;">El estado de arriba se calcula con el ETD/ETA registrado. Para <strong>arribos reales confirmados</strong> (dato oficial del aeropuerto), agrega tu <strong>AviationStack API Key</strong> en Configuración — es el rastreo confiable de llegadas a Miami para MAS Customs.</div>';
 }
 
 function statusBgColor(c) {
@@ -2813,7 +2816,7 @@ function renderAeroLive(num, m, flightId, autoBox) {
   }
 
   var realBox = '<div style="background:'+st.bg+';border-radius:8px;padding:14px;margin-bottom:14px;border:1px solid '+st.c+'33;">'
-    + '<div style="font-size:11px;font-weight:700;color:'+st.c+';text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estado REAL (AeroDataBox)</div>'
+    + '<div style="font-size:11px;font-weight:700;color:'+st.c+';text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estado REAL (AviationStack)</div>'
     + '<div style="font-size:17px;font-weight:800;color:'+st.c+';">'+st.t+'</div>'
     + '</div>';
 
@@ -2831,7 +2834,7 @@ function renderAeroLive(num, m, flightId, autoBox) {
     + (m.arrTerminal ? row('Terminal', esc(m.arrTerminal)) : '')
     + '</div>';
 
-  var footer = '<div style="font-size:10px;color:var(--t3);margin-top:10px;text-align:center;">⚡ Dato consultado ' + new Date().toLocaleTimeString('es-EC') + ' · AeroDataBox</div>';
+  var footer = '<div style="font-size:10px;color:var(--t3);margin-top:10px;text-align:center;">⚡ Dato consultado ' + new Date().toLocaleTimeString('es-EC') + ' · AviationStack</div>';
 
   document.getElementById('live-body').innerHTML = autoBox + mismatch + inferredNote + staleWarn + realBox + details + footer;
 }
@@ -3220,8 +3223,8 @@ function renderIntel() {
   renderTrendChart();
 }
 
-// ── GRÁFICOS DE VOLUMEN POR PUERTO (cajas, FBE, mensual apilado) ──
-var _volCharts = { boxes:null, fbe:null, monthly:null };
+// ── GRÁFICOS DE VOLUMEN POR PUERTO (cajas, FBE, kg, mensual apilado) ──
+var _volCharts = { boxes:null, fbe:null, kg:null, monthly:null };
 function renderVolumeCharts(){
   if (typeof Chart === 'undefined') return;
   var empty = document.getElementById('vol-empty');
@@ -3229,13 +3232,14 @@ function renderVolumeCharts(){
   DB.flights.forEach(function(f){
     var p = (f.origin||'').toUpperCase().trim();
     if (!p) return;
-    if (!byPort[p]) byPort[p] = { boxes:0, fbe:0 };
+    if (!byPort[p]) byPort[p] = { boxes:0, fbe:0, kg:0 };
     byPort[p].boxes += parseInt(f.bsent)||parseInt(f.boxes_conf)||0;
     byPort[p].fbe += parseFloat(f.fbe)||0;
+    byPort[p].kg += parseFloat(f.weight)||0;
   });
   var ports = Object.keys(byPort).sort(function(a,b){ return byPort[b].boxes - byPort[a].boxes; });
 
-  ['boxes','fbe','monthly'].forEach(function(k){ if(_volCharts[k]){ _volCharts[k].destroy(); _volCharts[k]=null; } });
+  ['boxes','fbe','kg','monthly'].forEach(function(k){ if(_volCharts[k]){ _volCharts[k].destroy(); _volCharts[k]=null; } });
 
   if (!ports.length){
     if(empty){ empty.style.display='block'; empty.textContent='Registra vuelos con puerto de origen y cajas para ver el volumen.'; }
@@ -3262,6 +3266,15 @@ function renderVolumeCharts(){
       backgroundColor:ports.map(colorFor), borderRadius:6, barThickness:40 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},
       tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString('es-EC')+' FBE';}}}},
+      scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:txt}}, y:{grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
+  });
+
+  _volCharts.kg = new Chart(document.getElementById('chart-kg-port').getContext('2d'), {
+    type:'bar',
+    data:{ labels:ports, datasets:[{ data:ports.map(function(p){return Math.round(byPort[p].kg);}),
+      backgroundColor:ports.map(colorFor), borderRadius:6, barThickness:40 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:function(c){return c.parsed.y.toLocaleString('es-EC')+' kg';}}}},
       scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:txt}}, y:{grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
   });
 
@@ -4661,8 +4674,9 @@ function calcAll() {
   var boxes=parseInt(gv('f-bsent'))||0;
 
   // ── OTROS CARGOS ──
-  // El AWB imprime "Total Other Charges Due Agent/Carrier". Si vienen del PDF o los escribiste tú, mandan esos.
-  // Solo si están vacíos, sugerimos un cálculo: agente = MAA + AWC | carrier = (MYC + ESC) × base
+  // Comportamiento predecible:
+  // - Si escribiste el campo A MANO (dataset.manual='1'), se respeta tu valor.
+  // - Si NO, y hay MYC/ESC (o MAA/AWC), se RECALCULA siempre para que las sumas cuadren.
   var agField = document.getElementById('f-ochagent'), carField = document.getElementById('f-ochcarrier');
   var basis = gv('f-myc-basis') || 'kg';
   var basisQty = basis === 'box' ? boxes : cw;
@@ -4670,8 +4684,10 @@ function calcAll() {
   var carSuggested = (mycRate + escRate) * basisQty;
   var agManual = agField && agField.dataset.manual === '1';
   var carManual = carField && carField.dataset.manual === '1';
-  if (!agManual && agSuggested > 0 && !gv('f-ochagent')) sv('f-ochagent', agSuggested.toFixed(2));
-  if (!carManual && carSuggested > 0 && !gv('f-ochcarrier')) sv('f-ochcarrier', carSuggested.toFixed(2));
+  // Agente: si no es manual y hay MAA/AWC, recalcula siempre (antes solo si estaba vacío)
+  if (!agManual && agSuggested > 0) sv('f-ochagent', agSuggested.toFixed(2));
+  // Carrier: si no es manual y hay MYC/ESC, recalcula siempre
+  if (!carManual && carSuggested > 0) sv('f-ochcarrier', carSuggested.toFixed(2));
   var agTot = parseFloat(gv('f-ochagent'))||0;
   var carTot = parseFloat(gv('f-ochcarrier'))||0;
 
@@ -4719,6 +4735,8 @@ function calcAll() {
 // ══ CLEAR FORM ══
 function clearFlightForm() {
   ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-fbe','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes','f-claim-amount','f-claim-recovered','f-claim-ref','f-claim-date','f-claim-deadline','f-claim-notes','f-temp-orig','f-temp-mia','f-temp-readings','f-temp-notes'].forEach(function(i){sv(i,'');});
+  // Resetear los flags "manual" de otros cargos para que no queden pegados del envío anterior
+  ['f-ochagent','f-ochcarrier'].forEach(function(i){var e=document.getElementById(i);if(e)delete e.dataset.manual;});
   var ta=document.getElementById('f-temp-alert'); if(ta)ta.style.display='none';
   ['f-temp-orig-conv','f-temp-mia-conv','f-temp-readings-out'].forEach(function(i){var e=document.getElementById(i);if(e)e.textContent='';});
   sv('f-claim-status','none');
@@ -4944,7 +4962,7 @@ function arrivalCell(f) {
   if (s === 'delayed') return withBtn('<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;white-space:nowrap;">🔴 Demorado</span>');
   if (s === 'canceled') return withBtn('<span style="display:inline-block;background:#FEE2E2;color:#991B1B;font-weight:700;font-size:10px;padding:3px 8px;border-radius:10px;">❌ Cancelado</span>');
   if (f.liveLastCheck) return withBtn('<span style="font-size:10px;color:var(--t3);">🕐 Programado</span>');
-  return withBtn('<span style="font-size:10px;color:var(--t3);" title="Sin rastreo — agrega AeroDataBox API Key en Configuración">—</span>');
+  return withBtn('<span style="font-size:10px;color:var(--t3);" title="Sin rastreo — agrega AviationStack API Key en Configuración">—</span>');
 }
 
 // Marca manualmente un vuelo como arribado a Miami (un clic, sin abrir edición)
@@ -5135,7 +5153,7 @@ function toggleTheme() {
 var TOUR_STEPS = [
   { icon:'👋', title:'¡Bienvenido a TrackFlow Air!', text:'Tu centro de control para la carga aérea de flores. Te muestro lo esencial en 6 pasos rápidos.' },
   { icon:'📄', title:'Sube el AWB y listo', text:'Al crear un envío, sube el PDF de la guía aérea. La app extrae automáticamente el número de AWB, vuelo, aerolínea, cajas, pesos, tarifas y todos los cargos. No tienes que escribir casi nada.' },
-  { icon:'✈️', title:'Rastreo real de arribos', text:'Con la API de AeroDataBox activada, la app sabe cuándo tus guías realmente aterrizan en Miami — sin revisar portal por portal. La columna "Arribo Real" y el semáforo de la ETA te avisan de un vistazo.' },
+  { icon:'✈️', title:'Rastreo real de arribos', text:'Con la API de AviationStack activada, la app sabe cuándo tus guías realmente aterrizan en Miami — sin revisar portal por portal. La columna "Arribo Real" y el semáforo de la ETA te avisan de un vistazo.' },
   { icon:'🚦', title:'El semáforo de colores', text:'En la ETA: 🔵 en camino · 🟡 por llegar (la app lo está vigilando) · 🔴 debería haber llegado, revisa · 🟢 arribó. Ideal para que MAS Customs evite cargos de almacenamiento.' },
   { icon:'📊', title:'Todo bajo control', text:'Dashboard con alertas de lo urgente, reportes para gerencia, seguimiento de reclamos a aerolíneas, calendario de vuelos y registro de quién cambió qué. Explóralo desde el menú lateral.' },
   { icon:'💾', title:'Un consejo importante', text:'Tus datos viven en este navegador. Exporta un respaldo cada semana desde Configuración, y si usas Safari, considera Chrome (Safari borra datos tras 7 días sin abrir la app).' }
@@ -5508,7 +5526,7 @@ function renderSettingsPage(){
   }
   sv('cfg-groq',CFG.groqKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus'); renderSeasonsConfig(); sv('cfg-temp-min', CFG.tempMin!==undefined?CFG.tempMin:1); sv('cfg-temp-max', CFG.tempMax!==undefined?CFG.tempMax:8);
   sv('cfg-ai-privacy',CFG.aiPrivacy||'full'); onPrivacyChange();
-  sv('cfg-aero',CFG.aeroKey||''); var asc=document.getElementById('cfg-autoscan'); if(asc)asc.checked=CFG.autoScanArrivals!==false;
+  sv('cfg-aviation',CFG.aviationKey||''); var asc=document.getElementById('cfg-autoscan'); if(asc)asc.checked=CFG.autoScanArrivals!==false;
   sv('cfg-scan-hours', String(CFG.scanHours||2)); onScanFreqChange();
   sv('cfg-email-service',CFG.emailServiceId||''); sv('cfg-email-template',CFG.emailTemplateId||''); sv('cfg-email-key',CFG.emailPublicKey||''); sv('cfg-notify-emails',CFG.notifyEmails||'');
   var na=document.getElementById('cfg-notify-arrival'); if(na)na.checked=CFG.notifyOnArrival!==false;
@@ -5582,7 +5600,7 @@ function toggleHelp(){
     dashboard:'<strong>📊 Dashboard</strong><br>Tu vista de HOY.<br><br>• <strong>Buscador (arriba):</strong> escribe un AWB, vuelo o carguera y aparecen resultados al instante. Toca uno para ver su detalle.<br>• <strong>Vuelos de hoy:</strong> toca cualquiera para abrir su detalle. El botón "✓ Marcar arribo" confirma la llegada a Miami.<br>• <strong>Tarjetas de números:</strong> toca "Alertas de tarifa" para ir a los envíos afectados.<br>• <strong>Requiere tu atención:</strong> alertas de temperatura, reprogramación, USDA. El botón "✓ Cumplido" las silencia.',
     intel:'<strong>🧠 Inteligencia</strong><br>Tu centro de negociación.<br><br>• <strong>Desempeño por carguera:</strong> compara precio y confiabilidad.<br>• <strong>Factor volumétrico:</strong> cuánto infla cada carguera el peso.<br>• <strong>Comparador $/kg:</strong> filtra por ruta y temporada para comparar limpio.<br>• <strong>Tendencia:</strong> toca los chips para comparar varias rutas/cargueras a la vez.<br>• <strong>Histórico por ruta:</strong> filtra por período para ver tu piso y techo de tarifa.',
     reports:'<strong>📄 Reportes</strong><br>Para gerencia y correo.<br><br>• Elige el período y genera el reporte.<br>• Puedes enviarlo por correo o exportarlo.',
-    flights:'<strong>✈️ Vuelos</strong><br>Todos tus envíos.<br><br>• <strong>Pestañas (Todos/Tránsito/Pendiente/Entregado):</strong> filtran la lista.<br>• <strong>✈ Live:</strong> consulta el estado real del vuelo en AeroDataBox.<br>• <strong>✓ Marcar arribo:</strong> confirma llegada manualmente.<br>• Toca cualquier fila para ver o editar el envío.<br>• <strong>Columnas:</strong> personaliza cuáles ver con el botón "Columnas".',
+    flights:'<strong>✈️ Vuelos</strong><br>Todos tus envíos.<br><br>• <strong>Pestañas (Todos/Tránsito/Pendiente/Entregado):</strong> filtran la lista.<br>• <strong>✈ Live:</strong> consulta el estado real del vuelo en AviationStack.<br>• <strong>✓ Marcar arribo:</strong> confirma llegada manualmente.<br>• Toca cualquier fila para ver o editar el envío.<br>• <strong>Columnas:</strong> personaliza cuáles ver con el botón "Columnas".',
     calendar:'<strong>📅 Calendario</strong><br>Tus vuelos por fecha.<br><br>• Toca cualquier envío para abrir su detalle completo.',
     audit:'<strong>🔍 Auditoría</strong><br>Registro de cambios.<br><br>• Cada acción (crear, editar, confirmar arribo) queda registrada con fecha y usuario.',
     agencies:'<strong>👥 Agencias</strong><br>Directorio de cargueras.<br><br>• Guarda contacto, teléfono y email de cada una.<br>• "📊 Ver desempeño" te lleva a su análisis en Inteligencia.'
@@ -5661,9 +5679,9 @@ function saveSettings(){
   var tMin=parseFloat(gv('cfg-temp-min')); var tMax=parseFloat(gv('cfg-temp-max'));
   CFG.tempMin = isNaN(tMin)?1:tMin; CFG.tempMax = isNaN(tMax)?8:tMax;
   CFG.aiPrivacy=gv('cfg-ai-privacy')||'full';
-  CFG.aeroKey=gv('cfg-aero'); var asc2=document.getElementById('cfg-autoscan'); CFG.autoScanArrivals=asc2?asc2.checked:true;
+  CFG.aviationKey=gv('cfg-aviation'); var asc2=document.getElementById('cfg-autoscan'); CFG.autoScanArrivals=asc2?asc2.checked:true;
   var newHours=parseInt(gv('cfg-scan-hours'))||2;
-  if(newHours!==CFG.scanHours){CFG.scanHours=newHours; if(window._arrivalInterval){clearInterval(window._arrivalInterval); window._arrivalInterval=setInterval(function(){if(CFG.aeroKey&&CFG.autoScanArrivals!==false)scanArrivals(true);}, newHours*60*60000);}}
+  if(newHours!==CFG.scanHours){CFG.scanHours=newHours; if(window._arrivalInterval){clearInterval(window._arrivalInterval); window._arrivalInterval=setInterval(function(){if(CFG.aviationKey&&CFG.autoScanArrivals!==false)scanArrivals(true);}, newHours*60*60000);}}
   CFG.emailServiceId=gv('cfg-email-service'); CFG.emailTemplateId=gv('cfg-email-template'); CFG.emailPublicKey=gv('cfg-email-key'); CFG.notifyEmails=gv('cfg-notify-emails');
   var na=document.getElementById('cfg-notify-arrival'), nd=document.getElementById('cfg-notify-delay'), nu=document.getElementById('cfg-notify-usda');
   CFG.notifyOnArrival=na?na.checked:true; CFG.notifyOnDelay=nd?nd.checked:true; CFG.notifyOnUsda=nu?nu.checked:true;
