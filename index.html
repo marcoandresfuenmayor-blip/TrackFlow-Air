@@ -422,14 +422,21 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div id="urgent-list" style="display:flex;flex-direction:column;gap:7px;"></div>
         </div>
 
-        <!-- Tarjetas de números con contexto -->
+        <!-- Tarjetas de números — SOLO HOY -->
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;">Actividad de hoy</div>
         <div class="sg sg5">
-          <div class="sc" onclick="go('flights')" style="cursor:pointer;" title="Ver todos los vuelos"><div class="sl">Total Vuelos</div><div class="sv" id="st-fl">0</div><div class="ss neu" id="st-fl-s">—</div></div>
-          <div class="sc" onclick="dashFbyStatus('delivered')" style="cursor:pointer;" title="Ver confirmados"><div class="sl">Cajas Confirmadas</div><div class="sv" id="st-conf">0</div><div class="ss up" id="st-conf-s">—</div></div>
+          <div class="sc" onclick="go('flights')" style="cursor:pointer;" title="Ver todos los vuelos"><div class="sl">Vuelos de hoy</div><div class="sv" id="st-fl">0</div><div class="ss neu" id="st-fl-s">salen o llegan hoy</div></div>
+          <div class="sc"><div class="sl">Cajas de hoy</div><div class="sv" id="st-conf">0</div><div class="ss up" id="st-conf-s">confirmadas / enviadas</div></div>
           <div class="sc" onclick="scrollToUrgent()" style="cursor:pointer;" title="Ver pendientes"><div class="sl">Faltantes / Pendiente</div><div class="sv" id="st-miss">0</div><div class="ss dn" id="st-miss-s">—</div></div>
           <div class="sc" onclick="scrollToRateAlerts()" style="cursor:pointer;" title="Ver alertas de tarifa"><div class="sl">Alertas de Tarifa</div><div class="sv" id="st-rate-alerts" style="color:var(--red);">0</div><div class="ss dn">Tarifa ≠ Esperada</div></div>
-          <div class="sc"><div class="sl">Costo Total AWB</div><div class="sv" id="st-cost" style="font-size:17px;">$0</div><div class="ss up" id="st-cost-s">—</div></div>
-          <div class="sc"><div class="sl">Total FBE (Full Boxes)</div><div class="sv" id="st-fbe">0</div><div class="ss neu" id="st-fbe-s">cajas equivalentes</div></div>
+          <div class="sc"><div class="sl">Costo de hoy</div><div class="sv" id="st-cost" style="font-size:17px;">$0</div><div class="ss up" id="st-cost-s">AWB de hoy</div></div>
+          <div class="sc"><div class="sl">FBE de hoy</div><div class="sv" id="st-fbe">0</div><div class="ss neu" id="st-fbe-s">cajas equivalentes</div></div>
+        </div>
+
+        <!-- Franja de acumulado histórico → Inteligencia -->
+        <div style="background:var(--lightgreen);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:12px;color:var(--green);"><strong>Acumulado histórico</strong> — <span id="hist-summary">—</span></div>
+          <button class="btn xs" onclick="go('intel')" style="flex-shrink:0;">Ver en Inteligencia →</button>
         </div>
 
         <div class="alert-card" id="rate-alert-card"><div class="alert-title">⚠ Diferencias de Tarifa — la tarifa real difiere de la esperada</div><div id="rate-alert-list"></div></div>
@@ -2426,7 +2433,7 @@ function autoUpdateAllStatuses() {
 
 // Consulta AviationStack por número de vuelo IATA.
 // Devuelve { flights:[...] } normalizado, o { error:'...' }.
-async function fetchAeroStatus(flightNum, dateISO) {
+async function fetchAeroStatus(flightNum, dateISO, flightObj) {
   if (!CFG.aviationKey) return { error: 'nokey' };
   var raw = (flightNum||'').replace(/\s/g,'').toUpperCase();
   raw = raw.replace(/[\/]\d{1,2}$/,'');                // quita "/29" (día tras barra)
@@ -2481,13 +2488,35 @@ async function fetchAeroStatus(flightNum, dateISO) {
     }
     var data = (json.data || []);
     if (!data.length) { anyEmpty = true; continue; }
-    // Preferir el vuelo cuya fecha coincida con la buscada; si no, el más reciente.
-    var chosen = data;
-    if (wantDate) {
-      var exact = data.filter(function(fl){ return fl.flight_date === wantDate; });
-      if (exact.length) chosen = exact;
-    }
-    return { flights: chosen, usedCode: code };
+    // ── VALIDACIÓN ESTRICTA: fecha + origen + destino deben coincidir ──
+    // Evita mostrar un vuelo de OTRO DÍA u OTRA RUTA (que daría un "llegó" falso).
+    // Si AviationStack no tiene el vuelo exacto de hoy, es más seguro no mostrar nada
+    // y caer al estado por horario, que mostrar un dato de ayer como si fuera de hoy.
+    var wantOrig = flightObj && flightObj.origin ? flightObj.origin.toUpperCase().trim() : null;
+    var wantDest = flightObj && flightObj.dest ? flightObj.dest.toUpperCase().trim() : null;
+    var valid = data.filter(function(fl){
+      // Fecha debe coincidir con la buscada (si se pidió una)
+      if (wantDate && fl.flight_date !== wantDate) return false;
+      // Origen debe coincidir (compara IATA e ICAO)
+      if (wantOrig) {
+        var dep = fl.departure || {};
+        var depCode = (dep.iata || '').toUpperCase();
+        var depIcao = (dep.icao || '').toUpperCase();
+        if (depCode !== wantOrig && depIcao !== wantOrig) return false;
+      }
+      // Destino debe coincidir
+      if (wantDest) {
+        var arr = fl.arrival || {};
+        var arrCode = (arr.iata || '').toUpperCase();
+        var arrIcao = (arr.icao || '').toUpperCase();
+        if (arrCode !== wantDest && arrIcao !== wantDest) return false;
+      }
+      return true;
+    });
+    // Si ninguno cumple fecha+ruta, NO usar AviationStack (más seguro): seguir buscando
+    // otros candidatos de código, y si ninguno cumple, devolver 'notfound'.
+    if (!valid.length) { anyEmpty = true; continue; }
+    return { flights: valid, usedCode: code };
   }
   return { error: 'notfound' };
 }
@@ -2600,7 +2629,7 @@ async function scanArrivals(silent) {
     var f = candidates[i];
     // Espaciar consultas entre vuelos para no disparar el límite de tasa
     if (i > 0) await new Promise(function(r){ setTimeout(r, 1300); });
-    var result = await fetchAeroStatus(f.num, f.etd);
+    var result = await fetchAeroStatus(f.num, f.etd, f);
     if (!result) continue;
     if (result.error === 'limit' || result.error === 'ratelimit') { limitHit = true; break; }
     if (result.error === 'auth') { if(!silent) toast('API Key de AviationStack inválida. Revísala en Configuración.', 'err'); break; }
@@ -2697,7 +2726,7 @@ async function checkLive(num, flightId) {
   if (CFG.aviationKey) {
     document.getElementById('live-body').innerHTML = autoBox
       + '<div class="ai-bubble" style="display:flex;align-items:center;gap:8px;"><span class="dp"><span></span><span></span><span></span></span> Consultando estado real en AviationStack…</div>';
-    var aero = await fetchAeroStatus(num, f && f.etd);
+    var aero = await fetchAeroStatus(num, f && f.etd, f);
     if (aero && aero.flights) {
       // Elegir el tramo cuyo destino coincida
       var match = null;
@@ -2731,7 +2760,7 @@ async function checkLive(num, flightId) {
       document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;color:var(--red);">⚠️ El plan gratuito de AviationStack usa conexión insegura (http) y el navegador la bloquea en un sitio https. Para rastreo en vivo necesitas el plan de pago de AviationStack (que da https), o abrir la app en http. El estado de arriba se calcula por horario.</div>';
       return;
     } else if (aero && aero.error === 'notfound') {
-      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AviationStack no tiene datos del vuelo <strong>' + esc(num) + '</strong> para esta fecha. Puede que no cubra esta aerolínea de carga, o que el vuelo no esté en su base. El estado de arriba es una estimación por horario.</div>';
+      document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AviationStack no tiene el vuelo <strong>' + esc(num) + '</strong> con la fecha y ruta exactas de este envío. Por seguridad no se muestra ningún dato que no coincida (evita mostrar un vuelo de otro día). El estado de arriba es la estimación por horario.</div>';
       return;
     } else if (aero && aero.error === 'api') {
       document.getElementById('live-body').innerHTML = autoBox + '<div class="ai-bubble" style="font-size:11px;">AviationStack devolvió un error al consultar. El estado de arriba se calcula por horario.</div>';
@@ -5284,10 +5313,18 @@ function animateCount(id, target, prefix, decimals) {
 
 function renderDash(){
   renderProblemRanking();
-  var fl=DB.flights, tc=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
+  var allFl=DB.flights;
+  // ── SOLO HOY: vuelos cuyo ETD o ETA cae hoy ──
+  var today=new Date(); today.setHours(0,0,0,0);
+  var tomorrow=new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  function isToday(d){ if(!d)return false; var x=new Date(d); return !isNaN(x)&&x>=today&&x<tomorrow; }
+  var fl=allFl.filter(function(f){ return isToday(f.etd)||isToday(f.eta); });
+  // Tarjetas: solo hoy
+  var tc=fl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
   var sent=fl.reduce(function(s,f){return s+(parseInt(f.bsent)||0);},0), conf=fl.reduce(function(s,f){return s+(parseInt(f.bconf)||0);},0);
   var miss=fl.reduce(function(s,f){var d=(parseInt(f.bconf)||0)-(parseInt(f.bsent)||0);return s+(d<0?Math.abs(d):0);},0);
-  var rateAlerts=fl.filter(function(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;return e>0&&a>0&&Math.abs(a-e)>0.001;});
+  // Alertas de tarifa: se revisan sobre TODOS (una diferencia vieja sigue importando)
+  var rateAlerts=allFl.filter(function(f){var a=parseFloat(f.rate)||0,e=parseFloat(f.rateExp)||0;return e>0&&a>0&&Math.abs(a-e)>0.001;});
   // Saludo según la hora + resumen del día
   renderGreeting();
   renderWorldClocks();
@@ -5297,18 +5334,30 @@ function renderDash(){
     if (screen==='dashboard') renderWorldClocks();
     else { clearInterval(window._clockInterval); window._clockInterval=null; }
   }, 60000);
-  // Animar los números para que "suban" — da sensación dinámica
+  // Animar los números (solo hoy)
   animateCount('st-fl', fl.length);
-  document.getElementById('st-fl-s').textContent=fl.length>0?fl.length+' total':'Sin vuelos aún';
+  document.getElementById('st-fl-s').textContent=fl.length>0?'salen o llegan hoy':'sin vuelos hoy';
   animateCount('st-conf', conf);
-  document.getElementById('st-conf-s').textContent=sent>0?Math.round(conf/sent*100)+'% tasa':'—';
+  document.getElementById('st-conf-s').textContent=sent>0?conf+' / '+sent+' cajas':'—';
   animateCount('st-miss', miss);
   document.getElementById('st-miss-s').textContent=miss>0?miss+' cajas':'—';
   animateCount('st-rate-alerts', rateAlerts.length);
   animateCount('st-cost', tc, '$', 2);
-  document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' vuelos':'—';
+  document.getElementById('st-cost-s').textContent=fl.length>0?fl.length+' AWB de hoy':'—';
   var totalFbe=fl.reduce(function(s,f){return s+(parseFloat(f.fbe)||0);},0);
   if(document.getElementById('st-fbe')) animateCount('st-fbe', totalFbe, '', 2);
+  // ── Franja histórica: acumulado de TODOS los vuelos ──
+  var histEl=document.getElementById('hist-summary');
+  if(histEl){
+    var hTc=allFl.reduce(function(s,f){return s+(parseFloat(f.totalpaid)||0);},0);
+    var hSent=allFl.reduce(function(s,f){return s+(parseInt(f.bsent)||0);},0);
+    var hFbe=allFl.reduce(function(s,f){return s+(parseFloat(f.fbe)||0);},0);
+    if(allFl.length>0){
+      histEl.textContent=allFl.length+' vuelos · '+hSent.toLocaleString('es-EC')+' cajas · $'+hTc.toLocaleString('es-EC',{maximumFractionDigits:0})+' · '+hFbe.toLocaleString('es-EC',{maximumFractionDigits:0})+' FBE';
+    } else {
+      histEl.textContent='sin vuelos registrados aún';
+    }
+  }
   renderUrgent();
   renderToday();
   var alertCard=document.getElementById('rate-alert-card'), alertList=document.getElementById('rate-alert-list');
