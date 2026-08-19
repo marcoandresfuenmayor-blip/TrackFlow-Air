@@ -667,7 +667,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <button class="btn xs" onclick="calNav(1)">Siguiente ›</button>
             </div>
           </div>
-          <div style="padding:16px;" id="calendar-body"></div>
+          <div style="padding:10px;" id="calendar-body"></div>
         </div>
       </div>
 
@@ -4389,9 +4389,9 @@ function renderCalendar(){
   var today = new Date();
   var isCurrentMonth = today.getMonth()===_calMonth && today.getFullYear()===_calYear;
 
-  var h = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+  var h = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;align-items:start;">';
   ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].forEach(function(d){
-    h += '<div style="text-align:center;font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;padding:6px 0;">'+d+'</div>';
+    h += '<div style="text-align:center;font-size:9px;font-weight:800;color:var(--t3);text-transform:uppercase;padding:3px 0;">'+d+'</div>';
   });
   // Celdas vacías antes del día 1
   for (var i=0; i<startDow; i++) h += '<div></div>';
@@ -4399,9 +4399,10 @@ function renderCalendar(){
   for (var day=1; day<=daysInMonth; day++) {
     var fls = byDay[day] || [];
     var isToday = isCurrentMonth && today.getDate()===day;
-    h += '<div style="min-height:118px;border:1px solid '+(isToday?'var(--green)':'var(--border)')+';border-radius:8px;padding:5px;background:'+(isToday?'var(--lightgreen)':'var(--surf)')+';overflow:hidden;">';
-    h += '<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--t2)')+';margin-bottom:3px;">'+day+'</div>';
-    fls.slice(0,3).forEach(function(f){
+    // Altura flexible: celda mínima compacta, crece según los vuelos del día
+    h += '<div style="min-height:44px;border:0.5px solid '+(isToday?'var(--green)':'var(--border)')+';border-radius:6px;padding:3px;background:'+(isToday?'var(--lightgreen)':'var(--surf)')+';overflow:hidden;">';
+    h += '<div style="font-size:10px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--t2)')+';margin-bottom:2px;">'+day+'</div>';
+    fls.forEach(function(f){
       var c = STC[f.status] || '#9CA3AF';
       var awb = f.awb || f.num || '—';
       var boxes = parseInt(f.bsent)||0;
@@ -4409,24 +4410,22 @@ function renderCalendar(){
         + (f.agName?'Carguera: '+f.agName+'\n':'')
         + (f.airline?'Aerolínea: '+f.airline+'\n':'')
         + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas';
-      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'18;border-left:3px solid '+c+';border-radius:4px;padding:4px 5px;margin-bottom:3px;overflow:hidden;">'
-        + '<div style="font-family:var(--mono);font-size:9.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(awb)+'</div>'
-        + '<div style="font-size:8.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;">'
+      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'20;border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;overflow:hidden;">'
+        + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(awb)+'</div>'
+        + '<div style="font-size:8px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">'
         + esc(f.origin||'?')+'→'+esc(f.dest||'?')
         + (f.num?' · '+esc(f.num):'')
         + '</div>'
-        + (f.agName?'<div style="font-size:8px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(f.agName)+'</div>':'')
-        + (boxes?'<div style="font-size:8px;color:var(--t3);font-weight:700;">'+boxes+' cajas</div>':'')
+        + (boxes?'<div style="font-size:7.5px;color:var(--t3);font-weight:700;">'+boxes+' cajas</div>':'')
         + '</div>';
     });
-    if (fls.length > 3) h += '<div style="font-size:9px;color:var(--t3);padding-left:3px;">+'+(fls.length-3)+' más</div>';
     h += '</div>';
   }
   h += '</div>';
   // Leyenda
-  h += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;justify-content:center;">';
+  h += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;justify-content:center;">';
   [['Programado','#F59E0B'],['En tránsito','#3B82F6'],['Arribado','#22A351'],['Demorado','#DC2626']].forEach(function(x){
-    h += '<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t2);"><span style="width:9px;height:9px;border-radius:2px;background:'+x[1]+';"></span>'+x[0]+'</div>';
+    h += '<div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2);"><span style="width:8px;height:8px;border-radius:2px;background:'+x[1]+';"></span>'+x[0]+'</div>';
   });
   h += '</div>';
   // Resumen del mes
@@ -4434,7 +4433,7 @@ function renderCalendar(){
   var boxesM = Object.keys(byDay).reduce(function(s,k){
     return s + byDay[k].reduce(function(t,f){return t+(parseInt(f.bsent)||0);},0);
   },0);
-  h += '<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--t3);">'+totalM+' envíos · '+boxesM.toLocaleString('es-EC')+' cajas en '+MESES[_calMonth]+'</div>';
+  h += '<div style="text-align:center;margin-top:6px;font-size:10px;color:var(--t3);">'+totalM+' envíos · '+boxesM.toLocaleString('es-EC')+' cajas en '+MESES[_calMonth]+'</div>';
   box.innerHTML = h;
 }
 
