@@ -516,6 +516,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
       <!-- FLIGHTS -->
       <div class="screen" id="s-flights">
+        <div id="world-clocks-flights" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:4px 2px;"></div>
         <div class="card">
           <div class="ch">
             <span class="ct">Todos los Vuelos</span>
@@ -857,7 +858,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="fg c4">
           <div class="field"><label>Cajas enviadas (manual) <span class="req">*</span></label><input id="f-bsent" type="number" min="0" placeholder="Ingresar manualmente" oninput="calcAll()"></div>
           <div class="field"><label>Cajas confirmadas por agencia</label><input id="f-bconf" type="number" min="0" placeholder="Desde AWB / agencia" oninput="calcAll()"></div>
-          <div class="field"><label>Cajas faltantes/excedentes</label><input id="f-bmiss" type="text" readonly placeholder="Auto-calculado"></div>
+          <div class="field"><label>Cajas faltantes/excedentes <span style="font-size:9px;color:var(--t3);">(auto, editable)</span></label><input id="f-bmiss" type="text" placeholder="Auto-calculado" oninput="markManual(this)"></div>
           <div class="field"><label>Estado confirmación</label><select id="f-confst"><option value="unconfirmed">Sin confirmar</option><option value="partial">Parcial</option><option value="confirmed">Confirmado</option></select></div>
           <div class="field"><label>Peso bruto (kg)</label><input id="f-weight" type="number" step="0.1" placeholder="Desde AWB" oninput="calcAll()"></div>
           <div class="field"><label>Peso facturable (kg)</label><input id="f-cweight" type="number" step="0.1" placeholder="Desde AWB" oninput="calcAll()"></div>
@@ -912,7 +913,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="fg c4">
           <div class="field"><label>Tarifa/kg (del AWB)</label><input id="f-rate" type="number" step="0.001" placeholder="Del AWB" oninput="calcAll()"></div>
           <div class="field"><label>Tarifa esperada/kg <span class="req">*</span></label><input id="f-rate-exp" type="number" step="0.001" placeholder="Ingresar tarifa esperada" oninput="calcAll()"></div>
-          <div class="field"><label>Cargo por peso</label><input id="f-wcharge" type="number" readonly placeholder="Auto-calculado" class="calc"></div>
+          <div class="field"><label>Cargo por peso <span style="font-size:9px;color:var(--t3);">(auto, editable)</span></label><input id="f-wcharge" type="number" step="0.01" placeholder="Auto-calculado" class="calc" oninput="markManual(this);calcAll()"></div>
           <div class="field"><label>Cargo valuación</label><input id="f-valcharge" type="number" step="0.01" placeholder="0.00" oninput="calcAll()"></div>
           <div class="field"><label>Impuesto</label><input id="f-tax" type="number" step="0.01" placeholder="0.00" oninput="calcAll()"></div>
           <div class="field"><label>MAA (USD)<span class="help-ic">?<span class="help-tip"><strong>Miscellaneous charges Due Agent:</strong> cargos varios que cobra el agente de carga.</span></span></label><input id="f-maa" type="number" step="0.01" placeholder="e.g. 35.00" oninput="calcAll()"></div>
@@ -925,7 +926,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           </select></div>
           <div class="field"><label>Otros cargos (agente)</label><input id="f-ochagent" type="number" step="0.01" placeholder="Auto o manual" oninput="markManual(this);calcAll()"></div>
           <div class="field"><label>Otros cargos (carrier)</label><input id="f-ochcarrier" type="number" step="0.01" placeholder="Auto o manual" oninput="markManual(this);calcAll()"></div>
-          <div class="field"><label>TOTAL PREPAGADO (USD)</label><input id="f-totalpaid" type="number" readonly class="calc" style="font-size:14px;font-weight:800;"></div>
+          <div class="field"><label>TOTAL PREPAGADO (USD) <span style="font-size:9px;color:var(--t3);">(auto, editable)</span></label><input id="f-totalpaid" type="number" step="0.01" class="calc" style="font-size:14px;font-weight:800;" oninput="markManual(this)"></div>
           <div class="field"><label>Total cobrar (USD) <span style="font-size:9px;color:var(--t3);">(solo si el AWB es Collect)</span></label><input id="f-totalcoll" type="number" step="0.01" placeholder="0.00"></div>
         </div>
         <div id="total-mismatch-alert" style="display:none;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;line-height:1.5;"></div>
@@ -4712,7 +4713,10 @@ function calcAll() {
   var rateEffective = rateBase + mycRate + escRate;
 
   var cw=parseFloat(gv('f-cweight'))||parseFloat(gv('f-weight'))||0, wc=rateBase*cw;
-  if (wc>0) sv('f-wcharge', wc.toFixed(2));
+  var wcField=document.getElementById('f-wcharge');
+  var wcManual=wcField&&wcField.dataset.manual==='1';
+  if (wc>0 && !wcManual) sv('f-wcharge', wc.toFixed(2));
+  else if (wcManual) wc=parseFloat(gv('f-wcharge'))||wc; // usar el valor que escribiste
   var maa=parseFloat(gv('f-maa'))||0, awc=parseFloat(gv('f-awc'))||0;
   var boxes=parseInt(gv('f-bsent'))||0;
 
@@ -4736,8 +4740,10 @@ function calcAll() {
 
   var val=parseFloat(gv('f-valcharge'))||0, tax=parseFloat(gv('f-tax'))||0;
   var total = wc + val + tax + agTot + carTot;
+  var totField=document.getElementById('f-totalpaid');
+  var totManual=totField&&totField.dataset.manual==='1';
   if (total > 0) {
-    sv('f-totalpaid', total.toFixed(2));
+    if (!totManual) sv('f-totalpaid', total.toFixed(2));
     var tc=document.getElementById('tip-cost'); tc.style.display='flex';
     // Desglose completo y honesto de TODOS los componentes
     var partes = [];
@@ -4779,7 +4785,7 @@ function calcAll() {
 function clearFlightForm() {
   ['f-num','f-airline','f-awb','f-agcontact','f-agphone','f-agemail','f-bsent','f-bconf','f-bmiss','f-weight','f-cweight','f-fbe','f-rate','f-rate-exp','f-wcharge','f-valcharge','f-tax','f-maa','f-awc','f-myc','f-esc','f-ochagent','f-ochcarrier','f-totalpaid','f-totalcoll','f-hs','f-ref','f-notes','f-bdamaged','f-blost','f-busda','f-busda-released','f-usda-freed-time','f-qc-notes','f-claim-amount','f-claim-recovered','f-claim-ref','f-claim-date','f-claim-deadline','f-claim-notes','f-temp-orig','f-temp-mia','f-temp-readings','f-temp-notes'].forEach(function(i){sv(i,'');});
   // Resetear los flags "manual" de otros cargos para que no queden pegados del envío anterior
-  ['f-ochagent','f-ochcarrier'].forEach(function(i){var e=document.getElementById(i);if(e)delete e.dataset.manual;});
+  ['f-ochagent','f-ochcarrier','f-wcharge','f-totalpaid','f-bmiss'].forEach(function(i){var e=document.getElementById(i);if(e)delete e.dataset.manual;});
   var ta=document.getElementById('f-temp-alert'); if(ta)ta.style.display='none';
   ['f-temp-orig-conv','f-temp-mia-conv','f-temp-readings-out'].forEach(function(i){var e=document.getElementById(i);if(e)e.textContent='';});
   sv('f-claim-status','none');
@@ -4797,7 +4803,7 @@ function clearFlightForm() {
   document.getElementById('awb-zone-txt').textContent='Clic para subir AWB PDF / Imagen';
   document.getElementById('pod-zone-txt').textContent='Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive';
   pendingPOD = null; _pendingAl = null; window._lastDepartureDay = null; window._awbTotalPrepaid = 0;
-  ['f-ochagent','f-ochcarrier'].forEach(function(i){var e=document.getElementById(i); if(e) delete e.dataset.manual;});
+  ['f-ochagent','f-ochcarrier','f-wcharge','f-totalpaid','f-bmiss'].forEach(function(i){var e=document.getElementById(i); if(e) delete e.dataset.manual;});
   sv('f-myc-basis','kg');
   var tma=document.getElementById('total-mismatch-alert'); if(tma)tma.style.display='none';
   var tfd=document.getElementById('tip-flight-day'); if(tfd)tfd.style.display='none';
@@ -5328,12 +5334,6 @@ function renderDash(){
   // Saludo según la hora + resumen del día
   renderGreeting();
   renderWorldClocks();
-  // Actualizar relojes cada minuto mientras se ve el Dashboard
-  if (window._clockInterval) clearInterval(window._clockInterval);
-  window._clockInterval = setInterval(function(){
-    if (screen==='dashboard') renderWorldClocks();
-    else { clearInterval(window._clockInterval); window._clockInterval=null; }
-  }, 60000);
   // Animar los números (solo hoy)
   animateCount('st-fl', fl.length);
   document.getElementById('st-fl-s').textContent=fl.length>0?'salen o llegan hoy':'sin vuelos hoy';
@@ -5369,8 +5369,8 @@ function renderDash(){
 
 // Relojes mundiales: se generan automáticamente según los puertos en uso + Miami
 function renderWorldClocks(){
-  var box = document.getElementById('world-clocks');
-  if (!box) return;
+  var boxes = [document.getElementById('world-clocks'), document.getElementById('world-clocks-flights')];
+  if (!boxes[0] && !boxes[1]) return;
   // Reúne las zonas de los puertos que realmente aparecen en los vuelos + destino Miami
   var zones = {}; // tz -> label
   DB.flights.forEach(function(f){
@@ -5391,11 +5391,19 @@ function renderWorldClocks(){
     if (dayThere > homeDay) dayTag = ' <span style="color:var(--amber);font-size:9px;">+1d</span>';
     else if (dayThere < homeDay) dayTag = ' <span style="color:var(--amber);font-size:9px;">−1d</span>';
     return '<div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;">'
-      + '<span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.03em;">'+esc(label)+'</span>'
-      + '<span style="font-size:13px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;">'+time+dayTag+'</span>'
+      + '<span style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.03em;">'+esc(label)+'</span>'
+      + '<span style="font-size:16px;font-weight:800;color:var(--t1);font-variant-numeric:tabular-nums;">'+time+dayTag+'</span>'
       + '</div>';
   }).join('<span style="color:var(--border);align-self:center;">·</span>');
-  box.innerHTML = '<span style="font-size:14px;align-self:center;">🕐</span>' + html;
+  var full = '<span style="font-size:16px;align-self:center;">🕐</span>' + html;
+  boxes.forEach(function(b){ if(b) b.innerHTML = full; });
+  // Auto-actualización cada minuto mientras se vean los relojes (dashboard o vuelos)
+  if (!window._clockInterval) {
+    window._clockInterval = setInterval(function(){
+      if (screen==='dashboard' || screen==='flights') renderWorldClocks();
+      else { clearInterval(window._clockInterval); window._clockInterval=null; }
+    }, 60000);
+  }
 }
 
 // Saludo según hora del día + resumen operativo
@@ -5488,6 +5496,7 @@ function renderDashCharts(){
 }
 
 function renderFlights(){
+  renderWorldClocks();
   initDragCols('tbl-flights');
   var filtered=flsFlt==='all'?DB.flights:DB.flights.filter(function(f){return f.status===flsFlt;});
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
