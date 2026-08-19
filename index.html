@@ -657,6 +657,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
       <!-- CALENDARIO -->
       <div class="screen" id="s-calendar">
+        <div id="world-clocks-cal" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:4px 2px;"></div>
         <div class="card">
           <div class="ch">
             <span class="ct" id="cal-label">Calendario</span>
@@ -4364,6 +4365,7 @@ function calToday(){
   var n = new Date(); _calMonth = n.getMonth(); _calYear = n.getFullYear(); renderCalendar();
 }
 function renderCalendar(){
+  renderWorldClocks();
   var box = document.getElementById('calendar-body');
   if (!box) return;
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -5369,8 +5371,8 @@ function renderDash(){
 
 // Relojes mundiales: se generan automáticamente según los puertos en uso + Miami
 function renderWorldClocks(){
-  var boxes = [document.getElementById('world-clocks'), document.getElementById('world-clocks-flights')];
-  if (!boxes[0] && !boxes[1]) return;
+  var boxes = [document.getElementById('world-clocks'), document.getElementById('world-clocks-flights'), document.getElementById('world-clocks-cal')];
+  if (!boxes[0] && !boxes[1] && !boxes[2]) return;
   // Reúne las zonas de los puertos que realmente aparecen en los vuelos + destino Miami
   var zones = {}; // tz -> label
   DB.flights.forEach(function(f){
@@ -5400,7 +5402,7 @@ function renderWorldClocks(){
   // Auto-actualización cada minuto mientras se vean los relojes (dashboard o vuelos)
   if (!window._clockInterval) {
     window._clockInterval = setInterval(function(){
-      if (screen==='dashboard' || screen==='flights') renderWorldClocks();
+      if (screen==='dashboard' || screen==='flights' || screen==='calendar') renderWorldClocks();
       else { clearInterval(window._clockInterval); window._clockInterval=null; }
     }, 60000);
   }
