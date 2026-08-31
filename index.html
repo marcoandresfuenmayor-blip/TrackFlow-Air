@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TrackFlow Air — Jet Fresh Flowers Distributors</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/3.6.0/cdn.min.js"></script>
@@ -311,7 +309,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px;}
 </style>
-</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script></head>
 <body>
 
 <!-- LOGIN SCREEN -->
@@ -319,29 +317,28 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
   <div class="login-card">
     <div class="login-logo">
       <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="30" cy="40" rx="14" ry="7" fill="rgba(255,255,255,.2)"/>
-        <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="rgba(255,255,255,.5)"/>
-        <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".8"/>
-        <circle cx="30" cy="15" r="4" fill="#fff"/>
-        <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="30" cy="40" rx="14" ry="7" fill="rgba(255,255,255,.2)"></ellipse>
+        <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="rgba(255,255,255,.5)"></path>
+        <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".8"></path>
+        <circle cx="30" cy="15" r="4" fill="#fff"></circle>
+        <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
       </svg>
     </div>
     <div class="login-title">TrackFlow Air</div>
     <div class="login-sub">Jet Fresh Flowers Distributors<br>Sistema de Gestión de Carga Aérea</div>
-    <button class="login-btn" onclick="signIn()">
-      <svg viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
-        <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
-        <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
-        <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
-      </svg>
-      Iniciar sesión con Microsoft
-    </button>
+    <form onsubmit="event.preventDefault(); signIn();" style="display:flex;flex-direction:column;gap:10px;width:100%;">
+      <input id="login-email" type="email" autocomplete="username" placeholder="Correo" class="login-input" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);font-size:14px;box-sizing:border-box;">
+      <input id="login-password" type="password" autocomplete="current-password" placeholder="Contraseña" class="login-input" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);font-size:14px;box-sizing:border-box;">
+      <div id="login-error" style="display:none;color:#DC2626;font-size:12px;"></div>
+      <button type="submit" class="login-btn" id="login-submit-btn">
+        Iniciar sesión
+      </button>
+    </form>
     <button class="login-btn" onclick="signInTest()" style="background:var(--t3);margin-top:10px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="10"></circle></svg>
       Entrar en modo prueba
     </button>
-    <div class="login-note">Usa tu cuenta de Jet Fresh Flowers Distributors.<br>La primera vez pedirá permiso — acepta para continuar.<br><span style="color:var(--t3);opacity:.8;">"Modo prueba" es temporal, para probar sin correo.</span></div>
+    <div class="login-note">Usa tu cuenta de Jet Fresh Flowers Distributors.<br>Si no tienes acceso, pídele a un administrador que te cree una cuenta.<br><span style="color:var(--t3);opacity:.8;">"Modo prueba" es temporal, para probar sin correo.</span></div>
   </div>
 </div>
 
@@ -351,29 +348,29 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
     <div class="sb-logo">
       <div class="logo-circle">
         <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="30" cy="30" r="28" fill="#1B7A3E"/>
-          <ellipse cx="30" cy="38" rx="14" ry="8" fill="#fff" opacity=".2"/>
-          <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="#22A351"/>
-          <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".6"/>
-          <circle cx="30" cy="15" r="4" fill="#fff"/>
-          <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <circle cx="30" cy="30" r="28" fill="#1B7A3E"></circle>
+          <ellipse cx="30" cy="38" rx="14" ry="8" fill="#fff" opacity=".2"></ellipse>
+          <path d="M18 33 Q22 19 30 15 Q38 19 42 33" fill="#22A351"></path>
+          <path d="M24 33 Q26 23 30 19 Q34 23 36 33" fill="#fff" opacity=".6"></path>
+          <circle cx="30" cy="15" r="4" fill="#fff"></circle>
+          <path d="M20 37 Q30 43 40 37" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
         </svg>
       </div>
       <div><div class="sb-name">Jet Fresh Flowers</div><div class="sb-sub">Distributors</div></div>
     </div>
     <nav class="sb-nav">
       <div class="sb-sec">Operaciones</div>
-      <div class="ni active" id="nav-dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Dashboard</span><span class="nbadge" id="badge-alert" style="display:none">!</span></div>
-      <div class="ni" id="nav-intel" onclick="go('intel')"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg><span>Inteligencia</span></div>
-      <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reportes</span></div>
-      <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"/></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
-      <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendario</span></div>
-      <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Auditoría</span></div>
-      <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Agencias</span></div>
+      <div class="ni active" id="nav-dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg><span>Dashboard</span><span class="nbadge" id="badge-alert" style="display:none">!</span></div>
+      <div class="ni" id="nav-intel" onclick="go('intel')"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"></path><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"></path></svg><span>Inteligencia</span></div>
+      <div class="ni" id="nav-reports" onclick="go('reports')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span>Reportes</span></div>
+      <div class="ni" id="nav-flights" onclick="go('flights')"><svg viewBox="0 0 24 24"><path d="M22 16.5H2M5 12l-3 4.5M19 12l3 4.5M12 3v9M8.5 7.5L12 3l3.5 4.5"></path></svg><span>Vuelos</span><span class="nbadge g" id="badge-fl" style="display:none">0</span></div>
+      <div class="ni" id="nav-calendar" onclick="go('calendar')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>Calendario</span></div>
+      <div class="ni" id="nav-audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Auditoría</span></div>
+      <div class="ni" id="nav-agencies" onclick="go('agencies')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Agencias</span></div>
       <div class="sb-sec" style="margin-top:6px;">IA Tools</div>
-      <div class="ni" id="nav-notifications" onclick="go('notifications')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notificaciones</span><span class="nbadge" id="badge-notif">0</span></div>
+      <div class="ni" id="nav-notifications" onclick="go('notifications')"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span>Notificaciones</span><span class="nbadge" id="badge-notif">0</span></div>
       <div class="sb-sec" style="margin-top:6px;">Config</div>
-      <div class="ni" id="nav-settings" onclick="go('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Configuración</span></div>
+      <div class="ni" id="nav-settings" onclick="go('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span>Configuración</span></div>
     </nav>
     <div class="sb-foot">
       <div class="user-info">
@@ -385,9 +382,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="lang-btns"><button class="lb" onclick="setLang('en',this)">EN</button><button class="lb on" onclick="setLang('es',this)">ES</button></div>
       </div>
       <div class="sb-btns">
-        <button class="sb-action-btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
-        <button class="sb-action-btn" onclick="exportExcel()" style="background:rgba(34,163,81,.18);"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar Excel (con filtros)</button>
-        <button class="sb-action-btn logout" onclick="signOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión</button>
+        <button class="sb-action-btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Exportar CSV</button>
+        <button class="sb-action-btn" onclick="exportExcel()" style="background:rgba(34,163,81,.18);"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Exportar Excel (con filtros)</button>
+        <button class="sb-action-btn logout" onclick="signOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Cerrar sesión</button>
       </div>
     </div>
   </aside>
@@ -396,8 +393,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
     <div class="topbar">
       <span class="tb-title" id="pg-title">Dashboard</span>
       <div style="flex:1;min-width:20px;"></div>
-      <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
-      <button class="tb-btn" style="margin-left:auto;" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo Envío</button>
+      <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
+      <button class="tb-btn" style="margin-left:auto;" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Nuevo Envío</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema claro/oscuro"><span id="theme-icon">🌙</span></button>
       <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
     </div>
@@ -824,7 +821,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>Teléfono agencia</label><input id="f-agphone" placeholder="Auto-rellenado"></div>
           <div class="field"><label>Email agencia</label><input id="f-agemail" type="email" placeholder="Auto-rellenado"></div>
         </div>
-        <div class="ai-tip" id="tip-agency"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-agency-txt"></span></div>
+        <div class="ai-tip" id="tip-agency"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-agency-txt"></span></div>
       </div>
       <!-- FLIGHT INFO -->
       <div class="fs">
@@ -839,8 +836,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>Estado del vuelo</label><select id="f-status"><option value="pending">Pendiente</option><option value="transit">En tránsito</option><option value="delivered">Entregado</option></select></div>
           <div class="field"><label>Prioridad</label><select id="f-priority"><option value="normal">Normal</option><option value="high">Alta</option><option value="critical">Crítica</option></select></div>
         </div>
-        <div class="ai-tip" id="tip-airline" onclick="applyAirline()" style="cursor:pointer;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-airline-txt"></span></div>
-        <div class="ai-tip" id="tip-flight-day" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-flight-day-txt"></span></div>
+        <div class="ai-tip" id="tip-airline" onclick="applyAirline()" style="cursor:pointer;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-airline-txt"></span></div>
+        <div class="ai-tip" id="tip-flight-day" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-flight-day-txt"></span></div>
       </div>
       <!-- BOX COUNT & CARGO -->
       <div class="fs">
@@ -848,13 +845,13 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div style="margin-bottom:12px;">
           <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Subir AWB PDF para auto-rellenar campos</label>
           <div class="upload-zone" onclick="document.getElementById('awb-pdf').click()" id="awb-zone">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
             <p id="awb-zone-txt">Clic para subir AWB PDF / Imagen</p>
             <p style="font-size:10px;color:var(--t3);margin-top:3px;">Extrae automáticamente: AWB, vuelo, aerolínea, ruta, cajas, pesos, tarifa y todos los cargos financieros</p>
           </div>
           <input type="file" id="awb-pdf" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleAWBUpload(event)">
           <div class="upload-status" id="awb-status"></div>
-          <div class="ai-tip" id="tip-agency-detected" style="margin-top:6px;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-agency-detected-txt"></span></div>
+          <div class="ai-tip" id="tip-agency-detected" style="margin-top:6px;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-agency-detected-txt"></span></div>
         </div>
         <div class="fg c4">
           <div class="field"><label>Cajas enviadas (manual) <span class="req">*</span></label><input id="f-bsent" type="number" min="0" placeholder="Ingresar manualmente" oninput="calcAll()"></div>
@@ -869,7 +866,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field s2"><label>Manejo especial</label><select id="f-handling"><option>Mantener refrigerado</option><option>Ninguno</option><option>Mantener vertical</option><option>Frágil</option><option>Este lado arriba</option></select></div>
           <div class="field"><label>Código HS</label><input id="f-hs" placeholder="e.g. 060311/060390"></div>
         </div>
-        <div class="ai-tip" id="tip-boxes"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-boxes-txt"></span></div>
+        <div class="ai-tip" id="tip-boxes"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-boxes-txt"></span></div>
       </div>
       <!-- CADENA DE FRÍO / TEMPERATURA -->
       <div class="form-sec">
@@ -931,7 +928,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>Total cobrar (USD) <span style="font-size:9px;color:var(--t3);">(solo si el AWB es Collect)</span></label><input id="f-totalcoll" type="number" step="0.01" placeholder="0.00"></div>
         </div>
         <div id="total-mismatch-alert" style="display:none;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;line-height:1.5;"></div>
-        <div class="ai-tip" id="tip-cost"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-cost-txt"></span></div>
+        <div class="ai-tip" id="tip-cost"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-cost-txt"></span></div>
         <div id="rate-mismatch-alert" style="display:none;background:var(--amberbg);color:var(--ambertxt);border:1px solid #F59E0B;margin-top:8px;border-radius:var(--r);padding:8px 10px;font-size:11px;font-weight:600;"></div>
       </div>
       <!-- CONTROL DE CALIDAD Y USDA -->
@@ -964,7 +961,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="field"><label>Fecha/hora de liberación USDA</label><input type="datetime-local" id="f-usda-freed-time"></div>
           <div class="field"><label>Observaciones de calidad / USDA</label><textarea id="f-qc-notes" placeholder="Ej: 5 cajas con daño por frío, 2 perdidas en tránsito, USDA retuvo por documentación..." style="min-height:44px;"></textarea></div>
         </div>
-        <div class="ai-tip" id="tip-qc" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-qc-txt"></span></div>
+        <div class="ai-tip" id="tip-qc" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-qc-txt"></span></div>
       </div>
       <!-- RECLAMO A LA AEROLÍNEA -->
       <div class="fs">
@@ -990,7 +987,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="fg" style="margin-top:10px;">
           <div class="field"><label>Notas del reclamo</label><textarea id="f-claim-notes" placeholder="Ej: Se presentó con fotos y AWB. Contacto en aerolínea: Juan Pérez." style="min-height:44px;"></textarea></div>
         </div>
-        <div class="ai-tip" id="tip-claim" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span id="tip-claim-txt"></span></div>
+        <div class="ai-tip" id="tip-claim" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span id="tip-claim-txt"></span></div>
       </div>
       <!-- SHIPPER & CONSIGNEE -->
       <div class="fs">
@@ -998,7 +995,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div class="fg c2">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:8px;">REMITENTE</div>
-            <div class="fg" style="gap:8px;"><div class="field"><label>Empresa</label><input id="f-sname" value="Jet Fresh Flowers Distributors" readonly style="color:var(--t3);"></div></div>
+            <div class="fg" style="gap:8px;"><div class="field"><label>Empresa</label><input id="f-sname" value="Jet Fresh Flowers Distributors" readonly="" style="color:var(--t3);"></div></div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:8px;">CONSIGNATARIO</div>
@@ -1008,7 +1005,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         <div style="margin-top:12px;">
           <label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">Prueba de Entrega (POD) — las fotos se comprimen automáticamente</label>
           <div class="upload-zone" onclick="document.getElementById('pod-file').click()" id="pod-zone">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             <p id="pod-zone-txt">Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive</p>
           </div>
           <input type="file" id="pod-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handlePODUpload(event)">
@@ -1109,68 +1106,18 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 // ══════════════════════════════════════════════════════════
 // CONFIGURATION — Jet Fresh Flowers Distributors
 // ══════════════════════════════════════════════════════════
-var TENANT_ID   = '41019810-8a33-4873-a550-419b81c39a45';
-var CLIENT_ID   = '26255b53-9ce5-417f-b2fd-0df367f5e5ab';
-var SP_SITE     = 'jetfreshflowers.sharepoint.com';
-var SP_SITE_PATH= '/sites/TrackFlow';
-var ONEDRIVE_FOLDER = 'TrackFlow-Files';
-
-// ══ MSAL CONFIG ══
-var SCOPES = ['User.Read'];
+// ══ SUPABASE ══
+var SUPABASE_URL = 'https://nlbllmeuzyozqfdjwnec.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_3-QWUCg8YKkHBaE5c50jkA_o1go9B1_';
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 var currentUser = null;
-var accessToken = null;
-var spSiteId = null;
-var flightsListId = null;
-var agenciesListId = null;
 
-var msalConfig = {
-  auth: {
-    clientId: CLIENT_ID,
-    authority: 'https://login.microsoftonline.com/' + TENANT_ID,
-    redirectUri: window.location.origin + window.location.pathname
-  },
-  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
-};
-var msalInstance = null;
-
-async function initMSAL() {
-  msalInstance = new msal.PublicClientApplication(msalConfig);
-  await msalInstance.initialize();
-  var accounts = msalInstance.getAllAccounts();
-  if (accounts.length > 0) {
-    currentUser = accounts[0];
+async function initAuth() {
+  var { data } = await supabase.auth.getSession();
+  if (data && data.session) {
+    var u = data.session.user;
+    currentUser = { id: u.id, name: (u.user_metadata && u.user_metadata.nombre) || u.email.split('@')[0], username: u.email };
     await initApp();
-  }
-}
-
-async function signIn() {
-  if (!msalInstance) { alert('Cargando librería de autenticación, intenta en 2 segundos...'); return; }
-  try {
-    var result = await msalInstance.loginPopup({ scopes: SCOPES });
-    currentUser = result.account;
-    await initApp();
-  } catch(e) {
-    alert('Error al iniciar sesión: ' + e.message + '\n\nAsegúrate de usar tu cuenta de Jet Fresh Flowers Distributors.');
-  }
-}
-
-async function signOut() {
-  if (!confirm('¿Cerrar sesión?')) return;
-  await msalInstance.logoutPopup();
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  currentUser = null; accessToken = null;
-}
-
-async function getToken() {
-  try {
-    var result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
-    accessToken = result.accessToken;
-    return accessToken;
-  } catch(e) {
-    var result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
-    accessToken = result.accessToken;
-    return accessToken;
   }
 }
 
@@ -1193,19 +1140,35 @@ function saveLocalCFG() {
   try { localStorage.setItem('jff_cfg', JSON.stringify(CFG)); } catch(e) {}
 }
 
-// ══ AUTH ══
+// ══ AUTH (Supabase — email/contraseña) ══
 async function signIn() {
+  var email = (document.getElementById('login-email').value || '').trim();
+  var password = document.getElementById('login-password').value || '';
+  var errBox = document.getElementById('login-error');
+  var btn = document.getElementById('login-submit-btn');
+  errBox.style.display = 'none';
+  if (!email || !password) {
+    errBox.textContent = 'Ingresa tu correo y contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Entrando…';
   try {
-    var result = await msalInstance.loginPopup({ scopes: SCOPES });
-    currentUser = result.account;
+    var result = await supabase.auth.signInWithPassword({ email: email, password: password });
+    if (result.error) throw result.error;
+    var u = result.data.user;
+    currentUser = { id: u.id, name: (u.user_metadata && u.user_metadata.nombre) || u.email.split('@')[0], username: u.email };
+    window._testMode = false;
     await initApp();
   } catch(e) {
-    alert('Error al iniciar sesión: ' + e.message + '\n\nAsegúrate de usar tu cuenta de Jet Fresh Flowers Distributors.');
+    errBox.textContent = 'No se pudo iniciar sesión: ' + (e.message || 'correo o contraseña incorrectos.');
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
   }
 }
 
-// MODO PRUEBA (temporal): entra sin autenticación con Microsoft, para probar en
-// navegación privada sin correo. Quitar cuando el correo esté resuelto.
+// MODO PRUEBA (temporal): entra sin autenticación, para probar sin cuenta.
 async function signInTest() {
   currentUser = { name: 'Usuario de prueba', username: 'prueba@local' };
   window._testMode = true;
@@ -1214,23 +1177,10 @@ async function signInTest() {
 
 async function signOut() {
   if (!confirm('¿Cerrar sesión?')) return;
-  await msalInstance.logoutPopup();
+  if (!window._testMode) { try { await supabase.auth.signOut(); } catch(e) {} }
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  currentUser = null; accessToken = null;
-}
-
-async function getToken() {
-  if (window._testMode) return null; // modo prueba: sin token de Microsoft
-  try {
-    var result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
-    accessToken = result.accessToken;
-    return accessToken;
-  } catch(e) {
-    var result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
-    accessToken = result.accessToken;
-    return accessToken;
-  }
+  currentUser = null;
 }
 
 async function initApp() {
@@ -5842,25 +5792,11 @@ window.onload = function() {
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
-  var script = document.createElement('script');
-  script.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
-  script.onload = function() { initMSAL(); };
-  script.onerror = function() {
-    // Fallback CDN
-    var s2 = document.createElement('script');
-    s2.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
-    s2.onload = function() { initMSAL(); };
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(script);
+  initAuth();
 };
 </script>
-<button id="ai-fab" onclick="go('assistant')" title="Asistente IA — pregúntale a tus datos"
-  style="position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;border:none;box-shadow:0 4px 14px rgba(27,122,62,.4);cursor:pointer;font-size:22px;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;"
-  onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">💬</button>
-<button id="help-fab" onclick="toggleHelp()" title="Ayuda — cómo usar TrackFlow Air"
-  style="position:fixed;bottom:84px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--surf);color:var(--green);border:2px solid var(--green);box-shadow:0 4px 14px rgba(0,0,0,.15);cursor:pointer;font-size:24px;font-weight:800;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;"
-  onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">?</button>
+<button id="ai-fab" onclick="go('assistant')" title="Asistente IA — pregúntale a tus datos" style="position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;border:none;box-shadow:0 4px 14px rgba(27,122,62,.4);cursor:pointer;font-size:22px;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">💬</button>
+<button id="help-fab" onclick="toggleHelp()" title="Ayuda — cómo usar TrackFlow Air" style="position:fixed;bottom:84px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--surf);color:var(--green);border:2px solid var(--green);box-shadow:0 4px 14px rgba(0,0,0,.15);cursor:pointer;font-size:24px;font-weight:800;z-index:900;display:flex;align-items:center;justify-content:center;transition:transform .15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">?</button>
 <div id="help-panel" style="display:none;position:fixed;bottom:146px;right:22px;width:340px;max-width:calc(100vw - 44px);max-height:70vh;overflow-y:auto;background:var(--surf);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);z-index:901;padding:0;">
   <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surf);border-radius:14px 14px 0 0;">
     <span style="font-size:14px;font-weight:800;color:var(--green);">❓ Guía rápida</span>
@@ -5868,5 +5804,6 @@ window.onload = function() {
   </div>
   <div id="help-content" style="padding:14px 16px;font-size:12px;line-height:1.6;color:var(--t2);"></div>
 </div>
-</body>
-</html>
+
+
+</body></html>
