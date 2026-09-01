@@ -1192,7 +1192,8 @@ async function initApp() {
   var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
   document.getElementById('user-av').textContent = initials || 'JF';
   loadLocalCFG();
-  loadLocalFallback();
+  setSyncStatus('syncing', 'Cargando datos…');
+  await loadLocalFallback();
   setSyncStatus('ok', 'Sesión activa ✓');
   maybeShowTour();
   autoUpdateAllStatuses();
@@ -1489,37 +1490,215 @@ function importBackup(input) {
   reader.readAsText(file);
 }
 
-function loadLocalFallback() {
+// ══ SUPABASE — mapeo de campos (app camelCase <-> columnas snake_case) ══
+// Campos con columna propia; todo lo demás viaja intacto en la columna "extra"
+// (tracking en vivo, reprogramaciones, POD, campos calculados, etc.) para no
+// perder nada sin tener que rediseñar el formulario en esta etapa.
+var FLIGHT_KNOWN_FIELDS = ['awb','num','airline','origin','dest','etd','eta','agId','bsent','bconf',
+  'bdamaged','blost','weight','cweight','fbe','commodity','ctype','hs','handling','rateBase','rateExp',
+  'wcharge','valcharge','tax','maa','awc','myc','esc','ochagent','ochcarrier','totalpaid','totalcoll',
+  'tempOrig','tempOrigUnit','tempMia','tempMiaUnit','tempReadings','tempNotes','tempAck','tempAckAt',
+  'tempNotified','usdaHold','usdaFreed','usdaFreedTime','busda','busdaReleased','claimAmount',
+  'claimRecovered','claimRef','claimDate','claimDeadline','claimStatus','claimNotes','consignee','ref',
+  'notes','qcNotes','status','statusNotes','arrived','completed','manualDelivered','arrivedTime',
+  'priority','id','createdAt','modifiedAt'];
+
+function _num(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
+function _int(v) { var x = parseInt(v); return isNaN(x) ? null : x; }
+function _toISO(v) { if (!v) return null; var d = new Date(v); return isNaN(d) ? null : d.toISOString(); }
+// ISO (UTC, de Supabase) -> string local para <input type="datetime-local">
+function _toLocalInput(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,16);
+}
+function _s(v) { return (v === null || v === undefined) ? '' : String(v); }
+
+function flightToRow(f) {
+  var extra = {};
+  Object.keys(f).forEach(function(k){ if (FLIGHT_KNOWN_FIELDS.indexOf(k) === -1) extra[k] = f[k]; });
+  return {
+    awb: f.awb || null, vuelo_numero: f.num || null, aerolinea: f.airline || null,
+    origen: f.origin || null, destino: f.dest || null,
+    etd: _toISO(f.etd), eta: _toISO(f.eta),
+    agencia_id: f.agId || null,
+    cajas_enviadas: _int(f.bsent) || 0, cajas_confirmadas_miami: _int(f.bconf),
+    cajas_danadas: _int(f.bdamaged) || 0, cajas_perdidas: _int(f.blost) || 0,
+    peso_bruto: _num(f.weight), peso_facturable: _num(f.cweight), fbe: _num(f.fbe),
+    // app.commodity = tipo de guía (CONSOL/LINEA RELEASE/OWN GUIDE); app.ctype = mercancía real
+    tipo_guia: f.commodity || null, commodity: f.ctype || null,
+    hs_code: f.hs || null, handling: f.handling || null,
+    tarifa_kg: _num(f.rateBase), tarifa_esperada: _num(f.rateExp),
+    cargo_peso: _num(f.wcharge), cargo_valuacion: _num(f.valcharge), impuesto: _num(f.tax),
+    maa: _num(f.maa), awc: _num(f.awc), myc: _num(f.myc), esc: _num(f.esc),
+    otros_cargos_agente: _num(f.ochagent), otros_cargos_carrier: _num(f.ochcarrier),
+    total_prepagado: _num(f.totalpaid), total_collect: _num(f.totalcoll),
+    temp_origen: _num(f.tempOrig), temp_origen_unidad: f.tempOrigUnit || null,
+    temp_miami: _num(f.tempMia), temp_miami_unidad: f.tempMiaUnit || null,
+    temp_lecturas: f.tempReadings || null, temp_notas: f.tempNotes || null,
+    temp_alerta_atendida: !!f.tempAck, temp_alerta_atendida_at: _toISO(f.tempAckAt),
+    temp_notificado: !!f.tempNotified,
+    usda_hold: !!f.usdaHold, usda_freed: !!f.usdaFreed, usda_liberado_at: _toISO(f.usdaFreedTime),
+    usda_cajas_retenidas: _int(f.busda), usda_cajas_liberadas: _int(f.busdaReleased),
+    reclamo_monto: _num(f.claimAmount), reclamo_recuperado: _num(f.claimRecovered),
+    reclamo_referencia: f.claimRef || null, reclamo_fecha: f.claimDate || null,
+    reclamo_fecha_limite: f.claimDeadline || null, reclamo_estado: f.claimStatus || null,
+    reclamo_notas: f.claimNotes || null,
+    consignatario: f.consignee || null, referencia: f.ref || null, notas: f.notes || null,
+    notas_qc: f.qcNotes || null, estado: f.status || null, notas_estado: f.statusNotes || null,
+    arribado: !!f.arrived, completado: !!f.completed, entregado_manual: !!f.manualDelivered,
+    arribo_real: _toISO(f.arrivedTime), prioridad: f.priority || null,
+    extra: extra
+  };
+}
+
+function rowToFlight(row) {
+  var f = Object.assign({}, row.extra || {});
+  f.id = row.id;
+  f.awb = row.awb || ''; f.num = row.vuelo_numero || ''; f.airline = row.aerolinea || '';
+  f.origin = row.origen || ''; f.dest = row.destino || '';
+  f.etd = _toLocalInput(row.etd); f.eta = _toLocalInput(row.eta);
+  f.agId = row.agencia_id || '';
+  f.bsent = row.cajas_enviadas || 0; f.bconf = row.cajas_confirmadas_miami || 0;
+  f.bmiss = (f.bconf||0) - (f.bsent||0);
+  f.confst = (f.bsent > 0 && f.bconf >= f.bsent) ? 'confirmed' : (f.bconf > 0 ? 'partial' : 'unconfirmed');
+  f.bdamaged = row.cajas_danadas || 0; f.blost = row.cajas_perdidas || 0;
+  f.weight = _s(row.peso_bruto); f.cweight = _s(row.peso_facturable); f.fbe = row.fbe || 0;
+  f.commodity = row.tipo_guia || ''; f.ctype = row.commodity || '';
+  f.hs = row.hs_code || ''; f.handling = row.handling || '';
+  f.rateBase = _s(row.tarifa_kg); f.rateExp = _s(row.tarifa_esperada);
+  f.rate = (parseFloat(row.tarifa_kg)||0) + (parseFloat(row.myc)||0) + (parseFloat(row.esc)||0);
+  f.wcharge = _s(row.cargo_peso); f.valcharge = _s(row.cargo_valuacion); f.tax = _s(row.impuesto);
+  f.maa = _s(row.maa); f.awc = _s(row.awc); f.myc = _s(row.myc); f.esc = _s(row.esc);
+  f.ochagent = _s(row.otros_cargos_agente); f.ochcarrier = _s(row.otros_cargos_carrier);
+  f.totalpaid = _s(row.total_prepagado); f.totalcoll = _s(row.total_collect);
+  f.tempOrig = _s(row.temp_origen); f.tempOrigUnit = row.temp_origen_unidad || '';
+  f.tempMia = _s(row.temp_miami); f.tempMiaUnit = row.temp_miami_unidad || '';
+  f.tempReadings = row.temp_lecturas || ''; f.tempNotes = row.temp_notas || '';
+  f.tempAck = !!row.temp_alerta_atendida; f.tempAckAt = _toLocalInput(row.temp_alerta_atendida_at);
+  f.tempNotified = !!row.temp_notificado;
+  f.usdaHold = !!row.usda_hold; f.usdaFreed = !!row.usda_freed;
+  f.usdaFreedTime = _toLocalInput(row.usda_liberado_at);
+  f.busda = row.usda_cajas_retenidas || 0; f.busdaReleased = row.usda_cajas_liberadas || 0;
+  f.claimAmount = row.reclamo_monto || 0; f.claimRecovered = row.reclamo_recuperado || 0;
+  f.claimRef = row.reclamo_referencia || ''; f.claimDate = row.reclamo_fecha || '';
+  f.claimDeadline = row.reclamo_fecha_limite || ''; f.claimStatus = row.reclamo_estado || 'none';
+  f.claimNotes = row.reclamo_notas || '';
+  f.consignee = row.consignatario || ''; f.ref = row.referencia || ''; f.notes = row.notas || '';
+  f.qcNotes = row.notas_qc || ''; f.status = row.estado || ''; f.statusNotes = row.notas_estado || '';
+  f.arrived = !!row.arribado; f.completed = !!row.completado; f.manualDelivered = !!row.entregado_manual;
+  f.arrivedTime = _toLocalInput(row.arribo_real); f.priority = row.prioridad || 'normal';
+  f.createdAt = row.created_at || f.createdAt; f.modifiedAt = row.updated_at || f.modifiedAt;
+  return f;
+}
+
+function agencyToRow(a) {
+  return { nombre: a.name || '', contacto: a.contact || null, email: a.email || null,
+    telefono: a.phone || null, direccion: a.address || null, notas: a.notes || null };
+}
+function rowToAgency(row) {
+  return { id: row.id, name: row.nombre || '', contact: row.contacto || '', email: row.email || '',
+    phone: row.telefono || '', address: row.direccion || '', notes: row.notas || '' };
+}
+
+// ══ SUPABASE — carga y guardado real (con localStorage como respaldo local) ══
+async function loadLocalFallback() {
   try {
-    var d = localStorage.getItem('jff_db') || localStorage.getItem('jff_db_backup');
-    if (d) DB = JSON.parse(d);
-  } catch(e) {}
+    var flRes = await supabase.from('vuelos').select('*').order('created_at', { ascending: false });
+    if (flRes.error) throw flRes.error;
+    var agRes = await supabase.from('agencias').select('*').order('nombre', { ascending: true });
+    if (agRes.error) throw agRes.error;
+    DB.flights = (flRes.data || []).map(rowToFlight);
+    DB.agencies = (agRes.data || []).map(rowToAgency);
+    persistDB(); // refresca la caché local de respaldo
+    setSyncStatus('ok', 'Datos cargados ✓');
+  } catch(e) {
+    console.error('Error cargando datos de Supabase:', e);
+    setSyncStatus('err', '⚠ Sin conexión a la base de datos');
+    toast('No se pudieron cargar los datos de la base de datos: ' + (e.message||e), 'err');
+    // Respaldo: si Supabase no responde, usar la última copia local conocida
+    try {
+      var d = localStorage.getItem('jff_db') || localStorage.getItem('jff_db_backup');
+      if (d) DB = JSON.parse(d);
+    } catch(e2) {}
+  }
 }
 
 async function saveFlight_SP(f) {
-  if (!f.id || f.id.startsWith('local_')) f.id = 'local_' + Date.now();
-  if (persistDB()) setSyncStatus('ok', 'Guardado ✓');
+  var isNew = !f.id || String(f.id).indexOf('local_') === 0;
+  var row = flightToRow(f);
+  try {
+    if (isNew) {
+      var insRes = await supabase.from('vuelos').insert(row).select().single();
+      if (insRes.error) throw insRes.error;
+      f.id = insRes.data.id; f.createdAt = insRes.data.created_at; f.modifiedAt = insRes.data.updated_at;
+    } else {
+      var updRes = await supabase.from('vuelos').update(row).eq('id', f.id).select().single();
+      if (updRes.error) throw updRes.error;
+      f.modifiedAt = updRes.data.updated_at;
+    }
+    persistDB();
+    setSyncStatus('ok', 'Guardado ✓');
+  } catch(e) {
+    console.error('Error al guardar vuelo en Supabase:', e);
+    toast('⚠ No se pudo guardar en la base de datos: ' + (e.message||e), 'err');
+    setSyncStatus('err', '⚠ Error al guardar');
+  }
 }
 
 async function saveAgency_SP(a) {
-  if (!a.id || a.id.startsWith('local_')) a.id = 'local_ag_' + Date.now();
-  persistDB();
+  var isNew = !a.id || String(a.id).indexOf('local_') === 0;
+  var row = agencyToRow(a);
+  try {
+    if (isNew) {
+      var insRes = await supabase.from('agencias').insert(row).select().single();
+      if (insRes.error) throw insRes.error;
+      a.id = insRes.data.id;
+    } else {
+      var updRes = await supabase.from('agencias').update(row).eq('id', a.id);
+      if (updRes.error) throw updRes.error;
+    }
+    persistDB();
+  } catch(e) {
+    console.error('Error al guardar agencia en Supabase:', e);
+    toast('⚠ No se pudo guardar la agencia en la base de datos: ' + (e.message||e), 'err');
+  }
 }
 
 async function deleteFlight_SP(id) {
   var doomed = DB.flights.find(function(x){ return x.id === id; });
   if (doomed) logAudit(doomed, doomed, (doomed.createdby||'Sistema'), 'delete');
   DB.flights = DB.flights.filter(function(x){ return x.id !== id; });
+  try {
+    if (id && String(id).indexOf('local_') !== 0) {
+      var delRes = await supabase.from('vuelos').delete().eq('id', id);
+      if (delRes.error) throw delRes.error;
+    }
+  } catch(e) {
+    console.error('Error al eliminar vuelo en Supabase:', e);
+    toast('⚠ No se pudo eliminar en la base de datos: ' + (e.message||e), 'err');
+  }
   persistDB();
 }
 
 async function deleteAgency_SP(id) {
   DB.agencies = DB.agencies.filter(function(a){ return a.id !== id; });
+  try {
+    if (id && String(id).indexOf('local_') !== 0) {
+      var delRes = await supabase.from('agencias').delete().eq('id', id);
+      if (delRes.error) throw delRes.error;
+    }
+  } catch(e) {
+    console.error('Error al eliminar agencia en Supabase:', e);
+    toast('⚠ No se pudo eliminar la agencia en la base de datos: ' + (e.message||e), 'err');
+  }
   persistDB();
 }
 
 async function forceSyncAll() {
-  loadLocalFallback();
+  await loadLocalFallback();
   renderScreen(screen);
   updateBadges();
   toast('Datos cargados correctamente', 'ok');
