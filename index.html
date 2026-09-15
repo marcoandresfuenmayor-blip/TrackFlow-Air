@@ -1194,6 +1194,7 @@ async function initApp() {
   loadLocalCFG();
   setSyncStatus('syncing', 'Cargando datos…');
   await loadLocalFallback();
+  await loadCFG_SP();
   setSyncStatus('ok', 'Sesión activa ✓');
   maybeShowTour();
   autoUpdateAllStatuses();
@@ -1601,6 +1602,61 @@ function agencyToRow(a) {
 function rowToAgency(row) {
   return { id: row.id, name: row.nombre || '', contact: row.contacto || '', email: row.email || '',
     phone: row.telefono || '', address: row.direccion || '', notes: row.notas || '' };
+}
+
+// ══ CONFIGURACIÓN COMPARTIDA (Supabase) ══
+// Nota: theme, tourSeen y colOrder son preferencias personales de cada navegador,
+// NO se comparten vía Supabase — solo lo que es "de la empresa" (API keys, notificaciones, etc.)
+function cfgToRow(cfg) {
+  return {
+    groq_api_key: cfg.groqKey || null, aviationstack_api_key: cfg.aviationKey || null,
+    emailjs_service_id: cfg.emailServiceId || null, emailjs_template_id: cfg.emailTemplateId || null,
+    emailjs_public_key: cfg.emailPublicKey || null,
+    notif_arribo: !!cfg.notifyOnArrival, notif_demora: !!cfg.notifyOnDelay, notif_usda: !!cfg.notifyOnUsda,
+    notif_emails: cfg.notifyEmails || '', consignatarios: cfg.consignees || '',
+    temporadas_altas: cfg.highSeasons || [],
+    temp_min: (cfg.tempMin === undefined || cfg.tempMin === null || isNaN(cfg.tempMin)) ? null : cfg.tempMin,
+    temp_max: (cfg.tempMax === undefined || cfg.tempMax === null || isNaN(cfg.tempMax)) ? null : cfg.tempMax,
+    ia_privacidad: cfg.aiPrivacy || 'full', frecuencia_escaneo: cfg.scanHours || null,
+    auto_scan_arrivals: cfg.autoScanArrivals !== false,
+    last_backup: cfg.lastBackup ? _toISO(cfg.lastBackup) : null,
+    claude_api_key: cfg.claudeKey || null, aero_api_key: cfg.aeroKey || null,
+    updated_by: (currentUser && currentUser.id) || null
+  };
+}
+function applyCfgRow(row) {
+  if (!row) return;
+  CFG.groqKey = row.groq_api_key || ''; CFG.aviationKey = row.aviationstack_api_key || '';
+  CFG.emailServiceId = row.emailjs_service_id || ''; CFG.emailTemplateId = row.emailjs_template_id || '';
+  CFG.emailPublicKey = row.emailjs_public_key || '';
+  CFG.notifyOnArrival = !!row.notif_arribo; CFG.notifyOnDelay = !!row.notif_demora; CFG.notifyOnUsda = !!row.notif_usda;
+  CFG.notifyEmails = row.notif_emails || ''; CFG.consignees = row.consignatarios || '';
+  CFG.highSeasons = Array.isArray(row.temporadas_altas) ? row.temporadas_altas : (CFG.highSeasons || []);
+  CFG.tempMin = (row.temp_min !== null && row.temp_min !== undefined) ? parseFloat(row.temp_min) : CFG.tempMin;
+  CFG.tempMax = (row.temp_max !== null && row.temp_max !== undefined) ? parseFloat(row.temp_max) : CFG.tempMax;
+  CFG.aiPrivacy = row.ia_privacidad || 'full'; CFG.scanHours = row.frecuencia_escaneo || CFG.scanHours;
+  CFG.autoScanArrivals = row.auto_scan_arrivals !== false; CFG.lastBackup = row.last_backup || '';
+  CFG.claudeKey = row.claude_api_key || ''; CFG.aeroKey = row.aero_api_key || '';
+}
+async function loadCFG_SP() {
+  try {
+    var res = await supabase.from('configuracion').select('*').eq('id', 1).single();
+    if (res.error) throw res.error;
+    applyCfgRow(res.data);
+    saveLocalCFG(); // refresca la caché local con lo compartido
+  } catch(e) {
+    console.error('Error cargando configuración de Supabase:', e);
+    // Sin conexión: se sigue usando lo que ya había en localStorage (loadLocalCFG corrió antes)
+  }
+}
+async function saveCFG_SP() {
+  try {
+    var res = await supabase.from('configuracion').update(cfgToRow(CFG)).eq('id', 1);
+    if (res.error) throw res.error;
+  } catch(e) {
+    console.error('Error guardando configuración en Supabase:', e);
+    toast('⚠ No se pudo guardar la configuración en la base de datos: ' + (e.message||e), 'err');
+  }
 }
 
 // ══ SUPABASE — carga y guardado real (con localStorage como respaldo local) ══
@@ -5876,7 +5932,7 @@ function clearNotifs(){document.getElementById('notif-list').innerHTML='<div cla
 function updateBadges(){var n=document.querySelectorAll('#notif-list .ni-item').length;var nb=document.getElementById('badge-notif');nb.textContent=n;nb.style.display=n>0?'':'none';var fb=document.getElementById('badge-fl');fb.textContent=DB.flights.length;fb.style.display=DB.flights.length>0?'':'none';}
 
 // ══ SETTINGS ══
-function saveSettings(){
+async function saveSettings(){
   CFG.groqKey=gv('cfg-groq'); CFG.consignees=gv('cfg-consignees');
   var tMin=parseFloat(gv('cfg-temp-min')); var tMax=parseFloat(gv('cfg-temp-max'));
   CFG.tempMin = isNaN(tMin)?1:tMin; CFG.tempMax = isNaN(tMax)?8:tMax;
@@ -5888,6 +5944,7 @@ function saveSettings(){
   var na=document.getElementById('cfg-notify-arrival'), nd=document.getElementById('cfg-notify-delay'), nu=document.getElementById('cfg-notify-usda');
   CFG.notifyOnArrival=na?na.checked:true; CFG.notifyOnDelay=nd?nd.checked:true; CFG.notifyOnUsda=nu?nu.checked:true;
   saveLocalCFG(); populateConsignees(); toast('Configuración guardada!','ok');
+  await saveCFG_SP();
 }
 
 // ══ EXPORT ══
