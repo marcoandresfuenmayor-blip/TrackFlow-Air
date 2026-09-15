@@ -2008,6 +2008,7 @@ var PORT_TZ = {
   BOG: { tz:'America/Bogota',    label:'Colombia' },
   MDE: { tz:'America/Bogota',    label:'Colombia' },
   MED: { tz:'America/Bogota',    label:'Colombia' },
+  GUAT:{ tz:'America/Guatemala', label:'Guatemala' },
   MIA: { tz:'America/New_York',  label:'Miami' }
   // Futuros: AKL:{tz:'Pacific/Auckland',label:'Auckland'}, MXP:{tz:'Europe/Rome',label:'Milán'}, ...
 };
@@ -4594,7 +4595,9 @@ function renderCalendar(){
       var tip = 'AWB ' + (f.awb||'—') + (f.num?' · Vuelo '+f.num:'') + '\n'
         + (f.agName?'Carguera: '+f.agName+'\n':'')
         + (f.airline?'Aerolínea: '+f.airline+'\n':'')
-        + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas';
+        + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas'
+        + (f.etd?'\nSale: '+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label:'')
+        + (f.eta?'\nLlega: '+arrivalBothZones(f.eta):'');
       h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'20;border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;overflow:hidden;">'
         + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(awb)+'</div>'
         + '<div style="font-size:8px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">'
@@ -5691,7 +5694,7 @@ function renderFlights(){
     var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'—';
     var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
-    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;">'+fmtD(f.etd)+'</td><td>'+etaCell(f)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.fbe>0?'<strong style="color:var(--green2);">'+f.fbe+'</strong>':'—')+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+arrivalCell(f)+'</td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;" title="'+(f.etd?esc(fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label):'')+'">'+fmtD(f.etd)+'</td><td title="'+(f.eta?esc('🛬 '+arrivalBothZones(f.eta)):'')+'">'+etaCell(f)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.fbe>0?'<strong style="color:var(--green2);">'+f.fbe+'</strong>':'—')+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+arrivalCell(f)+'</td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
   applyColOrder('tbl-flights');
