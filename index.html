@@ -5560,12 +5560,9 @@ function renderDash(){
 function renderWorldClocks(){
   var boxes = [document.getElementById('world-clocks'), document.getElementById('world-clocks-flights'), document.getElementById('world-clocks-cal')];
   if (!boxes[0] && !boxes[1] && !boxes[2]) return;
-  // Reúne las zonas de los puertos que realmente aparecen en los vuelos + destino Miami
+  // Siempre muestra todos los países de origen conocidos (haya o no vuelos activos desde ahí) + Miami
   var zones = {}; // tz -> label
-  DB.flights.forEach(function(f){
-    var p = (f.origin||'').toUpperCase().trim();
-    if (p && PORT_TZ[p]) zones[PORT_TZ[p].tz] = PORT_TZ[p].label;
-  });
+  Object.keys(PORT_TZ).forEach(function(p){ zones[PORT_TZ[p].tz] = PORT_TZ[p].label; });
   // Siempre incluir la zona de casa y Miami
   zones[HOME_TZ.tz] = HOME_TZ.label;
   zones[DEST_TZ.tz] = DEST_TZ.label;
