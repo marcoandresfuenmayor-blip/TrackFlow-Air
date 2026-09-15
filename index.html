@@ -98,6 +98,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px
 .sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite;}
 .sync-dot.err{background:var(--red);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── RESPONSIVE (celular/tablet angosta) ── */
+.menu-toggle{display:none;}
+.sb-backdrop{display:none;}
+@media (max-width: 860px){
+  .sb{position:fixed;top:0;left:0;z-index:300;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 24px rgba(0,0,0,.3);}
+  .sb.open{transform:translateX(0);}
+  .sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:250;}
+  .sb-backdrop.show{display:block;}
+  .menu-toggle{display:flex;align-items:center;justify-content:center;width:34px;height:32px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;cursor:pointer;flex-shrink:0;}
+  .menu-toggle svg{width:18px;height:18px;stroke:var(--t1);fill:none;stroke-width:2;stroke-linecap:round;}
+  .tb-title{min-width:0;}
+  .topbar{padding:0 10px;gap:8px;}
+  .content{padding:12px;}
+}
 .eta-pulse{animation:pulse 1.5s ease-in-out infinite;}
 
 /* ── MICRO-INTERACCIONES: hacen la app sentirse viva ── */
@@ -344,6 +359,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
 <!-- MAIN APP (hidden until logged in) -->
 <div id="app" class="app" style="display:none;">
+  <div class="sb-backdrop" id="sb-backdrop" onclick="closeSidebar()"></div>
   <aside class="sb">
     <div class="sb-logo">
       <div class="logo-circle">
@@ -391,6 +407,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
   <div class="main">
     <div class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menú"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
       <span class="tb-title" id="pg-title">Dashboard</span>
       <div style="flex:1;min-width:20px;"></div>
       <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
@@ -778,9 +795,9 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div class="ss">
             <div class="ss-t">Almacenamiento de datos</div>
             <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="font-size:12px;color:var(--t2);line-height:1.6;background:var(--amberbg);border:1px solid #F59E0B;border-radius:8px;padding:10px 12px;">
-                <strong style="color:var(--ambertxt);">⚠ Tus datos viven en ESTE navegador</strong><br>
-                <span style="font-size:11px;">No hay servidor ni nube. Si borras el caché de Safari, cambias de computadora o usas otro navegador, <strong>no verás estos datos</strong>. Exporta un respaldo con frecuencia.</span>
+              <div style="font-size:12px;color:var(--t2);line-height:1.6;background:var(--lightgreen);border:1px solid var(--midgreen);border-radius:8px;padding:10px 12px;">
+                <strong style="color:var(--green);">☁ Tus datos viven en la nube (Supabase)</strong><br>
+                <span style="font-size:11px;">Vuelos, agencias y configuración se guardan en un servidor compartido — todo tu equipo ve lo mismo, y no se pierde si cambias de navegador, celular o computadora. Este navegador solo guarda una copia local temporal para que la app cargue rápido.</span>
               </div>
               <div id="storage-meter" style="font-size:11px;color:var(--t2);"></div>
               <button class="btn pr" onclick="loadDemoData()">🧪 Cargar 7 vuelos de ejemplo</button>
@@ -789,7 +806,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               <button class="btn pr" onclick="exportExcel()">📊 Exportar Excel (con filtros)</button>
               <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;">
                 <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px;">🔒 Respaldo de datos</div>
-                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.4;">Tus datos se guardan en este navegador. Exporta un respaldo regularmente para no perderlos.</div>
+                <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.4;">Tus datos ya están seguros en Supabase. Este respaldo es una copia extra opcional (un archivo .json) por si algún día la necesitas.</div>
                 <button class="btn pr" onclick="exportBackup()" style="width:100%;margin-bottom:6px;">💾 Exportar respaldo completo</button>
                 <label class="btn" style="width:100%;text-align:center;cursor:pointer;display:block;margin-bottom:6px;">📥 Restaurar desde respaldo<input type="file" accept=".json" onchange="importBackup(this)" style="display:none;"></label>
                 <button class="btn danger" onclick="purgePODs()" style="width:100%;">🗑 Liberar espacio (borrar PODs adjuntos)</button>
@@ -1257,16 +1274,18 @@ function storageInfo() {
 }
 
 // Libera espacio quitando los PODs guardados localmente (los datos del vuelo se conservan)
-function purgePODs() {
+async function purgePODs() {
   var withPod = DB.flights.filter(function(f){ return f.podUrl && f.podUrl.indexOf('data:') === 0; });
   if (!withPod.length) { toast('No hay PODs locales que borrar.', 'ok'); return; }
-  if (!confirm('¿Borrar ' + withPod.length + ' archivo(s) POD guardados en este navegador?\n\nLos datos de los vuelos se conservan — solo se elimina la imagen/PDF adjunto.\n\nRecomendación: exporta un respaldo primero.')) return;
+  if (!confirm('¿Borrar ' + withPod.length + ' archivo(s) POD guardados?\n\nLos datos de los vuelos se conservan — solo se elimina la imagen/PDF adjunto, tanto en este navegador como en la base de datos compartida.')) return;
   withPod.forEach(function(f){ f.podUrl = ''; f.podName = ''; });
   if (persistDB()) {
     var banner = document.getElementById('storage-alert'); if (banner) banner.style.display = 'none';
     renderScreen(screen);
     toast('✓ Espacio liberado: ' + withPod.length + ' POD(s) eliminados', 'ok');
   }
+  // Sin esto, el POD "borrado" localmente reaparecía solo al recargar (Supabase seguía con la copia vieja)
+  for (var i=0; i<withPod.length; i++) { await saveFlight_SP(withPod[i]); }
 }
 
 // ══ NOTIFICACIONES POR CORREO (EmailJS) ══
@@ -1410,31 +1429,12 @@ function daysSinceBackup() {
 }
 
 function checkBackupHealth() {
+  // Esta alarma (incluido el aviso de que Safari borra los datos en 7 días) era válida
+  // cuando los vuelos solo existían en localStorage de este navegador. Ahora la fuente
+  // de verdad es Supabase (nube compartida), así que ya no hay riesgo real de perderlos
+  // por cambiar de navegador o no abrir la app — se desactiva para no alarmar sin motivo.
   var banner = document.getElementById('backup-alert');
-  if (!banner) return;
-  if (!DB.flights.length) { banner.style.display = 'none'; return; }
-  var days = daysSinceBackup();
-  var safari = isSafari();
-  var msg = '', level = '';
-
-  if (days === null) {
-    level = safari ? 'high' : 'mid';
-    msg = '<strong>⚠ Nunca has exportado un respaldo.</strong> Tienes ' + DB.flights.length + ' envíos guardados únicamente en este navegador.'
-      + (safari ? '<br><br><strong>Estás usando Safari:</strong> Apple borra automáticamente los datos de los sitios web tras 7 días sin visitarlos. Tus envíos pueden desaparecer solos.' : '');
-  } else if (days >= 5) {
-    level = days >= 7 ? 'high' : 'mid';
-    msg = '<strong>⚠ Tu último respaldo fue hace ' + days + ' día' + (days>1?'s':'') + '.</strong>'
-      + (safari ? ' Safari borra los datos tras 7 días sin abrir el sitio — exporta uno nuevo ahora.' : ' Conviene exportar uno nuevo.');
-  } else {
-    banner.style.display = 'none';
-    return;
-  }
-  var c = level === 'high' ? { bg:'#FEE2E2', bd:'#DC2626', tx:'#991B1B' } : { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E' };
-  banner.style.cssText = 'display:block;background:'+c.bg+';border:1.5px solid '+c.bd+';color:'+c.tx
-    + ';border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.5;';
-  banner.innerHTML = msg + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'
-    + '<button class="btn xs pr" onclick="exportBackup()">💾 Exportar respaldo ahora</button>'
-    + '<button class="btn xs" onclick="document.getElementById(\'backup-alert\').style.display=\'none\'">Después</button></div>';
+  if (banner) banner.style.display = 'none';
 }
 
 function exportBackup() {
@@ -5164,6 +5164,17 @@ function go(s) {
   if(srch) srch.style.display = (s==='flights') ? '' : 'none';
   closeSearchResults();
   renderScreen(s);
+  closeSidebar(); // en celular, navegar cierra el menú lateral
+}
+function toggleSidebar(){
+  var sb=document.querySelector('.sb'), bd=document.getElementById('sb-backdrop');
+  if (sb) sb.classList.toggle('open');
+  if (bd) bd.classList.toggle('show');
+}
+function closeSidebar(){
+  var sb=document.querySelector('.sb'), bd=document.getElementById('sb-backdrop');
+  if (sb) sb.classList.remove('open');
+  if (bd) bd.classList.remove('show');
 }
 function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
 
@@ -5768,19 +5779,14 @@ function renderSettingsPage(){
       + '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden;">'
       + '<div style="height:100%;width:' + si.pct + '%;background:' + barColor + ';border-radius:4px;"></div></div>'
       + '<div style="font-size:10px;color:var(--t3);margin-top:4px;">' + DB.flights.length + ' vuelos · ' + podCount + ' POD adjuntos'
-      + (si.pct >= 60 ? ' · <strong style="color:'+barColor+';">Conviene exportar respaldo y liberar PODs</strong>' : '') + '</div>';
-    // Estado del último respaldo
+      + (si.pct >= 60 ? ' · <strong style="color:'+barColor+';">Conviene liberar espacio (los datos ya están a salvo en Supabase)</strong>' : '') + '</div>';
+    // Estado del último respaldo (copia extra opcional en .json — los datos reales ya están en Supabase)
     var dsb = daysSinceBackup();
     var bkTxt = dsb === null
-      ? '<strong style="color:var(--red);">Nunca has exportado un respaldo</strong>'
+      ? '<span style="color:var(--t3);">Sin copia .json exportada todavía (opcional)</span>'
       : (dsb === 0 ? '<strong style="color:var(--green);">Último respaldo: hoy ✓</strong>'
-        : '<strong style="color:' + (dsb>=5?'var(--red)':'var(--t2)') + ';">Último respaldo: hace ' + dsb + ' día' + (dsb>1?'s':'') + '</strong>');
+        : '<span style="color:var(--t3);">Último respaldo: hace ' + dsb + ' día' + (dsb>1?'s':'') + '</span>');
     meter.innerHTML += '<div style="font-size:10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">' + bkTxt + '</div>';
-    if (isSafari()) {
-      meter.innerHTML += '<div style="font-size:10px;line-height:1.5;background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B;border-radius:8px;padding:8px 10px;margin-top:8px;">'
-        + '<strong>🧭 Estás usando Safari</strong><br>Apple borra automáticamente los datos guardados de un sitio si no lo abres durante 7 días. También se borran al limpiar el historial.<br><br>'
-        + '<strong>Opciones:</strong> abre TrackFlow al menos una vez por semana, exporta respaldos con frecuencia, o usa <strong>Chrome</strong> (no aplica este borrado automático).</div>';
-    }
   }
   sv('cfg-groq',CFG.groqKey||''); sv('cfg-consignees',CFG.consignees||'MAS Customs,Delivery Plus'); renderSeasonsConfig(); sv('cfg-temp-min', CFG.tempMin!==undefined?CFG.tempMin:1); sv('cfg-temp-max', CFG.tempMax!==undefined?CFG.tempMax:8);
   sv('cfg-ai-privacy',CFG.aiPrivacy||'full'); onPrivacyChange();
