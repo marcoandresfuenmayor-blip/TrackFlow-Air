@@ -1103,6 +1103,15 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
   </div>
 </div>
 
+<!-- MODAL: VER POD -->
+<div class="modal-bg" id="modal-pod">
+  <div class="modal" style="max-width:760px;">
+    <div class="mh"><span class="mt" id="pod-view-title">POD</span><button class="mc" onclick="closeModal('pod')">×</button></div>
+    <div class="mb" id="pod-view-body" style="text-align:center;"></div>
+    <div class="mf"><a class="btn" id="pod-download-link" href="#" target="_blank" rel="noopener">⬇ Descargar</a><button class="btn pr" onclick="closeModal('pod')">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- TOUR DE BIENVENIDA -->
@@ -5074,8 +5083,61 @@ function openModal(id) {
   if (id==='agency'&&!editAgId) { document.getElementById('modal-agency-title').textContent='Agregar Agencia'; ['ag-name','ag-contact','ag-phone','ag-email','ag-addr','ag-notes'].forEach(function(i){sv(i,'');}); }
   document.getElementById('modal-'+id).classList.add('open');
 }
-function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); if(id==='new')editFlId=null; if(id==='agency')editAgId=null; }
-document.addEventListener('keydown',function(e){if(e.key==='Escape')['new','agency','detail','live'].forEach(closeModal);});
+function closeModal(id) {
+  document.getElementById('modal-'+id).classList.remove('open');
+  if(id==='new')editFlId=null; if(id==='agency')editAgId=null;
+  if(id==='pod' && window._podBlobUrl) { try{URL.revokeObjectURL(window._podBlobUrl);}catch(e){} window._podBlobUrl=null; }
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')['new','agency','detail','live','pod'].forEach(closeModal);});
+
+// ══ VER POD (foto/PDF de prueba de entrega) ══
+// Antes se abría con <a href="data:...jpeg;base64,..." target="_blank">, y Chrome bloquea/
+// no renderiza la navegación de una pestaña nueva a una URL "data:" muy larga (típico con
+// fotos de celular en base64, que fácilmente pasan de varios MB) — se ve una pestaña en
+// blanco con la URL rarísima en la barra, exactamente lo que reportó Marco. La solución es
+// convertir el data: URI a un Blob real (sin ese límite) y mostrarlo dentro de la propia app.
+function dataURItoBlob(dataURI) {
+  var comma = dataURI.indexOf(',');
+  var meta = dataURI.slice(0, comma);
+  var mimeMatch = meta.match(/data:([^;]+)/);
+  var mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+  var isBase64 = meta.indexOf('base64') !== -1;
+  var payload = dataURI.slice(comma + 1);
+  var raw = isBase64 ? atob(payload) : decodeURIComponent(payload);
+  var arr = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function viewPODByFlight(id) {
+  var f = DB.flights.find(function(x){ return x.id === id; });
+  if (!f || !f.podUrl) { toast('Sin POD adjunto.', 'err'); return; }
+  viewPOD(f.podUrl, f.podName);
+}
+function viewPOD(dataUri, name) {
+  if (!dataUri) { toast('Sin POD adjunto.', 'err'); return; }
+  try {
+    var url = dataUri, mime = '';
+    if (dataUri.indexOf('data:') === 0) {
+      var blob = dataURItoBlob(dataUri);
+      url = URL.createObjectURL(blob);
+      mime = blob.type;
+      window._podBlobUrl = url; // se libera al cerrar el modal (closeModal)
+    }
+    document.getElementById('pod-view-title').textContent = name || 'POD';
+    var body = document.getElementById('pod-view-body');
+    if (mime.indexOf('pdf') !== -1) {
+      body.innerHTML = '<iframe src="'+url+'" style="width:100%;height:70vh;border:1px solid var(--border);border-radius:8px;"></iframe>';
+    } else {
+      body.innerHTML = '<img src="'+url+'" style="max-width:100%;max-height:70vh;border-radius:8px;">';
+    }
+    var dl = document.getElementById('pod-download-link');
+    dl.href = url; dl.download = name || 'POD';
+    openModal('pod');
+  } catch(e) {
+    console.error('Error al abrir POD:', e);
+    toast('No se pudo abrir el POD: ' + (e.message||e), 'err');
+  }
+}
 
 // ══ SAVE FLIGHT ══
 async function saveFlight() {
@@ -5147,12 +5209,20 @@ async function saveFlight() {
         f.tempAck = false; f.tempNotified = false;
       }
       // ── DETECCIÓN DE REPROGRAMACIÓN ──
-      // Si el envío YA estaba confirmado y cambia el vuelo, la fecha o la hora de salida,
-      // es una reprogramación del itinerario (responsabilidad de la carguera, no del vuelo).
-      var wasConfirmed = existing.confst === 'confirmed';
-      var flightChanged = (existing.num||'') !== (f.num||'');
-      var etdChanged = (existing.etd||'') !== (f.etd||'');
-      if (wasConfirmed && (flightChanged || etdChanged)) {
+      // Solo cuenta como reprogramación si el vuelo # o la salida YA tenían un valor real
+      // y ESE valor cambia por otro distinto — es decir, la carguera avisó un itinerario y
+      // después lo cambió. Completar por primera vez un dato que todavía estaba vacío
+      // (el flujo normal: reserva → AWB → coordinación con fincas → al día siguiente la
+      // carguera manda el itinerario oficial) NO cuenta, aunque sea la "primera carga" de
+      // ese campo. Antes se usaba si las cajas ya estaban "confirmadas" (confst) como
+      // condición para avisar, pero eso es un dato de otra cosa (conteo en Miami) y no
+      // reflejaba si el itinerario ya era real o no — se reemplaza por esta comparación directa.
+      // "Sin vuelo #" y "AWB <numero>" son los placeholders que la app pone sola cuando
+      // todavía no hay vuelo real (ver saveFlight) — no cuentan como un valor real todavía.
+      var isFlightNumPlaceholder = function(n){ return !n || n==='Sin vuelo' || n.indexOf('AWB ')===0; };
+      var flightChanged = !isFlightNumPlaceholder(existing.num) && !isFlightNumPlaceholder(f.num) && existing.num !== f.num;
+      var etdChanged = !!(existing.etd && f.etd && existing.etd !== f.etd);
+      if (flightChanged || etdChanged) {
         if (!f.reprogs) f.reprogs = (existing.reprogs || []).slice();
         var chg = [];
         if (flightChanged) chg.push('vuelo '+(existing.num||'—')+' → '+(f.num||'—'));
@@ -5764,7 +5834,7 @@ function renderFlights(){
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
   if(!filtered.length){tb.innerHTML=erow(24,'Sin vuelos.');return;}
   filtered.forEach(function(f){
-    var pod=f.podUrl?'<a href="'+f.podUrl+'" target="_blank" class="btn xs pr">📄 POD</a>':'—';
+    var pod=f.podUrl?'<button type="button" class="btn xs pr" onclick="event.stopPropagation();viewPODByFlight(\''+f.id+'\')">📄 POD</button>':'—';
     var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
     tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;" title="'+(f.etd?esc(fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label):'')+'">'+fmtD(f.etd)+'</td><td title="'+(f.eta?esc('🛬 '+arrivalBothZones(f.eta)):'')+'">'+etaCell(f)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.fbe>0?'<strong style="color:var(--green2);">'+f.fbe+'</strong>':'—')+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+arrivalCell(f)+'</td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
@@ -5873,7 +5943,7 @@ function openDetail(id){
   document.getElementById('detail-title').textContent=f.num+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
-  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd)+(f.etd?' <span style="font-size:10px;color:var(--t3);">('+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label+')</span>':''))+R('ETA',fmtD(f.eta)+(f.eta?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">🛬 '+arrivalBothZones(f.eta)+'</div>':''))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="'+f.podUrl+'" target="_blank" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd)+(f.etd?' <span style="font-size:10px;color:var(--t3);">('+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label+')</span>':''))+R('ETA',fmtD(f.eta)+(f.eta?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">🛬 '+arrivalBothZones(f.eta)+'</div>':''))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Mercancía',esc(f.commodity||'—'))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="#" onclick="event.preventDefault();viewPODByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
   if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
   document.getElementById('detail-body').innerHTML=b;
   document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
