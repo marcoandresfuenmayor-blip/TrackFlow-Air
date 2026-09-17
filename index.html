@@ -5145,6 +5145,20 @@ async function saveFlight() {
   if (!origin||!dest) { toast('Selecciona origen y destino.','err'); return; }
   if (!cb) { toast('Selecciona quién crea este envío.','err'); return; }
   if (!gv('f-consignee')) { toast('Selecciona un consignatario.','err'); return; }
+  // El AWB es único en la base de datos (un AWB = un envío real). Como la info se sube en
+  // partes (reserva → AWB → itinerario oficial al día siguiente), es fácil crear sin querer
+  // un envío nuevo con el mismo AWB de uno que ya existe (en vez de abrir y editar ese mismo).
+  // Avisamos ANTES de intentar guardar, para no toparse recién con el error de Supabase.
+  var awbTyped = gv('f-awb');
+  if (awbTyped) {
+    var dupFlight = DB.flights.find(function(x){
+      return x.id !== editFlId && (x.awb||'').trim().toLowerCase() === awbTyped.trim().toLowerCase();
+    });
+    if (dupFlight) {
+      var seguir = confirm('Ya existe un envío con el AWB '+awbTyped+' (vuelo '+(dupFlight.num||'sin vuelo')+', creado por '+(dupFlight.createdby||'—')+').\n\n¿Abrir ese envío para editarlo en vez de crear uno nuevo?\n\nAceptar = abrir el existente. Cancelar = seguir creando uno nuevo (puede fallar al guardar).');
+      if (seguir) { closeModal('new'); openEditFlight(dupFlight.id); return; }
+    }
+  }
   // Si no hay número de vuelo, usar el AWB o un identificador genérico para mostrar en las tablas
   if (!num) num = gv('f-awb') ? ('AWB ' + gv('f-awb')) : 'Sin vuelo';
   var agId=gv('f-agency'), agName='';
