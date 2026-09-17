@@ -544,7 +544,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#DC2626;"></span>ETA vencida sin arribo</span>
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#22A351;"></span>Arribó ✓</span>
           </div>
-          <div class="tw tw-tall"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>FBE</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Arribo Real</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
+          <div class="tw tw-tall"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>FBE</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Arribo Real</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>Ingresado</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -1155,6 +1155,7 @@ var editFlId = null;
 var editAgId = null;
 var dashFlt = 'all';
 var flsFlt = 'all';
+var flsSort = { oi: null, dir: 1 }; // ordenamiento por clic en encabezado de la tabla de Vuelos
 var chatHist = [];
 var DB = { flights: [], agencies: [] };
 var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', aviationKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light', highSeasons: [{from:120,to:214,label:'San Valentín'},{from:415,to:511,label:'Día de la Madre'}], tempMin: 1, tempMax: 8 };
@@ -4416,6 +4417,16 @@ function initDragCols(tableId) {
       if (th.textContent.trim() === '') { th.classList.add('nodrag'); return; }
       th.draggable = true;
       th.title = 'Arrastra para reordenar esta columna';
+      // Click para ordenar (solo en la tabla de Vuelos, y solo columnas con un valor claro a comparar)
+      if (tableId === 'tbl-flights' && flightSortKey({}, i) !== null) {
+        var origLabel = th.textContent;
+        th.textContent = '';
+        var lbl = document.createElement('span'); lbl.textContent = origLabel;
+        var ind = document.createElement('span'); ind.className = 'sort-ind'; ind.style.marginLeft = '3px'; ind.style.fontSize = '9px';
+        th.appendChild(lbl); th.appendChild(ind);
+        th.title += ' · clic para ordenar';
+        th.addEventListener('click', (function(oi){ return function(){ onSortClick(oi); }; })(i));
+      }
       th.addEventListener('dragstart', function(e) {
         _dragTh = th; th.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
@@ -5845,16 +5856,84 @@ function renderFlights(){
   renderWorldClocks();
   initDragCols('tbl-flights');
   var filtered=flsFlt==='all'?DB.flights:DB.flights.filter(function(f){return f.status===flsFlt;});
+  if (flsSort.oi !== null) { filtered = filtered.slice().sort(function(a,b){ return cmpFlights(a,b,flsSort.oi,flsSort.dir); }); }
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
-  if(!filtered.length){tb.innerHTML=erow(24,'Sin vuelos.');return;}
+  if(!filtered.length){tb.innerHTML=erow(25,'Sin vuelos.');return;}
   filtered.forEach(function(f){
     var pod=f.podUrl?'<button type="button" class="btn xs pr" onclick="event.stopPropagation();viewPODByFlight(\''+f.id+'\')">📄 POD</button>':'—';
     var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
-    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;" title="'+(f.etd?esc(fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label):'')+'">'+fmtD(f.etd)+'</td><td title="'+(f.eta?esc('🛬 '+arrivalBothZones(f.eta)):'')+'">'+etaCell(f)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.fbe>0?'<strong style="color:var(--green2);">'+f.fbe+'</strong>':'—')+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+arrivalCell(f)+'</td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
+    tr.innerHTML='<td><span style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:13px;">'+esc(f.awb||'—')+'</span></td><td><span style="font-family:var(--mono);font-size:11px;color:var(--t2);">'+esc(f.num||'—')+'</span></td><td>'+esc(f.airline)+'</td><td>'+esc(f.origin)+'</td><td>'+esc(f.dest)+'</td><td style="font-size:11px;" title="'+(f.etd?esc(fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label):'')+'">'+fmtD(f.etd)+'</td><td title="'+(f.eta?esc('🛬 '+arrivalBothZones(f.eta)):'')+'">'+etaCell(f)+'</td><td>'+esc(f.agName||'—')+'</td><td>'+f.bsent+'</td><td>'+f.bconf+'</td><td>'+(f.fbe>0?'<strong style="color:var(--green2);">'+f.fbe+'</strong>':'—')+'</td><td>'+(f.bmiss!==0?fmtBoxDiff(f.bmiss):'0')+'</td><td><span class="pill '+f.confst+'">'+cl(f.confst)+'</span></td><td><span class="pill '+f.status+'">'+sl(f.status)+'</span></td><td>'+arrivalCell(f)+'</td><td>'+(f.weight?f.weight+' kg':'—')+'</td><td '+rateClass+'>'+(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—')+'</td><td>'+(f.rateExp?'$'+parseFloat(f.rateExp).toFixed(3):'—')+'</td><td><strong style="color:var(--green2);">'+fmt$(f.totalpaid)+'</strong></td><td>'+(f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(f.modifiedAt||'—')+'</td><td style="font-size:10px;color:var(--t3);">'+esc(fmtIngresado(f))+'</td><td>'+pod+'</td><td>'+livBtn(f.num,f.id)+'</td><td>'+viewBtn(f.id)+'</td>';
     tb.appendChild(tr);
   });
   applyColOrder('tbl-flights');
+  updateSortIndicators();
+}
+
+// Fecha en que se ingresó por primera vez el registro (no cambia con ediciones posteriores).
+// Antes de sincronizar con Supabase, createdAt viene en texto ya legible (nowStr()); una vez
+// sincronizado, viene como ISO de Postgres y se formatea igual que las demás fechas.
+function fmtIngresado(f){
+  var v = f.createdAt;
+  if (!v) return '—';
+  var t = Date.parse(v);
+  return isNaN(t) ? v : fmtD(v);
+}
+
+// ══ ORDENAR VUELOS AL HACER CLIC EN UN ENCABEZADO ══
+// oi = índice original de columna (data-oi). Devuelve el valor comparable de esa columna para un vuelo.
+function flightSortKey(f, oi){
+  switch(oi){
+    case 0: return (f.awb||'').toLowerCase();
+    case 1: return (f.num||'').toLowerCase();
+    case 2: return (f.airline||'').toLowerCase();
+    case 3: return (f.origin||'').toLowerCase();
+    case 4: return (f.dest||'').toLowerCase();
+    case 5: return Date.parse(f.etd)||0;
+    case 6: return Date.parse(f.eta)||0;
+    case 7: return (f.agName||'').toLowerCase();
+    case 8: return parseFloat(f.bsent)||0;
+    case 9: return parseFloat(f.bconf)||0;
+    case 10: return parseFloat(f.fbe)||0;
+    case 11: return parseFloat(f.bmiss)||0;
+    case 12: return (f.confst||'').toLowerCase();
+    case 13: return (f.status||'').toLowerCase();
+    case 14:
+      if (f.liveArrivedConfirmed || (f.liveStatus && f.liveStatus.toLowerCase()==='arrived')) return 3;
+      if (f.liveArrivedInferred) return 2;
+      var s=(f.liveStatus||'').toLowerCase();
+      if (s==='enroute'||s==='departed') return 1;
+      if (s==='delayed') return -1;
+      return 0;
+    case 15: return parseFloat(f.weight)||0;
+    case 16: return parseFloat(f.rate)||0;
+    case 17: return parseFloat(f.rateExp)||0;
+    case 18: return parseFloat(f.totalpaid)||0;
+    case 19: return (f.createdby||'').toLowerCase();
+    case 20: return Date.parse(f.modifiedAt)||Date.now();
+    case 21: return Date.parse(f.createdAt)||Date.now();
+    case 22: return f.podUrl?1:0;
+    default: return null;
+  }
+}
+function cmpFlights(a,b,oi,dir){
+  var ka=flightSortKey(a,oi), kb=flightSortKey(b,oi);
+  if (ka===null||kb===null) return 0;
+  if (typeof ka==='string' || typeof kb==='string') return dir*String(ka).localeCompare(String(kb),'es');
+  return dir*((ka||0)-(kb||0));
+}
+function onSortClick(oi){
+  if (flsSort.oi===oi) flsSort.dir=-flsSort.dir; else { flsSort.oi=oi; flsSort.dir=1; }
+  renderFlights();
+}
+function updateSortIndicators(){
+  var table=document.getElementById('tbl-flights'); if(!table) return;
+  var head=table.querySelector('thead tr'); if(!head) return;
+  Array.prototype.forEach.call(head.children, function(th){
+    var ind=th.querySelector('.sort-ind'); if(!ind) return;
+    var oi=parseInt(th.dataset.oi);
+    ind.textContent = (flsSort.oi===oi) ? (flsSort.dir===1?' ▲':' ▼') : '';
+  });
 }
 
 function renderAgencies(){
