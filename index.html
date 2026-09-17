@@ -1632,6 +1632,7 @@ function cfgToRow(cfg) {
     auto_scan_arrivals: cfg.autoScanArrivals !== false,
     last_backup: cfg.lastBackup ? _toISO(cfg.lastBackup) : null,
     claude_api_key: cfg.claudeKey || null, aero_api_key: cfg.aeroKey || null,
+    orden_columnas: cfg.colOrder || {},
     updated_by: (currentUser && currentUser.id) || null
   };
 }
@@ -1648,6 +1649,8 @@ function applyCfgRow(row) {
   CFG.aiPrivacy = row.ia_privacidad || 'full'; CFG.scanHours = row.frecuencia_escaneo || CFG.scanHours;
   CFG.autoScanArrivals = row.auto_scan_arrivals !== false; CFG.lastBackup = row.last_backup || '';
   CFG.claudeKey = row.claude_api_key || ''; CFG.aeroKey = row.aero_api_key || '';
+  // Orden de columnas: ahora compartido para todo el equipo (antes era solo de este navegador).
+  CFG.colOrder = (row.orden_columnas && typeof row.orden_columnas === 'object') ? row.orden_columnas : {};
 }
 async function loadCFG_SP() {
   try {
@@ -4052,26 +4055,42 @@ function tempViolations(f){
 }
 
 // Marca la alerta de reprogramación como atendida (ya se reorganizó con fincas/Miami)
-function ackReprog(id){
+// IMPORTANTE: se guarda en Supabase (no solo local) — si no, la alerta "vuelve" apenas se
+// recarga la página o la abre otra persona del equipo, porque loadLocalFallback() trae de
+// nuevo el reprogAck=false que sigue en la base compartida.
+async function ackReprog(id){
   var f = DB.flights.find(function(x){return x.id===id;});
   if (!f) return;
   f.reprogAck = true;
   auditNote(f, null, 'Reprogramación de itinerario marcada como atendida');
-  persistDB();
+  await saveFlight_SP(f);
   renderScreen(screen);
   toast('✓ Reprogramación atendida: '+(f.awb||f.num), 'ok');
 }
 
 // Marca la alerta de temperatura como atendida (ya se trabajó con MAS / la carguera)
-function ackTempAlert(id){
+// Igual que ackReprog: se guarda en Supabase para que quede atendida para todo el equipo.
+async function ackTempAlert(id){
   var f = DB.flights.find(function(x){return x.id===id;});
   if (!f) return;
   f.tempAck = true;
   f.tempAckAt = new Date().toISOString();
   auditNote(f, null, 'Alerta de temperatura marcada como cumplida');
-  persistDB();
+  await saveFlight_SP(f);
   renderScreen(screen);
   toast('✓ Alerta de temperatura atendida: '+(f.awb||f.num), 'ok');
+}
+
+// Marca la alerta de cajas dañadas como atendida (ya se gestionó, con o sin reclamo formal)
+async function ackDamageAlert(id){
+  var f = DB.flights.find(function(x){return x.id===id;});
+  if (!f) return;
+  f.dmgAck = true;
+  f.dmgAckAt = new Date().toISOString();
+  auditNote(f, null, 'Alerta de cajas dañadas marcada como cumplida');
+  await saveFlight_SP(f);
+  renderScreen(screen);
+  toast('✓ Cajas dañadas atendidas: '+(f.awb||f.num), 'ok');
 }
 
 // ── CADENA DE FRÍO: conversión C↔F, promedio y alerta ──
@@ -4467,6 +4486,7 @@ function initDragCols(tableId) {
         if (!CFG.colOrder) CFG.colOrder = {};
         CFG.colOrder[tableId] = visible;
         saveLocalCFG();
+        saveCFG_SP(); // el orden de columnas ahora es compartido para todo el equipo
         th.classList.remove('drop-l','drop-r');
         applyColOrder(tableId);
       });
@@ -4483,7 +4503,7 @@ function getVisibleOrder(tableId) {
   var saved = (CFG.colOrder || {})[tableId];
   if (!saved) return natural;
   // Validar que el orden guardado tenga las mismas columnas (por si cambió la versión)
-  if (saved.length !== natural.length) { delete CFG.colOrder[tableId]; saveLocalCFG(); return natural; }
+  if (saved.length !== natural.length) { delete CFG.colOrder[tableId]; saveLocalCFG(); saveCFG_SP(); return natural; }
   var sortedSaved = saved.slice().sort(function(a,b){return a-b;});
   var sortedNat = natural.slice().sort(function(a,b){return a-b;});
   if (sortedSaved.join(',') !== sortedNat.join(',')) { delete CFG.colOrder[tableId]; saveLocalCFG(); return natural; }
@@ -4525,6 +4545,7 @@ function applyColOrder(tableId) {
 function resetColOrder(tableId) {
   if (CFG.colOrder) delete CFG.colOrder[tableId];
   saveLocalCFG();
+  saveCFG_SP(); // el orden de columnas ahora es compartido para todo el equipo
   // Restaurar thead a orden natural
   var table = document.getElementById(tableId);
   if (table) {
@@ -5226,12 +5247,16 @@ async function saveFlight() {
       prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed;
       oldSnapshot = JSON.parse(JSON.stringify(existing)); // copia para auditoría
       // Preservar el rastreo en vivo y el estado de alertas al editar (no se pierden al guardar)
-      ['liveStatus','liveArrActual','liveArrEstimated','liveArrTerminal','liveLastCheck','liveArrivedConfirmed','liveArrivedInferred','arrivedTime','tempAck','tempAckAt','tempNotified','reprogs','reprogAck'].forEach(function(k){
+      ['liveStatus','liveArrActual','liveArrEstimated','liveArrTerminal','liveLastCheck','liveArrivedConfirmed','liveArrivedInferred','arrivedTime','tempAck','tempAckAt','tempNotified','reprogs','reprogAck','dmgAck','dmgAckAt'].forEach(function(k){
         if (existing[k]!==undefined && f[k]===undefined) f[k]=existing[k];
       });
       // Si cambiaron las temperaturas, la alerta se reactiva (nueva situación = nueva revisión)
       if ((existing.tempOrig||'') !== (f.tempOrig||'') || (existing.tempMia||'') !== (f.tempMia||'')) {
         f.tempAck = false; f.tempNotified = false;
+      }
+      // Si aumentan las cajas dañadas respecto a lo ya atendido, la alerta se reactiva (daño nuevo)
+      if ((parseInt(f.bdamaged)||0) > (parseInt(existing.bdamaged)||0)) {
+        f.dmgAck = false; f.dmgAckAt = '';
       }
       // ── DETECCIÓN DE REPROGRAMACIÓN ──
       // Solo cuenta como reprogramación si el vuelo # o la salida YA tenían un valor real
@@ -5375,7 +5400,7 @@ function arrivalCell(f) {
 }
 
 // Marca manualmente un vuelo como arribado a Miami (un clic, sin abrir edición)
-function markArrivedManual(id){
+async function markArrivedManual(id){
   var f = DB.flights.find(function(x){return x.id===id;});
   if (!f) return;
   f.status = 'delivered';
@@ -5384,7 +5409,7 @@ function markArrivedManual(id){
   f.liveArrivedInferred = false;
   if (!f.arrivedTime) f.arrivedTime = new Date().toISOString();
   auditNote(f, null, 'Arribo marcado manualmente (botón en columna)');
-  persistDB();
+  await saveFlight_SP(f); // se guarda en Supabase — si no, "arribado" se revierte al recargar
   renderScreen(screen);
   updateBadges();
   toast('✓ Marcado como arribado: '+(f.awb||f.num), 'ok');
@@ -5406,7 +5431,7 @@ function reprogDetailRows(f){
 }
 
 // Confirma un arribo inferido como llegada real definitiva (cuando MAS Customs avisa)
-function confirmArrival(id){
+async function confirmArrival(id){
   var f = DB.flights.find(function(x){return x.id===id;});
   if (!f) return;
   f.liveArrivedConfirmed = true;
@@ -5414,7 +5439,7 @@ function confirmArrival(id){
   f.status = 'delivered';
   if (!f.arrivedTime) f.arrivedTime = new Date().toISOString();
   auditNote(f, null, 'Arribo confirmado como llegada real (botón Confirmar)');
-  persistDB();
+  await saveFlight_SP(f); // se guarda en Supabase — si no, la confirmación se revierte al recargar
   renderScreen(screen);
   updateBadges();
   toast('✓ Llegada confirmada: '+(f.awb||f.num), 'ok');
@@ -5516,10 +5541,12 @@ function renderUrgent(){
     if (f.claimStatus==='approved' && (parseFloat(f.claimRecovered)||0) === 0) {
       items.push({ pri: 3, icon:'💰', txt: num + ': reclamo aprobado por ' + fmt$(f.claimAmount) + ' — pendiente de cobro', id: id });
     }
-    // Cajas dañadas
+    // Cajas dañadas — se apaga sola si ya se abrió un reclamo, o se marca "Cumplido" a mano
+    // (por ejemplo cuando el daño ya se gestionó de otra forma, sin reclamo formal).
     var dmg = parseInt(f.bdamaged)||0;
-    if (dmg > 0 && (!f.claimStatus || f.claimStatus === 'none')) {
-      items.push({ pri: 4, icon:'⚠️', txt: num + ': ' + dmg + ' cajas dañadas registradas', id: id });
+    if (dmg > 0 && (!f.claimStatus || f.claimStatus === 'none') && !f.dmgAck) {
+      items.push({ pri: 4, icon:'⚠️', txt: num + ': ' + dmg + ' cajas dañadas registradas', id: id,
+        btn: '<button onclick="event.stopPropagation();ackDamageAlert(\''+id+'\')" title="Ya se gestionó (con o sin reclamo formal) — silenciar esta alerta" style="background:var(--green);color:#fff;border:none;border-radius:6px;font-size:9px;font-weight:700;padding:3px 8px;cursor:pointer;white-space:nowrap;">✓ Cumplido</button>' });
     }
     // Cajas faltantes (confirmadas < enviadas)
     var sent=parseInt(f.bsent)||0, conf=parseInt(f.bconf)||0;
