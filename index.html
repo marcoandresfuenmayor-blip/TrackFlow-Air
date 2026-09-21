@@ -4714,14 +4714,16 @@ function renderCalendar(){
       var c = STC[f.status] || '#9CA3AF';
       var awb = f.awb || f.num || '—';
       var boxes = parseInt(f.bsent)||0;
+      var isLR = f.commodity === 'LINEA RELEASE';
       var tip = 'AWB ' + (f.awb||'—') + (f.num?' · Vuelo '+f.num:'') + '\n'
         + (f.agName?'Carguera: '+f.agName+'\n':'')
         + (f.airline?'Aerolínea: '+f.airline+'\n':'')
+        + (isLR?'🌹 LINEA RELEASE (preferencia de liberación en inspección)\n':'')
         + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas'
         + (f.etd?'\nSale: '+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label:'')
         + (f.eta?'\nLlega: '+arrivalBothZones(f.eta):'');
       h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'20;border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;overflow:hidden;">'
-        + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(awb)+'</div>'
+        + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(isLR?'🌹 ':'')+esc(awb)+'</div>'
         + '<div style="font-size:8px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">'
         + esc(f.origin||'?')+'→'+esc(f.dest||'?')
         + (f.num?' · '+esc(f.num):'')
@@ -5267,7 +5269,7 @@ async function saveFlight() {
       prevUsda = parseInt(existing.busda)||0; prevFreed = !!existing.usdaFreed;
       oldSnapshot = JSON.parse(JSON.stringify(existing)); // copia para auditoría
       // Preservar el rastreo en vivo y el estado de alertas al editar (no se pierden al guardar)
-      ['liveStatus','liveArrActual','liveArrEstimated','liveArrTerminal','liveLastCheck','liveArrivedConfirmed','liveArrivedInferred','arrivedTime','tempAck','tempAckAt','tempNotified','reprogs','reprogAck','dmgAck','dmgAckAt','etdIsEstimate'].forEach(function(k){
+      ['liveStatus','liveArrActual','liveArrEstimated','liveArrTerminal','liveLastCheck','liveArrivedConfirmed','liveArrivedInferred','arrivedTime','tempAck','tempAckAt','tempNotified','reprogs','reprogAck','dmgAck','dmgAckAt','etdIsEstimate','etdRevisions'].forEach(function(k){
         if (existing[k]!==undefined && f[k]===undefined) f[k]=existing[k];
       });
       // Si cambiaron las temperaturas, la alerta se reactiva (nueva situación = nueva revisión)
@@ -5295,10 +5297,25 @@ async function saveFlight() {
       var isFlightNumPlaceholder = function(n){ return !n || n==='Sin vuelo' || n.indexOf('AWB ')===0; };
       var flightChanged = !isFlightNumPlaceholder(existing.num) && !isFlightNumPlaceholder(f.num) && existing.num !== f.num;
       var etdWasEstimate = !!existing.etdIsEstimate;
-      var etdChanged = !!(existing.etd && f.etd && existing.etd !== f.etd) && !etdWasEstimate;
+      var etdRealChange = !!(existing.etd && f.etd && existing.etd !== f.etd);
+      // 21-sep-2026: se detectaron 2 casos reales donde la PRIMERA corrección de un ETD "real"
+      // (no vacío, no la hora tentativa "01:00") también era solo a Marco completando el dato
+      // minutos después de crear el vuelo — no una reprogramación de la carguera (confirmado
+      // revisando la hora exacta de creación vs. la del cambio en Supabase, y porque Marco lo
+      // reportó directamente: "ninguna de esas guías se reprogramó, simplemente completé la
+      // información después"). etdRevisions cuenta cuántas correcciones reales de ETD ya tuvo
+      // este vuelo — la primera corrección real se sigue considerando "completar el dato" (igual
+      // que ya pasaba con la hora tentativa "01:00"); recién la SEGUNDA en adelante se trata como
+      // una reprogramación real de la carguera.
+      // Completar una hora estimada ("01:00") también gasta ese único cambio gratis — si no,
+      // un vuelo con hora estimada tendría DOS correcciones libres en vez de una (la de completar
+      // el estimado + la primera corrección real), protegiendo de más de la cuenta.
+      var etdPriorRevisions = existing.etdRevisions || 0;
+      var etdChanged = etdRealChange && !etdWasEstimate && etdPriorRevisions > 0;
+      if (etdRealChange) f.etdRevisions = etdPriorRevisions + 1;
       // Un ETD que cambia de verdad deja de ser "estimado" de acá en adelante — si vuelve a
-      // cambiar más tarde, ya sí cuenta como reprogramación real (salvo que este mismo guardado
-      // haya vuelto a autocompletar una hora tentativa desde un nuevo PDF de AWB).
+      // cambiar más tarde, ya sí puede contar como reprogramación real (salvo que este mismo
+      // guardado haya vuelto a autocompletar una hora tentativa desde un nuevo PDF de AWB).
       if ((existing.etd||'') !== (f.etd||'') && !window._etdIsEstimate) f.etdIsEstimate = false;
       if (flightChanged || etdChanged) {
         if (!f.reprogs) f.reprogs = (existing.reprogs || []).slice();
