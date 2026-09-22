@@ -820,7 +820,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.4;">Tus datos ya están seguros en Supabase. Este respaldo es una copia extra opcional (un archivo .json) por si algún día la necesitas.</div>
                 <button class="btn pr" onclick="exportBackup()" style="width:100%;margin-bottom:6px;">💾 Exportar respaldo completo</button>
                 <label class="btn" style="width:100%;text-align:center;cursor:pointer;display:block;margin-bottom:6px;">📥 Restaurar desde respaldo<input type="file" accept=".json" onchange="importBackup(this)" style="display:none;"></label>
-                <button class="btn danger" onclick="purgePODs()" style="width:100%;">🗑 Liberar espacio (borrar PODs adjuntos)</button>
+                <button class="btn danger" onclick="purgePODs()" style="width:100%;margin-bottom:6px;">🗑 Liberar espacio (borrar PODs adjuntos)</button>
+                <button class="btn danger" onclick="purgeAWBs()" style="width:100%;">🗑 Liberar espacio (borrar PDF de AWB guardados)</button>
               </div>
             </div>
           </div>
@@ -1171,6 +1172,7 @@ var chatHist = [];
 var DB = { flights: [], agencies: [] };
 var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', aviationKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light', highSeasons: [{from:120,to:214,label:'San Valentín'},{from:415,to:511,label:'Día de la Madre'}], tempMin: 1, tempMax: 8 };
 var pendingPOD = null; // {name, data, type}
+var pendingAWB = null; // {name, url} — PDF del AWB original, guardado igual que el POD (base64 en el registro del vuelo)
 
 function loadLocalCFG() {
   try { var c = localStorage.getItem('jff_cfg'); if (c) CFG = Object.assign(CFG, JSON.parse(c)); } catch(e) {}
@@ -1275,9 +1277,10 @@ function persistDB() {
       if (banner) {
         banner.style.display = 'block';
         banner.innerHTML = '<strong>⚠ ALMACENAMIENTO LLENO — tus últimos cambios NO se guardaron.</strong><br>'
-          + 'El navegador solo permite ~5 MB. Las fotos de POD son lo que más ocupa. '
+          + 'El navegador solo permite ~5 MB. Las fotos de POD y los PDF de AWB son lo que más ocupa. '
           + '<button class="btn xs" style="margin-top:6px;" onclick="exportBackup()">💾 Exportar respaldo ahora</button> '
-          + '<button class="btn xs danger" style="margin-top:6px;" onclick="purgePODs()">🗑 Liberar espacio (borrar PODs)</button>';
+          + '<button class="btn xs danger" style="margin-top:6px;" onclick="purgePODs()">🗑 Borrar PODs</button> '
+          + '<button class="btn xs danger" style="margin-top:6px;" onclick="purgeAWBs()">🗑 Borrar PDF de AWB</button>';
       }
     } else {
       console.error('Error al guardar:', e);
@@ -1308,6 +1311,19 @@ async function purgePODs() {
   }
   // Sin esto, el POD "borrado" localmente reaparecía solo al recargar (Supabase seguía con la copia vieja)
   for (var i=0; i<withPod.length; i++) { await saveFlight_SP(withPod[i]); }
+}
+// Igual que purgePODs, pero para los PDF de AWB guardados en la nube (mismo mecanismo de almacenamiento)
+async function purgeAWBs() {
+  var withAwb = DB.flights.filter(function(f){ return f.awbUrl && f.awbUrl.indexOf('data:') === 0; });
+  if (!withAwb.length) { toast('No hay PDF de AWB guardados que borrar.', 'ok'); return; }
+  if (!confirm('¿Borrar ' + withAwb.length + ' PDF de AWB guardados?\n\nLos datos ya extraídos del vuelo se conservan — solo se elimina el archivo PDF adjunto, tanto en este navegador como en la base de datos compartida.')) return;
+  withAwb.forEach(function(f){ f.awbUrl = ''; f.awbName = ''; });
+  if (persistDB()) {
+    var banner = document.getElementById('storage-alert'); if (banner) banner.style.display = 'none';
+    renderScreen(screen);
+    toast('✓ Espacio liberado: ' + withAwb.length + ' PDF(s) de AWB eliminados', 'ok');
+  }
+  for (var i=0; i<withAwb.length; i++) { await saveFlight_SP(withAwb[i]); }
 }
 
 // ══ NOTIFICACIONES POR CORREO (EmailJS) ══
@@ -1963,6 +1979,35 @@ async function handleAWBUpload(e) {
       console.log('=== CAMPOS DETECTADOS ===');
       console.log(parsed);
       window._lastAWBText = fullText; // disponible para depuración manual en consola
+
+      // Guardar también el PDF original (igual que los POD: base64 dentro del registro del vuelo,
+      // sin bucket aparte) para poder revisarlo después, sin subir ni digitar nada extra.
+      var awbSaveNote = '';
+      try {
+        var MAX_AWB_PDF = 1.5 * 1024 * 1024; // mismo tope que los POD en PDF
+        if (file.size > MAX_AWB_PDF) {
+          awbSaveNote = ' · el PDF pesa ' + Math.round(file.size/1024) + ' KB y no se guardó en la nube (máx 1500 KB) — los datos extraídos sí se guardan';
+        } else {
+          var infoAwb = storageInfo();
+          if (infoAwb.bytes + file.size * 1.4 > 4.5 * 1024 * 1024) {
+            awbSaveNote = ' · sin espacio para guardar el PDF en la nube (libera espacio en Configuración) — los datos extraídos sí se guardan';
+          } else {
+            var awbDataUrl = await new Promise(function(res){
+              var r2 = new FileReader();
+              r2.onload = function(ev2){ res(ev2.target.result); };
+              r2.onerror = function(){ res(null); };
+              r2.readAsDataURL(file);
+            });
+            if (awbDataUrl) {
+              pendingAWB = { name: file.name, url: awbDataUrl };
+              awbSaveNote = ' · PDF guardado en la nube ✓';
+            }
+          }
+        }
+      } catch(eAwb) {
+        console.error('No se pudo guardar el PDF del AWB en la nube:', eAwb);
+      }
+
       var filledCount = 0;
       if (parsed.boxes_conf) { sv('f-bconf', parsed.boxes_conf); filledCount++; }
       if (parsed.gross_weight) { sv('f-weight', parsed.gross_weight); filledCount++; }
@@ -2041,11 +2086,11 @@ async function handleAWBUpload(e) {
       calcAll();
       // Panel de depuración: muestra el texto crudo y los campos detectados
       if (filledCount > 0) {
-        stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)';
+        stat.textContent = '✓ ' + filledCount + ' campos extraídos gratis desde ' + file.name + ' (sin costo de IA)' + awbSaveNote;
         stat.className = 'upload-status ok';
         txt.textContent = 'AWB cargado: ' + file.name;
       } else {
-        stat.textContent = '⚠ No se detectaron campos automáticamente. El formato puede ser diferente — completa manualmente, o usa Claude IA (Configuración) para PDFs complejos.';
+        stat.textContent = '⚠ No se detectaron campos automáticamente. El formato puede ser diferente — completa manualmente, o usa Claude IA (Configuración) para PDFs complejos.' + awbSaveNote;
         stat.className = 'upload-status err';
         txt.textContent = 'Clic para subir AWB PDF / Imagen';
       }
@@ -2142,9 +2187,16 @@ function extractAWBFields(text) {
   // Convertir a punto SOLO cuando la coma va seguida de 1-2 dígitos (decimal),
   // sin tocar comas de miles tipo "3,262.58" (3 dígitos después).
   clean = clean.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
+  // 22-sep-2026: las comas que SÍ quedan a esta altura son separador de MILES real, formato
+  // USA ("4,096.25" en el AWB de K&M) — hay que quitarlas, porque ninguna de las expresiones de
+  // abajo (tabla de carga, total prepagado, etc.) espera comas en medio de un número, y dejarlas
+  // rompía la lectura completa de esos campos (ej.: "4,096.25" se leía mal o no se leía).
+  // Se repite hasta que no cambie más, para cubrir números con varios grupos de miles.
+  var _prevLen;
+  do { _prevLen = clean.length; clean = clean.replace(/(\d),(\d{3})(?=\D|$)/g, '$1$2'); } while (clean.length !== _prevLen);
 
   // ── AEROLÍNEA / CARRIER ── prioriza nombres conocidos (el "Issued by" a veces queda separado del nombre real)
-  var airlineMatch = clean.match(/\b(DHL\s*AERO\s*EXPRESO|ATLAS\s*CARGO|ATLAS\s*AIR|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
+  var airlineMatch = clean.match(/\b(DHL\s*AERO\s*EXPRESO|ATLAS\s*CARGO|ATLAS\s*AIR|ABX(?:\s*AIR)?|LAN\s*CARGO\s*SA|LINEA\s*AEREA\s*CARGUERA\s*DE\s*COLOMBIA(?:\s*SA)?|LATAM\s*CARGO|LATAM|AVIANCA|AMERICAN\s*AIRLINES|KLM|COPA\s*AIRLINES|COPA|IBERIA|UNITED\s*AIRLINES|UNITED|DELTA|BRITISH\s*AIRWAYS|LUFTHANSA|AIR\s*FRANCE|EMIRATES|AEROMEXICO|CARGOLUX|QATAR\s*AIRWAYS|ETIHAD|TURKISH\s*AIRLINES|EVA\s*AIR)\b/i)
     || clean.match(/Issued\s+by\s+([A-Z][A-Z\s]{2,25}?)(?=\s+(?:Copies|AMERICO|SANTIAGO|Not\s+negotiable|\d{1,3},|\d{4}))/i);
   if (airlineMatch) {
     result.airline = normalizeAirline(airlineMatch[1].trim());
@@ -2200,6 +2252,17 @@ function extractAWBFields(text) {
   if (flightFullDate) {
     result.flightnum = (flightFullDate[1] + flightFullDate[2]).toUpperCase();
     result.departureDateFull = flightFullDate[3]; // fecha ISO completa: no hay que deducir el mes
+  } else {
+    // Layout K&M: "5Y-8622 2026/9/17" — código + número + FECHA completa con SLASHES y sin ceros
+    // a la izquierda en mes/día (no guiones como el layout LATAM de arriba). Sin este patrón el
+    // número de vuelo no se capturaba en absoluto en este layout, porque el día no va pegado al
+    // número de vuelo con guion/slash (como esperan los patrones de más abajo) sino como fecha aparte.
+    var flightSlashDate = clean.match(/\b([A-Z]\d|\d[A-Z])\s*-?\s*(\d{3,5})\s+(20\d{2})\/(\d{1,2})\/(\d{1,2})\b/);
+    if (flightSlashDate) {
+      result.flightnum = (flightSlashDate[1] + flightSlashDate[2]).toUpperCase();
+      var sdY = flightSlashDate[3], sdM = ('0' + flightSlashDate[4]).slice(-2), sdD = ('0' + flightSlashDate[5]).slice(-2);
+      result.departureDateFull = sdY + '-' + sdM + '-' + sdD;
+    }
   }
   var flightMatch = clean.match(/\b([A-Z]{2})\s*(\d{3,4})\s*[-\/]\s*(\d{1,2})\b/)   // XL0316/29 (2 letras + num + dia)
     || clean.match(/\b([A-Z]\d)\s*(\d{3,4})\s*[-\/]\s*(\d{1,2})\b/)   // W8 1510-7 (letra+dígito + num + dia)
@@ -2230,6 +2293,25 @@ function extractAWBFields(text) {
     var agColMatch = clean.match(/\d{3}-\d{7,8}\s+(?:Issued by:?\s+)?([A-Z][A-Z&\s\.]{4,38}?(?:SAS|S\.A\.S\.?|LTDA|S\.A\.))\s/);
     if (agColMatch) result.agencyName = agColMatch[1].trim();
   }
+  // Layout Laser/Copy 8 (ej. Apollo Freight): en algunos PDFs escaneados el texto entre la
+  // etiqueta "Issuing Carrier's Agent Name and City" y el nombre real queda ilegible/roto
+  // (texto vertical de un campo de firma superpuesto), así que ninguno de los 2 patrones de
+  // arriba encuentra nada. Pero el bloque agencia+dirección siempre aparece pegado justo ANTES
+  // del campo "Agent's IATA Code" en un AWB estándar — lo buscamos por esa posición en vez de
+  // por la etiqueta cuando esta quedó rota.
+  if (!result.agencyName) {
+    // Se usa [\s\S] (cualquier carácter) para el tramo intermedio en vez de una clase estricta,
+    // porque esa dirección real trae de todo (guiones, dos puntos, @, etc.) y una clase angosta
+    // cortaba el match antes de llegar a la etiqueta.
+    // OJO: SIN /i y con el nombre de la empresa en mayúsculas estrictas — el texto ilegible/vertical
+    // que suele haber entre la firma y el bloque de agencia en este layout ("...Consignee or his
+    // Agent...") va en minúsculas, y con /i esa clase de caracteres lo tomaba como si fuera parte
+    // del nombre de la agencia (terminaba armando cosas como "nee or his Agent APOLLO FREIGHT...").
+    // Los nombres/direcciones reales en estos AWB siempre van en mayúsculas, así que exigirlas
+    // descarta ese ruido sin perder el nombre real.
+    var agByPosition = clean.match(/([A-Z][A-Z0-9&.\s]{3,45}?(?:SAS|S\.A\.S\.?|LTDA|S\.A\.|SA|INC\.?))[\s\S]{0,250}?Agent(?:['´]s)?\s*IATA\s*Code/);
+    if (agByPosition) result.agencyName = agByPosition[1].trim();
+  }
 
   // ── CONSIGNATARIO ── nombre tras "Consignee's Name and Address ... Account Number"
   var consigneeMatch = clean.match(/Consignee's\s*Name\s*and\s*Address\s+Consignee's\s*Account\s*Number\s+([A-Z][A-Z0-9\s\.,&]{5,50}?)\s+EORI/i)
@@ -2241,7 +2323,13 @@ function extractAWBFields(text) {
   if (brokerMatch) result.customsBroker = brokerMatch[1].trim();
 
   // ── DECLARED VALUE FOR CARRIAGE ── "N.V.D." significa "No Value Declared" = 0
-  var declaredMatch = clean.match(/Declared\s*Value\s*for\s*Carriage\D*?(\d+[\.,]?\d*)/i);
+  // 22-sep-2026: el \D*? sin límite dejaba que, en layouts donde la etiqueta y su valor real
+  // quedan separados (como el de K+N/ABX), el patrón saltara sobre TODO el resto del documento
+  // hasta encontrar el primer dígito que fuera — terminó agarrando el número de piezas (340) de
+  // una fila de carga bien lejos de la etiqueta, y lo guardaba como si fuera el valor declarado
+  // aunque el AWB decía N.V.D. Se acota la búsqueda a los 40 caracteres siguientes a la etiqueta
+  // (donde ya cabe "Declared Value for Customs" antes del valor real, si lo hay).
+  var declaredMatch = clean.match(/Declared\s*Value\s*for\s*Carriage\D{0,40}?(\d+[\.,]?\d*)/i);
   if (declaredMatch && !/N\.?V\.?D/i.test(clean.substring(clean.indexOf('Declared Value for Carriage'), clean.indexOf('Declared Value for Carriage')+60))) {
     result.declaredValue = parseFloat(declaredMatch[1].replace(',', '.'));
   }
@@ -2258,6 +2346,19 @@ function extractAWBFields(text) {
     if (!result.chargeable_weight) result.chargeable_weight = parseFloat(tableMatch[4]);
     if (!result.rate) result.rate = parseFloat(tableMatch[5]);
     if (!result.weight_charge) result.weight_charge = parseFloat(tableMatch[6]);
+  }
+
+  // Layout K&M: no imprime letra de clase de tarifa entre "K" y el peso facturable
+  // ("520 2434 K 2825 1.45 4096.25", sin letra tipo "CN"/"Q" como en los otros layouts de arriba)
+  if (!tableMatch) {
+    var tableMatchNoClass = clean.match(/(\d{2,4})\s+(\d{3,6}(?:\.\d+)?)\s*[kK]\s+(\d{3,6}(?:\.\d+)?)\s+(\d{1,3}\.\d{2})\s+(\d{2,7}\.\d{2})/);
+    if (tableMatchNoClass) {
+      if (!result.boxes_conf) result.boxes_conf = parseInt(tableMatchNoClass[1]);
+      if (!result.gross_weight) result.gross_weight = parseFloat(tableMatchNoClass[2]);
+      if (!result.chargeable_weight) result.chargeable_weight = parseFloat(tableMatchNoClass[3]);
+      if (!result.rate) result.rate = parseFloat(tableMatchNoClass[4]);
+      if (!result.weight_charge) result.weight_charge = parseFloat(tableMatchNoClass[5]);
+    }
   }
 
   // Layout LATAM sin etiquetas: fila "214 977.00 1196.00 1.48 1770.08"
@@ -2381,17 +2482,20 @@ function extractAWBFields(text) {
   else if (/FRAGILE/i.test(clean)) result.handling = 'Frágil';
   else if (/UPRIGHT|THIS\s*SIDE\s*UP/i.test(clean)) result.handling = 'Este lado arriba';
 
-  // ── OTHER CHARGES (formato: "CODIGO US$ valor = total") ──
-  var maaMatch = clean.match(/MAA\s*US\$?\s*(\d+\.\d{1,3})/i);
+  // ── OTHER CHARGES (formato: "CODIGO US$ valor = total", o "CODIGO : USD valor" en K&M) ──
+  // 22-sep-2026: el layout K&M escribe "AWC : USD 25.00" (con dos puntos, y "USD" en vez de "US$")
+  // — el patrón original solo reconocía "US$" pegado sin dos puntos, así que este cargo quedaba
+  // sin capturar y el campo "Otros cargos (carrier)" no se autocompletaba en ese layout.
+  var maaMatch = clean.match(/MAA\s*:?\s*(?:US\$|USD|\$)?\s*(\d+\.\d{1,3})/i);
   if (maaMatch) result.maa = parseFloat(maaMatch[1]);
 
-  var awcMatch = clean.match(/(?:AWC|MCC)\s*US\$?\s*(\d+\.\d{1,3})/i);
+  var awcMatch = clean.match(/(?:AWC|MCC)\s*:?\s*(?:US\$|USD|\$)?\s*(\d+\.\d{1,3})/i);
   if (awcMatch) result.awc = parseFloat(awcMatch[1]);
 
-  var mycMatch = clean.match(/MYC\s*US\$?\s*(\d+\.\d{1,3})/i);
+  var mycMatch = clean.match(/MYC\s*:?\s*(?:US\$|USD|\$)?\s*(\d+\.\d{1,3})/i);
   if (mycMatch) result.myc = parseFloat(mycMatch[1]);
 
-  var escMatch = clean.match(/ESC\s*US\$?\s*(\d+\.\d{1,3})/i);
+  var escMatch = clean.match(/ESC\s*:?\s*(?:US\$|USD|\$)?\s*(\d+\.\d{1,3})/i);
   if (escMatch) result.esc = parseFloat(escMatch[1]);
 
   // ── Other Charges Due Carrier / Agent ──
@@ -2407,9 +2511,10 @@ function extractAWBFields(text) {
     if (result.other_agent === undefined) result.other_agent = parseFloat(dueBoth[1]);
     if (result.other_carrier === undefined) result.other_carrier = parseFloat(dueBoth[2]);
   }
-  // Layout LATAM: cargo AWC explícito "AWC: USD 25.00" (va al carrier)
+  // Layout LATAM: cargo AWC explícito "AWC: USD 25.00" (va al carrier) — tolera "AWC : USD 25.00"
+  // (espacio antes de los dos puntos, como en K&M)
   if (result.other_carrier === undefined) {
-    var awcUsd = clean.match(/AWC:?\s*(?:USD)?\s*\$?\s*(\d+(?:\.\d{1,2})?)/i);
+    var awcUsd = clean.match(/AWC\s*:?\s*(?:US\$|USD|\$)?\s*(\d+(?:\.\d{1,2})?)/i);
     if (awcUsd) result.other_carrier = parseFloat(awcUsd[1]);
   }
   // Layout Laser (Copy 8): el total del agente se imprime ANTES de la etiqueta "Due Carrier"
@@ -2461,9 +2566,14 @@ function extractAWBFields(text) {
 
   // Layout DHL/K+N: los recargos vienen como "MYC US$ 0.200 = 216.200 MCC US$ ... = 2.000 CCC ... = 52.000"
   // Si no se detectó "other_carrier", sumamos todos esos recargos con formato "= NNN"
+  // OJO — 22-sep-2026: "MAA" es "Miscellaneous charges Due AGENT" (lo dice el propio nombre) — nunca es
+  // un cargo del carrier. Incluirlo en esta suma de recargos del carrier inflaba "other_carrier" con un
+  // cargo que en realidad es del agente (ej. real: MAA US$30 + MCC US$25 sumados acá como si los dos
+  // fueran del carrier → 55 en vez de 25), y esto disparaba una alerta de descuadre falsa más abajo.
+  // MAA se sigue capturando aparte (ver result.maa arriba) y entra al total por el lado del agente.
   if (result.other_carrier === undefined) {
     var surchargeSum = 0, foundSurcharge = false;
-    var surRe = /(?:MYC|MCC|CCC|MAA|ESC|SCC|FSC|SSC|AWB|AWA)\s*(?:US\$|USD|\$)?\s*[\d.]+\s*=\s*([\d.]+)/gi;
+    var surRe = /(?:MYC|MCC|CCC|ESC|SCC|FSC|SSC|AWB|AWA)\s*(?:US\$|USD|\$)?\s*[\d.]+\s*=\s*([\d.]+)/gi;
     var sm;
     while ((sm = surRe.exec(clean)) !== null) {
       surchargeSum += parseFloat(sm[1]) || 0;
@@ -2489,8 +2599,18 @@ function extractAWBFields(text) {
 
   // Red de seguridad 1: si el total detectado es igual al cargo de peso pero hay otros cargos, recalcular
   // (significa que capturamos el subtotal, no el total real)
-  var computedTotal = (result.weight_charge||0) + (result.other_agent||0) + (result.other_carrier||0)
-    + (result.maa||0) + (result.awc||0) + (result.tax||0) + (result.valcharge||0);
+  // OJO — 22-sep-2026: "Total Other Charges Due Agent/Carrier" (other_agent/other_carrier) YA es la suma
+  // de los cargos itemizados que aparecen en el texto libre de "Other Charges" (MAA, AWC/MCC, MYC, ESC...).
+  // Ej. real: "MAA US$ 30.000 = 30.000" + "MCC US$ 25.000 = 25.000" en el texto libre, y más abajo en el
+  // AWB las cajas "Total Other Charges Due Agent: 30.0" / "Due Carrier: 25.0" — son EL MISMO cargo, no dos.
+  // Sumar maa/awc encima de other_agent/other_carrier cuando ambos se detectaron duplica el cargo
+  // (30+30 en vez de 30) e infla el "total impreso en el AWB" usado para comparar contra lo calculado,
+  // generando una alerta de descuadre falsa. Solo se usa maa/awc como el monto en sí cuando NO se
+  // detectó el total de esa caja (algunos layouts solo traen el texto libre, sin las cajas resumen).
+  var agenteCargos = (result.other_agent !== undefined) ? result.other_agent : (result.maa||0);
+  var carrierCargos = (result.other_carrier !== undefined) ? result.other_carrier : (result.awc||0);
+  var computedTotal = (result.weight_charge||0) + agenteCargos + carrierCargos
+    + (result.tax||0) + (result.valcharge||0);
   if (result.total_prepaid && result.weight_charge && result.total_prepaid === result.weight_charge && computedTotal > result.weight_charge) {
     result.total_prepaid = parseFloat(computedTotal.toFixed(2));
   }
@@ -3281,15 +3401,20 @@ function dbSummary() {
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
 // Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
 // ══ CENTRO DE INTELIGENCIA ══
-// Scorecard: puntúa por AEROLÍNEA o por CARGUERA (agencia) combinando precio y confiabilidad
-// dim = 'airline' | 'agency'
-function buildCarrierScorecard(dim) {
+// Scorecard: puntúa por AEROLÍNEA, CARGUERA (agencia) o TIPO DE GUÍA combinando precio y confiabilidad
+// dim = 'airline' | 'agency' | 'commodity'
+// routeFilter = 'all' o una ruta exacta ("UIO→MIA") — 22-sep-2026: el precio puede depender del
+// puerto de origen (ver nota más abajo), así que el scorecard puede acotarse a una sola ruta para
+// comparar aerolíneas/cargueras que de verdad compiten entre sí.
+function buildCarrierScorecard(dim, routeFilter) {
   dim = dim || 'airline';
   var carriers = {};
   DB.flights.forEach(function(f){
+    var rt = (f.origin||'?')+'→'+(f.dest||'?');
+    if (routeFilter && routeFilter!=='all' && rt!==routeFilter) return;
     var a = dim === 'agency' ? (f.agName || 'Sin carguera') : dim === 'commodity' ? (f.commodity || 'Sin definir') : (f.airline || 'Sin aerolínea');
     if (!carriers[a]) carriers[a] = { name:a, flights:0, boxes:0, rateSum:0, rateCount:0,
-      damaged:0, lost:0, delayed:0, delivered:0, sent:0, reprogged:0, partners:{} };
+      damaged:0, lost:0, delayed:0, delivered:0, sent:0, reprogged:0, partners:{}, routes:{} };
     var c = carriers[a];
     c.flights++;
     c.sent += parseInt(f.bsent)||0;
@@ -3304,6 +3429,9 @@ function buildCarrierScorecard(dim) {
     // Registrar con quién opera: si vemos cargueras, guardar aerolíneas usadas y viceversa
     var partner = dim === 'agency' ? f.airline : f.agName;
     if (partner) c.partners[partner] = (c.partners[partner]||0) + 1;
+    // Registrar por qué ruta(s) opera — para poder avisar si dos filas no comparten ninguna
+    // (comparar su precio directamente sería comparar el puerto de origen, no la aerolínea/carguera).
+    c.routes[rt] = (c.routes[rt]||0) + 1;
   });
   var list = Object.keys(carriers).map(function(k){ return carriers[k]; }).filter(function(c){ return c.flights > 0; });
   if (!list.length) return [];
@@ -3338,13 +3466,29 @@ function buildCarrierScorecard(dim) {
 }
 
 var _scDim = 'airline';
+var _scRoute = 'all'; // 22-sep-2026: filtro de ruta del scorecard, ver buildCarrierScorecard
 function setScoreDim(d){ _scDim = d; renderScorecard(); }
+function setScoreRoute(v){ _scRoute = v; renderScorecard(); }
+
+// ¿Al menos dos filas del scorecard comparten alguna ruta? Si ninguna aerolínea/carguera/tipo de
+// guía comparado vuela la misma ruta que otra, comparar su "Tarifa prom." directamente no es justo
+// — puede que la diferencia sea el puerto de origen, no quién es mejor. Ver nota 22-sep-2026.
+function scorecardRoutesShared(list) {
+  var owners = {};
+  list.forEach(function(c){
+    Object.keys(c.routes||{}).forEach(function(rt){
+      if (!owners[rt]) owners[rt] = {};
+      owners[rt][c.name] = true;
+    });
+  });
+  return Object.keys(owners).some(function(rt){ return Object.keys(owners[rt]).length > 1; });
+}
 
 function renderScorecard() {
   var box = document.getElementById('intel-scorecard');
   if (!box) return;
   var dim = _scDim;
-  var list = buildCarrierScorecard(dim);
+  var list = buildCarrierScorecard(dim, _scRoute);
   var dimLabel = dim === 'agency' ? 'Carguera' : dim === 'commodity' ? 'Tipo Guía' : 'Aerolínea';
   var partnerLabel = dim === 'agency' ? 'Aerolíneas que usa' : 'Cargueras que la usan';
 
@@ -3355,16 +3499,34 @@ function renderScorecard() {
   }
   var tabs = '<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">' + tab('airline','✈ Por Aerolínea') + tab('agency','🏢 Por Carguera') + tab('commodity','📦 Por Tipo Guía') + '</div>';
 
+  // Filtro de ruta — mismo patrón que "Comparador $/kg real" más abajo en esta pantalla.
+  // El precio suele depender del puerto de origen (UIO, MED, BOG...), así que acotar a una
+  // ruta deja comparar solo aerolíneas/cargueras que de verdad compiten por el mismo tramo.
+  var routes = {};
+  DB.flights.forEach(function(f){ if(f.origin&&f.dest) routes[f.origin+'→'+f.dest]=1; });
+  var routeOpts = '<option value="all"'+(_scRoute==='all'?' selected':'')+'>Todas las rutas</option>' + Object.keys(routes).map(function(r){
+    return '<option value="'+esc(r)+'"'+(_scRoute===r?' selected':'')+'>'+esc(r)+'</option>';
+  }).join('');
+  var routeFilterHtml = '<select onchange="setScoreRoute(this.value)" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);margin-bottom:12px;">'+routeOpts+'</select>';
+
   if (!list.length) {
-    box.innerHTML = tabs + '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con '+dimLabel.toLowerCase()+' y tarifa para ver el desempeño comparativo.</div>';
+    box.innerHTML = tabs + routeFilterHtml + '<div class="ai-bubble" style="font-size:12px;">Registra vuelos con '+dimLabel.toLowerCase()+' y tarifa para ver el desempeño comparativo.</div>';
     return;
+  }
+  // Aviso: con "Todas las rutas" seleccionado, si ninguna fila comparte ruta con otra, el precio
+  // no es directamente comparable entre ellas — es geografía, no desempeño.
+  var routeWarning = '';
+  if (_scRoute === 'all' && list.length > 1 && !scorecardRoutesShared(list)) {
+    routeWarning = '<div style="background:var(--amberbg);color:var(--ambertxt);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;line-height:1.5;">'
+      + '⚠️ Estas filas no comparten ninguna ruta entre sí — la "Tarifa prom." puede reflejar el puerto de origen, no cuál es realmente más barata. '
+      + 'Elegí una ruta específica arriba para comparar en igualdad de condiciones, o usá el <a href="#" onclick="event.preventDefault();document.getElementById(\'intel-costcompare\').scrollIntoView({behavior:\'smooth\',block:\'center\'});flashElement(document.getElementById(\'intel-costcompare\'));" style="color:var(--ambertxt);font-weight:700;text-decoration:underline;">Comparador $/kg real</a> de más abajo, que ya filtra por ruta.</div>';
   }
   function scoreColor(s){ return s>=85?'#22A351':(s>=70?'#F59E0B':'#DC2626'); }
   function scoreBadge(s){
     var c = scoreColor(s);
     return '<span style="display:inline-block;background:'+c+'22;color:'+c+';font-weight:800;font-size:13px;padding:4px 10px;border-radius:20px;min-width:44px;text-align:center;">'+s+'</span>';
   }
-  var h = tabs;
+  var h = tabs + routeFilterHtml + routeWarning;
   h += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). '
     + (dim==='agency' ? 'Evalúa a tus <strong>cargueras</strong>: quién te consigue mejor precio y menos problemas.' : dim==='commodity' ? 'Compara por <strong>tipo de guía</strong>: útil para ver si LINEA RELEASE realmente tiene menos daños, demoras o reprogramaciones que CONSOL u OWN GUIDE.' : 'Evalúa a las <strong>aerolíneas</strong>: una barata que daña mucha carga puede salir más cara.') + '</div>';
   h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>% Reprog.</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
@@ -5115,7 +5277,7 @@ function clearFlightForm() {
   document.getElementById('pod-status').style.display='none';
   document.getElementById('awb-zone-txt').textContent='Clic para subir AWB PDF / Imagen';
   document.getElementById('pod-zone-txt').textContent='Clic para adjuntar POD (PDF / Imagen) — se sube a OneDrive';
-  pendingPOD = null; _pendingAl = null; window._lastDepartureDay = null; window._awbTotalPrepaid = 0; window._etdIsEstimate = false;
+  pendingPOD = null; pendingAWB = null; _pendingAl = null; window._lastDepartureDay = null; window._awbTotalPrepaid = 0; window._etdIsEstimate = false;
   ['f-ochagent','f-ochcarrier','f-wcharge','f-totalpaid','f-bmiss'].forEach(function(i){var e=document.getElementById(i); if(e) delete e.dataset.manual;});
   sv('f-myc-basis','kg');
   var tma=document.getElementById('total-mismatch-alert'); if(tma)tma.style.display='none';
@@ -5162,6 +5324,11 @@ function viewPODByFlight(id) {
   var f = DB.flights.find(function(x){ return x.id === id; });
   if (!f || !f.podUrl) { toast('Sin POD adjunto.', 'err'); return; }
   viewPOD(f.podUrl, f.podName);
+}
+function viewAWBByFlight(id) {
+  var f = DB.flights.find(function(x){ return x.id === id; });
+  if (!f || !f.awbUrl) { toast('Sin PDF de AWB guardado.', 'err'); return; }
+  viewPOD(f.awbUrl, f.awbName); // mismo visor genérico que usa el POD (título/nombre por parámetro)
 }
 function viewPOD(dataUri, name) {
   if (!dataUri) { toast('Sin POD adjunto.', 'err'); return; }
@@ -5253,6 +5420,8 @@ async function saveFlight() {
     departureDay: window._lastDepartureDay || null,
     podUrl: pendingPOD ? pendingPOD.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podUrl||'':''),
     podName: pendingPOD ? pendingPOD.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).podName||'':''),
+    awbUrl: pendingAWB ? pendingAWB.url : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).awbUrl||'':''),
+    awbName: pendingAWB ? pendingAWB.name : (editFlId?(DB.flights.find(function(x){return x.id===editFlId;})||{}).awbName||'':''),
     modifiedAt: now,
     createdAt: editFlId ? ((DB.flights.find(function(x){return x.id===editFlId;})||{}).createdAt||now) : now
   };
@@ -5933,7 +6102,8 @@ function renderFlights(){
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
   if(!filtered.length){tb.innerHTML=erow(26,'Sin vuelos.');return;}
   filtered.forEach(function(f){
-    var pod=f.podUrl?'<button type="button" class="btn xs pr" onclick="event.stopPropagation();viewPODByFlight(\''+f.id+'\')">📄 POD</button>':'—';
+    var pod=(f.podUrl?'<button type="button" class="btn xs pr" onclick="event.stopPropagation();viewPODByFlight(\''+f.id+'\')">📄 POD</button>':'')+(f.awbUrl?'<button type="button" class="btn xs pr" style="margin-left:4px;" onclick="event.stopPropagation();viewAWBByFlight(\''+f.id+'\')">📄 AWB</button>':'');
+    if (!pod) pod = '—';
     var guiaCell=commodityCell(f);
     var rateClass=f.rate&&f.rateExp&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'style="color:var(--red);font-weight:700;"':'';
     var tr=document.createElement('tr');tr.className='dr';tr.onclick=function(){openDetail(f.id);};
@@ -6084,13 +6254,14 @@ function renderSettingsPage(){
   if (meter) {
     var si = storageInfo();
     var podCount = DB.flights.filter(function(f){ return f.podUrl && f.podUrl.indexOf('data:')===0; }).length;
+    var awbCount = DB.flights.filter(function(f){ return f.awbUrl && f.awbUrl.indexOf('data:')===0; }).length;
     var barColor = si.pct >= 85 ? 'var(--red)' : (si.pct >= 60 ? '#F59E0B' : 'var(--green)');
     meter.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
       + '<span>Espacio usado: <strong>' + si.kb + ' KB</strong> de ~5000 KB</span>'
       + '<strong style="color:' + barColor + ';">' + si.pct + '%</strong></div>'
       + '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden;">'
       + '<div style="height:100%;width:' + si.pct + '%;background:' + barColor + ';border-radius:4px;"></div></div>'
-      + '<div style="font-size:10px;color:var(--t3);margin-top:4px;">' + DB.flights.length + ' vuelos · ' + podCount + ' POD adjuntos'
+      + '<div style="font-size:10px;color:var(--t3);margin-top:4px;">' + DB.flights.length + ' vuelos · ' + podCount + ' POD adjuntos · ' + awbCount + ' PDF de AWB guardados'
       + (si.pct >= 60 ? ' · <strong style="color:'+barColor+';">Conviene liberar espacio (los datos ya están a salvo en Supabase)</strong>' : '') + '</div>';
     // Estado del último respaldo (copia extra opcional en .json — los datos reales ya están en Supabase)
     var dsb = daysSinceBackup();
@@ -6120,7 +6291,7 @@ function openDetail(id){
   document.getElementById('detail-title').textContent=f.num+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
-  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd)+(f.etd?' <span style="font-size:10px;color:var(--t3);">('+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label+')</span>':''))+R('ETA',fmtD(f.eta)+(f.eta?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">🛬 '+arrivalBothZones(f.eta)+'</div>':''))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Tipo de guía',commodityCell(f))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="#" onclick="event.preventDefault();viewPODByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
+  var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd)+(f.etd?' <span style="font-size:10px;color:var(--t3);">('+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label+')</span>':''))+R('ETA',fmtD(f.eta)+(f.eta?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">🛬 '+arrivalBothZones(f.eta)+'</div>':''))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+R('PDF del AWB',f.awbUrl?'<a href="#" onclick="event.preventDefault();viewAWBByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.awbName||'AWB')+'</a>':'No guardado')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Tipo de guía',commodityCell(f))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="#" onclick="event.preventDefault();viewPODByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
   if(f.notes)b+=S('NOTAS')+R('Notas',esc(f.notes));
   document.getElementById('detail-body').innerHTML=b;
   document.getElementById('btn-del').onclick=async function(){if(confirm('¿Eliminar este envío?')){await deleteFlight_SP(id);closeModal('detail');toast('Eliminado.','ok');renderScreen(screen);updateBadges();}};
@@ -6161,6 +6332,8 @@ function openEditFlight(id){
   window._lastDepartureDay = f.departureDay || null;
   window._etdIsEstimate = false; // se vuelve a marcar solo si se re-sube un AWB durante esta edición
   if(f.podName){document.getElementById('pod-zone-txt').textContent='POD adjunto: '+f.podName; document.getElementById('pod-status').textContent='✓ POD: '+f.podName; document.getElementById('pod-status').className='upload-status ok';}
+  pendingAWB = null; // no reenviar el PDF ya guardado solo por abrir a editar
+  if(f.awbName){document.getElementById('awb-zone-txt').textContent='AWB guardado: '+f.awbName; var awbStEl=document.getElementById('awb-status'); if(awbStEl){awbStEl.textContent='✓ PDF del AWB guardado en la nube: '+f.awbName; awbStEl.className='upload-status ok'; awbStEl.style.display='block';}}
   ['tip-airline','tip-boxes','tip-cost'].forEach(function(i){var e=document.getElementById(i); if(e)e.style.display='none';});
   var rma=document.getElementById('rate-mismatch-alert'); if(rma)rma.style.display='none';
   document.getElementById('modal-new').classList.add('open');
@@ -6270,8 +6443,8 @@ async function saveSettings(){
 // ══ EXPORT ══
 function exportCSV(){
   if(!DB.flights.length){toast('Sin vuelos para exportar.','err');return;}
-  var h='Vuelo#,Aerolínea,Origen,Destino,ETD,ETA,Agencia,AWB,CajasEnv,CajasConf,CajasFalt,EstConf,EstVuelo,PesoBruto,PesoFact,TipoCarga,Manejo,TipoGuia,CódHS,Tarifa,TarifaEsp,CargoPeso,MAA,AWC,MYC,ESC,OtroAgente,OtroCarrier,TotalPagado,TotalCobrar,Remitente,Consignatario,CreadoPor,Modificado,POD,Notas';
-  var rows=DB.flights.map(function(f){return[f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,f.confst,f.status,f.weight,f.cweight,f.ctype,f.handling,f.commodity,f.hs,f.rate,f.rateExp,f.wcharge,f.maa,f.awc,f.myc,f.esc,f.ochagent,f.ochcarrier,f.totalpaid,f.totalcoll,f.sname,f.consignee,f.createdby,f.modifiedAt,f.podName,f.notes].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');});
+  var h='Vuelo#,Aerolínea,Origen,Destino,ETD,ETA,Agencia,AWB,CajasEnv,CajasConf,CajasFalt,EstConf,EstVuelo,PesoBruto,PesoFact,TipoCarga,Manejo,TipoGuia,CódHS,Tarifa,TarifaEsp,CargoPeso,MAA,AWC,MYC,ESC,OtroAgente,OtroCarrier,TotalPagado,TotalCobrar,Remitente,Consignatario,CreadoPor,Modificado,POD,AWB_PDF,Notas';
+  var rows=DB.flights.map(function(f){return[f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.awb,f.bsent,f.bconf,f.bmiss,f.confst,f.status,f.weight,f.cweight,f.ctype,f.handling,f.commodity,f.hs,f.rate,f.rateExp,f.wcharge,f.maa,f.awc,f.myc,f.esc,f.ochagent,f.ochcarrier,f.totalpaid,f.totalcoll,f.sname,f.consignee,f.createdby,f.modifiedAt,f.podName,f.awbName,f.notes].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');});
   var blob=new Blob([[h].concat(rows).join('\n')],{type:'text/csv'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='jff-vuelos-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
 }
@@ -6283,7 +6456,7 @@ function exportExcel(){
     loadSheetJS(function(){ exportExcel(); });
     return;
   }
-  var headers=['AWB #','Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','Cajas Enviadas','Cajas Confirmadas','FBE (Full Boxes)','Cajas Faltantes/Excedentes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Tipo Guía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Cajas Dañadas','Cajas Perdidas','Hold USDA','Liberadas USDA','Estado USDA','Estado Reclamo','Monto Reclamado','Monto Recuperado','N° Reclamo','Fecha Reclamo','Límite Reclamo','Notas Reclamo','Remitente','Consignatario','Creado Por','Modificado','POD','Notas'];
+  var headers=['AWB #','Vuelo #','Aerolínea','Origen','Destino','ETD','ETA','Agencia','Cajas Enviadas','Cajas Confirmadas','FBE (Full Boxes)','Cajas Faltantes/Excedentes','Estado Confirmación','Estado Vuelo','Peso Bruto (kg)','Peso Facturable (kg)','Tipo Carga','Manejo Especial','Tipo Guía','Código HS','Tarifa/kg','Tarifa Esperada/kg','Cargo Peso','MAA','AWC','MYC','ESC','Otros Agente','Otros Carrier','Total Prepagado','Total Cobrar','Cajas Dañadas','Cajas Perdidas','Hold USDA','Liberadas USDA','Estado USDA','Estado Reclamo','Monto Reclamado','Monto Recuperado','N° Reclamo','Fecha Reclamo','Límite Reclamo','Notas Reclamo','Remitente','Consignatario','Creado Por','Modificado','POD','AWB PDF','Notas'];
   var rows=DB.flights.map(function(f){
     return [f.awb,f.num,f.airline,f.origin,f.dest,f.etd,f.eta,f.agName,f.bsent,f.bconf,parseFloat(f.fbe)||0,f.bmiss,
       f.confst==='confirmed'?'Confirmado':f.confst==='partial'?'Parcial':'Sin confirmar',
@@ -6296,7 +6469,7 @@ function exportExcel(){
       f.usdaFreed?'Liberado':(f.usdaHold?'En hold':''),
       CLAIM_LABELS[f.claimStatus||'none']||'Sin reclamo',
       parseFloat(f.claimAmount)||'', parseFloat(f.claimRecovered)||'', f.claimRef||'', f.claimDate||'', f.claimDeadline||'', f.claimNotes||'',
-      f.sname, f.consignee, f.createdby, f.modifiedAt, f.podName||'', f.notes
+      f.sname, f.consignee, f.createdby, f.modifiedAt, f.podName||'', f.awbName||'', f.notes
     ];
   });
   var wsData = [headers].concat(rows);
