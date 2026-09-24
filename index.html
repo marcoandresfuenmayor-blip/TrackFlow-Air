@@ -2180,6 +2180,45 @@ function arrivalBothZones(date) {
   return mia + ' · ' + home;
 }
 
+// ══ 23-sep-2026: "Hora típica" de salida/llegada por aerolínea+ruta (scorecard de Itinerarios) ══
+// Minutos desde medianoche de una fecha, en una zona horaria dada (para promediar horas del día).
+function minutesInTZ(date, tz) {
+  var d = new Date(date);
+  if (isNaN(d)) return null;
+  var parts = new Intl.DateTimeFormat('en-US', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:tz }).formatToParts(d);
+  var h = 0, m = 0;
+  parts.forEach(function(p){ if (p.type==='hour') h = parseInt(p.value)||0; if (p.type==='minute') m = parseInt(p.value)||0; });
+  if (h === 24) h = 0; // Intl a veces devuelve "24" para medianoche
+  return h*60 + m;
+}
+// Promedio de una lista de "horas del día" (en minutos desde medianoche). Es un promedio circular
+// (vectores en un círculo de 24h), no un promedio lineal simple — así un grupo de vuelos que salen
+// cerca de medianoche (23:40, 00:15, 00:30...) promedia correctamente cerca de medianoche también,
+// en vez de dar por error un resultado a mitad del día.
+function avgTimeOfDay(minutesArr) {
+  if (!minutesArr || !minutesArr.length) return null;
+  var sx = 0, sy = 0;
+  minutesArr.forEach(function(m){
+    var rad = (m/1440) * 2*Math.PI;
+    sx += Math.cos(rad); sy += Math.sin(rad);
+  });
+  var angle = Math.atan2(sy/minutesArr.length, sx/minutesArr.length);
+  if (angle < 0) angle += 2*Math.PI;
+  return Math.round((angle/(2*Math.PI)) * 1440) % 1440;
+}
+function fmtMinutesOfDay(mins) {
+  if (mins === null || mins === undefined || isNaN(mins)) return '—';
+  var h = Math.floor(mins/60), m = mins%60;
+  var ampm = h >= 12 ? 'p.m.' : 'a.m.';
+  var h12 = h % 12; if (h12 === 0) h12 = 12;
+  return h12 + ':' + ('0'+m).slice(-2) + ' ' + ampm;
+}
+function fmtTransitMinutes(mins) {
+  if (mins === null || mins === undefined || isNaN(mins)) return '—';
+  var h = Math.floor(mins/60), m = mins%60;
+  return h + 'h ' + ('0'+m).slice(-2) + 'm';
+}
+
 function extractAWBFields(text) {
   var result = {};
   var clean = text.replace(/\s+/g, ' ').trim();
@@ -3416,6 +3455,16 @@ function buildCarrierScorecard(dim, routeFilter) {
     if (!carriers[a]) carriers[a] = { name:a, flights:0, boxes:0, rateSum:0, rateCount:0,
       damaged:0, lost:0, delayed:0, delivered:0, sent:0, reprogged:0, partners:{}, routes:{} };
     var c = carriers[a];
+    // 23-sep-2026: para "hora típica" de salida/llegada por ruta, acumulamos ETD (hora local de origen)
+    // y ETA (hora en Miami) de cada vuelo, agrupados por ruta dentro de este mismo carrier/aerolínea.
+    if (!c.routes[rt]) c.routes[rt] = { count:0, etdMins:[], etaMins:[], transitMins:[] };
+    c.routes[rt].count++;
+    if (f.etd) { var _etdM = minutesInTZ(f.etd, originTZ(f).tz); if (_etdM !== null) c.routes[rt].etdMins.push(_etdM); }
+    if (f.eta) { var _etaM = minutesInTZ(f.eta, DEST_TZ.tz); if (_etaM !== null) c.routes[rt].etaMins.push(_etaM); }
+    if (f.etd && f.eta) {
+      var _transitH = (new Date(f.eta) - new Date(f.etd)) / 3600000;
+      if (_transitH > 0 && _transitH < 48) c.routes[rt].transitMins.push(Math.round(_transitH*60));
+    }
     c.flights++;
     c.sent += parseInt(f.bsent)||0;
     c.boxes += parseInt(f.bsent)||0;
@@ -3429,9 +3478,8 @@ function buildCarrierScorecard(dim, routeFilter) {
     // Registrar con quién opera: si vemos cargueras, guardar aerolíneas usadas y viceversa
     var partner = dim === 'agency' ? f.airline : f.agName;
     if (partner) c.partners[partner] = (c.partners[partner]||0) + 1;
-    // Registrar por qué ruta(s) opera — para poder avisar si dos filas no comparten ninguna
-    // (comparar su precio directamente sería comparar el puerto de origen, no la aerolínea/carguera).
-    c.routes[rt] = (c.routes[rt]||0) + 1;
+    // (el conteo por ruta — para "comparte alguna ruta" y ahora también horarios típicos —
+    // ya se acumuló arriba en c.routes[rt])
   });
   var list = Object.keys(carriers).map(function(k){ return carriers[k]; }).filter(function(c){ return c.flights > 0; });
   if (!list.length) return [];
@@ -3442,6 +3490,17 @@ function buildCarrierScorecard(dim, routeFilter) {
     c.lostPct = c.sent>0 ? (c.lost/c.sent*100) : 0;
     c.delayPct = c.flights>0 ? (c.delayed/c.flights*100) : 0;
     c.reprogPct = c.flights>0 ? (c.reprogged/c.flights*100) : 0;
+    // 23-sep-2026: "hora típica" de salida (local del origen) y llegada (hora Miami) por cada ruta
+    // que opera este carrier/aerolínea — para comparar itinerarios entre rutas dentro de la misma fila.
+    c.schedule = Object.keys(c.routes).map(function(rt){
+      var r = c.routes[rt];
+      return {
+        route: rt, flights: r.count,
+        etdTypical: avgTimeOfDay(r.etdMins),
+        etaTypical: avgTimeOfDay(r.etaMins),
+        transitTypical: r.transitMins.length ? Math.round(r.transitMins.reduce(function(a,b){return a+b;},0)/r.transitMins.length) : null
+      };
+    }).sort(function(a,b){ return b.flights - a.flights; });
   });
   // Puntaje: precio (40%) + daños (25%) + perdidas (20%) + demoras (15%)
   // Normalizar cada métrica contra el rango del grupo (menor es mejor en todas)
@@ -3528,8 +3587,19 @@ function renderScorecard() {
   }
   var h = tabs + routeFilterHtml + routeWarning;
   h += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5;">El puntaje combina <strong>precio (40%)</strong>, daños (25%), pérdidas (20%) y demoras (15%). '
-    + (dim==='agency' ? 'Evalúa a tus <strong>cargueras</strong>: quién te consigue mejor precio y menos problemas.' : dim==='commodity' ? 'Compara por <strong>tipo de guía</strong>: útil para ver si LINEA RELEASE realmente tiene menos daños, demoras o reprogramaciones que CONSOL u OWN GUIDE.' : 'Evalúa a las <strong>aerolíneas</strong>: una barata que daña mucha carga puede salir más cara.') + '</div>';
-  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>% Reprog.</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
+    + (dim==='agency' ? 'Evalúa a tus <strong>cargueras</strong>: quién te consigue mejor precio y menos problemas.' : dim==='commodity' ? 'Compara por <strong>tipo de guía</strong>: útil para ver si LINEA RELEASE realmente tiene menos daños, demoras o reprogramaciones que CONSOL u OWN GUIDE.' : 'Evalúa a las <strong>aerolíneas</strong>: una barata que daña mucha carga puede salir más cara.')
+    + ' <strong>Salida/llegada típica</strong> = promedio de tus vuelos registrados en cada ruta (hora local de salida, hora de llegada en Miami) — no es el horario oficial publicado por la aerolínea, y con pocos vuelos puede no ser representativo todavía.</div>';
+  // 23-sep-2026: celda de horario — una línea por ruta cuando el carrier opera más de una,
+  // para poder comparar la hora de salida/llegada entre rutas dentro de la misma fila (pedido de Marco).
+  function scheduleCell(c, key, fmtFn) {
+    if (!c.schedule || !c.schedule.length) return '—';
+    var multi = c.schedule.length > 1;
+    return c.schedule.map(function(s){
+      var v = '<span style="font-family:var(--mono);">'+fmtFn(s[key])+'</span>';
+      return multi ? '<div style="line-height:1.6;"><span style="font-size:9px;color:var(--t3);">'+esc(s.route)+':</span> '+v+'</div>' : v;
+    }).join('');
+  }
+  h += '<div class="tw" style="border:1px solid var(--border);border-radius:10px;"><table><thead><tr><th>'+dimLabel+'</th><th>Puntaje</th><th>Vuelos</th><th>Cajas</th><th>Tarifa prom.</th><th>% Dañadas</th><th>% Perdidas</th><th>% Demoras</th><th>% Reprog.</th><th>Salida típica</th><th>Llegada típica (MIA)</th><th>Tránsito prom.</th><th>'+partnerLabel+'</th></tr></thead><tbody>';
   list.forEach(function(c){
     var partners = Object.keys(c.partners).sort(function(a,b){return c.partners[b]-c.partners[a];})
       .slice(0,3).map(function(p){ return esc(p)+' ('+c.partners[p]+')'; }).join(', ') || '—';
@@ -3543,6 +3613,9 @@ function renderScorecard() {
       + '<td style="color:'+(c.lostPct>0.5?'var(--red)':'var(--t2)')+';">'+c.lostPct.toFixed(1)+'%</td>'
       + '<td style="color:'+(c.delayPct>10?'var(--red)':'var(--t2)')+';">'+c.delayPct.toFixed(0)+'%</td>'
       + '<td style="color:'+(c.reprogPct>10?'var(--red)':'var(--t2)')+';" title="Envíos que la carguera reprogramó tras confirmar">'+c.reprogPct.toFixed(0)+'%</td>'
+      + '<td style="font-size:11px;" title="Hora local del puerto de origen">'+scheduleCell(c,'etdTypical',fmtMinutesOfDay)+'</td>'
+      + '<td style="font-size:11px;" title="Hora de Miami">'+scheduleCell(c,'etaTypical',fmtMinutesOfDay)+'</td>'
+      + '<td style="font-size:11px;">'+scheduleCell(c,'transitTypical',fmtTransitMinutes)+'</td>'
       + '<td style="font-size:10px;color:var(--t3);">'+partners+'</td>'
       + '</tr>';
   });
@@ -4877,15 +4950,21 @@ function renderCalendar(){
       var awb = f.awb || f.num || '—';
       var boxes = parseInt(f.bsent)||0;
       var isLR = f.commodity === 'LINEA RELEASE';
+      // 23-sep-2026: alerta visual — el ETA ya pasó pero nadie confirmó manualmente "Marcar arribo"
+      // ni "Proceso terminado" (aunque el escaneo automático ya lo haya marcado "delivered" solo por
+      // inferencia). Es la confirmación pendiente de una persona, no el estado del vuelo.
+      var pendingConfirm = !!(f.eta && !isNaN(new Date(f.eta)) && new Date(f.eta) < today && !f.arrived && !f.completed);
       var tip = 'AWB ' + (f.awb||'—') + (f.num?' · Vuelo '+f.num:'') + '\n'
         + (f.agName?'Carguera: '+f.agName+'\n':'')
         + (f.airline?'Aerolínea: '+f.airline+'\n':'')
         + (isLR?'🌹 LINEA RELEASE (preferencia de liberación en inspección)\n':'')
+        + (pendingConfirm?'🟣 Pendiente confirmar arribo/cierre\n':'')
         + (f.origin||'?')+'→'+(f.dest||'?') + ' · ' + boxes + ' cajas'
         + (f.etd?'\nSale: '+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label:'')
         + (f.eta?'\nLlega: '+arrivalBothZones(f.eta):'');
-      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;background:'+c+'20;border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;overflow:hidden;">'
-        + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(isLR?'🌹 ':'')+esc(awb)+'</div>'
+      h += '<div onclick="openDetail(\''+f.id+'\')" title="'+esc(tip)+'" style="cursor:pointer;position:relative;background:'+c+'20;border-left:2px solid '+c+';border-radius:3px;padding:2px 4px;margin-bottom:2px;overflow:hidden;">'
+        + (pendingConfirm?'<span style="position:absolute;top:2px;right:3px;width:7px;height:7px;border-radius:50%;background:#7C3AED;box-shadow:0 0 0 2px #7C3AED55;"></span>':'')
+        + '<div style="font-family:var(--mono);font-size:8.5px;font-weight:800;color:'+c+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:'+(pendingConfirm?'10px':'0')+';">'+(isLR?'🌹 ':'')+esc(awb)+'</div>'
         + '<div style="font-size:8px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">'
         + esc(f.origin||'?')+'→'+esc(f.dest||'?')
         + (f.num?' · '+esc(f.num):'')
@@ -4901,6 +4980,7 @@ function renderCalendar(){
   [['Programado','#F59E0B'],['En tránsito','#3B82F6'],['Arribado','#22A351'],['Demorado','#DC2626']].forEach(function(x){
     h += '<div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2);"><span style="width:8px;height:8px;border-radius:2px;background:'+x[1]+';"></span>'+x[0]+'</div>';
   });
+  h += '<div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2);" title="El ETA ya pasó y todavía nadie confirmó manualmente el arribo o el cierre del proceso"><span style="width:8px;height:8px;border-radius:50%;background:#7C3AED;"></span>🟣 Falta confirmar arribo/cierre</div>';
   h += '</div>';
   // Resumen del mes
   var totalM = Object.keys(byDay).reduce(function(s,k){return s+byDay[k].length;},0);
