@@ -170,6 +170,16 @@ tbody tr:hover{background:var(--lightgreen)!important;}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;box-shadow:var(--sh);min-width:0;}
 .ch{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F6FBF8;}
 .ct{font-size:12px;font-weight:700;color:var(--t1);}
+/* 28-sep-2026: secciones plegables — .ch.collapsible colapsa el .card que lo contiene */
+.ch.collapsible{cursor:pointer;user-select:none;}
+.ch .chev{font-size:10px;color:var(--t3);transition:transform .15s;flex-shrink:0;margin-left:2px;}
+.card.collapsed>*:not(.ch){display:none!important;}
+.card.collapsed .chev{transform:rotate(-90deg);}
+/* bloque plegable genérico (para trozos dentro de una pantalla que no son un .card entero) */
+.subcol-h{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px;}
+.subcol-h .chev{font-size:10px;color:var(--t3);transition:transform .15s;}
+.subcol-h.collapsed .chev{transform:rotate(-90deg);}
+.subcol-body.collapsed{display:none!important;}
 .ca{display:flex;align-items:center;gap:6px;}
 .sg{display:grid;gap:10px;}
 .sg5{grid-template-columns:repeat(5,minmax(0,1fr));}
@@ -313,6 +323,12 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .ss{background:var(--surf);border:1px solid var(--border);border-radius:var(--rlg);padding:15px 17px;box-shadow:var(--sh);}
 .ss-t{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+/* 28-sep-2026: secciones de Configuración plegables */
+.ss-t.collapsible{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ss-t .chev{font-size:10px;transition:transform .15s;flex-shrink:0;}
+.ss.collapsed{padding-bottom:15px;}
+.ss.collapsed>*:not(.ss-t){display:none!important;}
+.ss.collapsed .chev{transform:rotate(-90deg);}
 .ag-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .ag-row:last-child{border-bottom:none;}
 .chat-bubble{padding:9px 12px;border-radius:var(--r);font-size:12px;line-height:1.6;max-width:80%;white-space:pre-wrap;}
@@ -410,7 +426,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menú"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
       <span class="tb-title" id="pg-title">Dashboard</span>
       <div style="flex:1;min-width:20px;"></div>
-      <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia…" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch();if(event.key==='Escape')closeSearchResults()"><div id="srch-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:1000;"></div></div>
+      <div class="srch" style="position:relative;display:none;"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg><input id="srch-inp" placeholder="Buscar vuelo #, AWB, agencia… (filtra la tabla)" autocomplete="off" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Escape')clearFlightSearch()"></div>
       <button class="tb-btn" style="margin-left:auto;" onclick="openModal('new')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Nuevo Envío</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema claro/oscuro"><span id="theme-icon">🌙</span></button>
       <div class="sync-status" id="sync-status"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-txt">SharePoint</span></div>
@@ -467,7 +483,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
         <!-- Gráficos operativos del día -->
         <div class="card" style="margin-bottom:16px;">
-          <div class="ch"><span class="ct">📊 Panorama de hoy</span><span style="font-size:10px;color:var(--t3);">Estado operativo en vivo</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">📊 Panorama de hoy</span><span style="font-size:10px;color:var(--t3);">Estado operativo en vivo</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
               <div>
@@ -487,7 +503,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
         <!-- Envíos que necesitan seguimiento -->
         <div class="card" style="margin-bottom:16px;">
-          <div class="ch"><span class="ct">⚠️ Envíos que necesitan seguimiento</span><span style="font-size:10px;color:var(--t3);">Ordenados del más problemático</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">⚠️ Envíos que necesitan seguimiento</span><span style="font-size:10px;color:var(--t3);">Ordenados del más problemático</span><span class="chev">▾</span></div>
           <div style="padding:12px 16px;" id="dash-problems"></div>
         </div>
 
@@ -511,7 +527,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 
         <!-- Búsqueda IA Groq -->
         <div class="card">
-          <div class="ch"><span class="ct">Búsqueda IA — Groq</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">Búsqueda IA — Groq</span><span style="font-size:10px;color:var(--t3);">Conectado · Tiempo real</span><span class="chev">▾</span></div>
           <div style="padding:12px 15px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <button class="qbtn" onclick="aiAsk('Lista todos los vuelos con cajas sin confirmar y la acción recomendada para cada uno')">Cajas sin confirmar</button>
@@ -537,6 +553,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span class="ct">Todos los Vuelos</span>
             <div class="ca"><div id="fls-status-tabs" style="display:flex;gap:4px;"><span class="ftab active" onclick="flF(this,'all')">Todos</span><span class="ftab" onclick="flF(this,'transit')">Tránsito</span><span class="ftab" onclick="flF(this,'pending')">Pendiente</span><span class="ftab" onclick="flF(this,'delivered')">Entregado</span></div><button class="btn xs" onclick="resetColOrder('tbl-flights')" title="Restablecer el orden original de las columnas">↺ Columnas</button><button class="btn sm pr" onclick="openModal('new')">+ Nuevo</button></div>
           </div>
+          <div class="subcol-h" id="fls-filters-h" onclick="toggleBlock('fls-filters')" style="padding:7px 16px;border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;"><span class="chev">▾</span> Filtros</div>
+          <div class="subcol-body" id="fls-filters">
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);">
             <strong style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;">Tipo guía:</strong>
             <div id="fls-guia-tabs" style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -554,6 +572,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#DC2626;"></span>ETA vencida sin arribo</span>
             <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#22A351;"></span>Arribó ✓</span>
           </div>
+          </div>
           <div class="tw tw-tall"><table id="tbl-flights"><thead><tr><th>AWB #</th><th>Vuelo #</th><th>Aerolínea</th><th>Origen</th><th>Destino</th><th>ETD</th><th>ETA</th><th>Agencia</th><th>Enviadas</th><th>Conf.</th><th>FBE</th><th>Falt./Exced.</th><th>Est.Conf</th><th>Estado</th><th>Arribo Real</th><th>Peso</th><th>Tarifa</th><th>Tarifa Esp.</th><th>Total Pag.</th><th>Creado Por</th><th>Modificado</th><th>Ingresado</th><th title="Tipo de guía: LINEA RELEASE tiene preferencia de liberación en la inspección al llegar a EE.UU.">Tipo Guía</th><th>POD</th><th>Live</th><th></th></tr></thead><tbody id="flights-tbody"></tbody></table></div>
         </div>
       </div>
@@ -569,17 +588,16 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <!-- PREDICTIONS -->
       <div class="screen" id="s-reports">
         <div class="card">
-          <div class="ch">
+          <div class="ch collapsible" onclick="toggleCard(this,event)">
             <span class="ct">📄 Reporte de Período</span>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <select id="report-period" onchange="renderReport(parseInt(this.value))" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);">
-                <option value="7">Última semana</option>
-                <option value="30">Último mes</option>
-                <option value="90">Último trimestre</option>
-                <option value="180">Último semestre</option>
-              </select>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:10px;color:var(--t3);">Desde</span>
+              <input type="date" id="report-from" onchange="onReportRangeChange()" style="font-size:11px;padding:4px 7px;border-radius:6px;border:1px solid var(--border);background:var(--surf);color:var(--t1);">
+              <span style="font-size:10px;color:var(--t3);">hasta</span>
+              <input type="date" id="report-to" onchange="onReportRangeChange()" style="font-size:11px;padding:4px 7px;border-radius:6px;border:1px solid var(--border);background:var(--surf);color:var(--t1);">
               <button class="btn xs" onclick="copyReport()">📋 Copiar</button>
               <button class="btn xs pr" onclick="analyzeReport()">🤖 Analizar con IA</button>
+              <span class="chev">▾</span>
             </div>
           </div>
           <div style="padding:16px;">
@@ -597,13 +615,27 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
           <div style="font-size:12px;opacity:.9;line-height:1.5;">Convierte tus datos en decisiones. Diseñado para negociar mejor y elegir la mejor carguera. Usa la información que ya capturas — sin ingresar nada nuevo.</div>
         </div>
 
+        <!-- 28-sep-2026: filtro de fechas único para todo Centro de Inteligencia (scorecard, gráficos
+             de volumen, histórico de negociación y tendencia) — pedido de Marco, reemplaza los presets
+             fijos de 15/30 días por un rango libre desde/hasta. -->
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">🏆 Desempeño por Aerolínea</span><span style="font-size:10px;color:var(--t3);">Precio vs. confiabilidad</span></div>
+          <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <strong style="font-size:11px;color:var(--t2);white-space:nowrap;">📅 Rango de fechas (por ETD):</strong>
+            <input type="date" id="intel-date-from" onchange="setIntelDateRange()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
+            <span style="font-size:11px;color:var(--t3);">hasta</span>
+            <input type="date" id="intel-date-to" onchange="setIntelDateRange()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
+            <button class="btn xs" onclick="clearIntelDateRange()">Limpiar</button>
+            <span id="intel-date-count" style="font-size:11px;color:var(--t3);margin-left:auto;"></span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">🏆 Desempeño por Aerolínea</span><span style="font-size:10px;color:var(--t3);">Precio vs. confiabilidad</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;" id="intel-scorecard"></div>
         </div>
 
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">📊 Volumen por Puerto de Origen</span><span style="font-size:10px;color:var(--t3);">Cuánta carga mueves y desde dónde</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">📊 Volumen por Puerto de Origen</span><span style="font-size:10px;color:var(--t3);">Cuánta carga mueves y desde dónde</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;">
             <div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.5;">Tu volumen es tu palanca de negociación: quien más carga mueve, mejores tarifas puede pedir. Aquí ves cuántas cajas, FBE y kilos salen de cada puerto.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
@@ -624,8 +656,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
               </div>
             </div>
             <div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Volumen mensual por puerto</div>
-              <div style="font-size:10px;color:var(--t3);margin-bottom:8px;">cajas apiladas — ve de dónde crece tu carga</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px;">Volumen por puerto en el tiempo</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:8px;" id="chart-vol-monthly-sub">una línea por puerto — ve de dónde crece tu carga</div>
               <div style="height:180px;position:relative;"><canvas id="chart-vol-monthly"></canvas></div>
             </div>
             <div id="vol-empty" style="display:none;font-size:11px;color:var(--t3);text-align:center;padding:20px;"></div>
@@ -633,22 +665,22 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         </div>
 
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">📦 Factor Volumétrico por Carguera</span><span style="font-size:10px;color:var(--t3);">Cuánto infla cada una el peso que cobra</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">📦 Factor Volumétrico por Carguera</span><span style="font-size:10px;color:var(--t3);">Cuánto infla cada una el peso que cobra</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;" id="intel-volfactor"></div>
         </div>
 
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">⚖️ Comparador $/kg Real</span><span style="font-size:10px;color:var(--t3);">La métrica que no se puede maquillar</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">⚖️ Comparador $/kg Real</span><span style="font-size:10px;color:var(--t3);">La métrica que no se puede maquillar</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;" id="intel-costcompare"></div>
         </div>
 
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">🧮 Simulador de Ahorro</span><span style="font-size:10px;color:var(--t3);">Compara cargueras sobre un volumen</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">🧮 Simulador de Ahorro</span><span style="font-size:10px;color:var(--t3);">Compara cargueras sobre un volumen</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;" id="intel-simulator"></div>
         </div>
 
         <div class="card" style="margin-bottom:14px;">
-          <div class="ch"><span class="ct">📉 Histórico de Negociación por Ruta</span><span style="font-size:10px;color:var(--t3);">Tu piso y techo para negociar</span></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">📉 Histórico de Negociación por Ruta</span><span style="font-size:10px;color:var(--t3);">Tu piso y techo para negociar</span><span class="chev">▾</span></div>
           <div style="padding:14px 16px;">
             <div id="intel-routes"></div>
             <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
@@ -663,7 +695,8 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                   <option value="all">Las 3 métricas (una selección)</option>
                 </select>
                 <select id="trend-period" onchange="renderTrendChart()" style="flex:1;min-width:130px;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surf);color:var(--t1);">
-                  <option value="month">Agrupar por mes</option>
+                  <option value="day">Agrupar por día</option>
+                  <option value="month" selected>Agrupar por mes</option>
                   <option value="year">Agrupar por año</option>
                   <option value="season">Agrupar por temporada</option>
                 </select>
@@ -675,7 +708,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
         </div>
 
         <div class="card">
-          <div class="ch"><span class="ct">🤖 Preparar Próxima Negociación</span><button class="btn xs pr" onclick="prepNegotiation()">Generar recomendaciones</button></div>
+          <div class="ch collapsible" onclick="toggleCard(this,event)"><span class="ct">🤖 Preparar Próxima Negociación</span><button class="btn xs pr" onclick="prepNegotiation()">Generar recomendaciones</button><span class="chev">▾</span></div>
           <div style="padding:14px 16px;" id="intel-ai"><div class="ai-bubble" style="font-size:12px;">Toca "Generar recomendaciones" para que la IA analice tu histórico y te diga con quién negociar, qué tarifa pedir y qué aerolíneas evitar.</div></div>
         </div>
       </div>
@@ -743,11 +776,12 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
       <div class="screen" id="s-settings">
         <div class="set-grid">
           <div class="ss">
-            <div class="ss-t">API Keys</div>
+            <div class="ss-t collapsible" onclick="toggleSS(this,event)">API Keys <span class="chev">▾</span></div>
             <div class="fg" style="gap:9px;">
               <div class="field"><label>Groq API Key <span style="font-size:10px;color:var(--t3);">(gratis en console.groq.com — para IA y asistente)</span></label><input id="cfg-groq" type="password" placeholder="gsk_..."></div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">🔐 Privacidad de datos con IA</div>
+                <div class="subcol-h" id="cfg-privacy-h" onclick="toggleBlock('cfg-privacy')" style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;"><span class="chev">▾</span> 🔐 Privacidad de datos con IA</div>
+                <div class="subcol-body" id="cfg-privacy">
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Cuando usas la búsqueda IA o el asistente, se envían datos de tus envíos a los servidores de Groq. En el plan gratuito, los proveedores suelen usar los datos para entrenar sus modelos.</div>
                 <div class="field"><label>Nivel de privacidad</label><select id="cfg-ai-privacy" onchange="onPrivacyChange()">
                   <option value="full">Completo — envía todo (mejores respuestas)</option>
@@ -756,9 +790,11 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 </select></div>
                 <div id="privacy-explain" style="font-size:10px;line-height:1.5;border-radius:8px;padding:9px 11px;margin-top:8px;"></div>
                 <button class="btn xs" onclick="showAIPayload()" style="width:100%;margin-top:8px;">👁 Ver exactamente qué se enviaría</button>
+                </div>
               </div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">✈ Rastreo REAL de arribos (AviationStack)</div>
+                <div class="subcol-h" id="cfg-aviation-blk-h" onclick="toggleBlock('cfg-aviation-blk')" style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;"><span class="chev">▾</span> ✈ Rastreo REAL de arribos (AviationStack)</div>
+                <div class="subcol-body" id="cfg-aviation-blk">
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Confirma automáticamente si tus guías llegaron a Miami — sin revisar portal por portal. Consíguela gratis en aviationstack.com → crea tu cuenta → copia tu "API Access Key" (plan gratuito: 100 consultas/mes). <a href="https://aviationstack.com/" target="_blank" style="color:var(--green);">Abrir AviationStack ↗</a><br><span style="color:#B45309;">⚠️ El plan gratuito usa http; si abres la app en https puede que el navegador bloquee el rastreo. Para uso continuo, considera el plan de pago (da https) o pruébalo primero.</span></div>
                 <div class="field"><label>AviationStack API Access Key</label><input id="cfg-aviation" type="password" placeholder="Tu access_key de aviationstack.com"></div>
                 <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:6px;"><input type="checkbox" id="cfg-autoscan" style="width:15px;height:15px;accent-color:var(--green);"> Rastrear arribos automáticamente</label>
@@ -770,24 +806,30 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                 </select></div>
                 <div id="scan-usage" style="font-size:10px;line-height:1.5;background:var(--lightgreen);border-radius:8px;padding:8px 10px;margin-top:8px;color:var(--t2);"></div>
                 <button class="btn pr" onclick="scanArrivals(false)" style="width:100%;margin-top:8px;">🔄 Rastrear arribos ahora</button>
+                </div>
               </div>
               <div class="field"><label>Consignatarios (separados por coma)</label><input id="cfg-consignees" placeholder="MAS Customs, Delivery Plus, otro…"></div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">🌸 Temporadas altas (para el análisis de negociación)</div>
+                <div class="subcol-h" id="cfg-seasons-h" onclick="toggleBlock('cfg-seasons')" style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;"><span class="chev">▾</span> 🌸 Temporadas altas (para el análisis de negociación)</div>
+                <div class="subcol-body" id="cfg-seasons">
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Define tú los períodos de alta demanda. La app marca automáticamente los envíos en esas fechas como "temporada alta", para no comparar tarifas de temporada alta contra baja. Puedes corregir la marca en cada envío.</div>
                 <div id="cfg-seasons-list"></div>
                 <button class="btn xs" onclick="addSeasonRow()" style="margin-top:6px;">+ Agregar temporada</button>
+                </div>
               </div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">❄️ Rango seguro de temperatura</div>
+                <div class="subcol-h" id="cfg-temp-h" onclick="toggleBlock('cfg-temp')" style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;"><span class="chev">▾</span> ❄️ Rango seguro de temperatura</div>
+                <div class="subcol-body" id="cfg-temp">
                 <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5;">La app alerta si la temperatura de un envío sale de este rango. Por defecto 1–8°C (típico para rosa). Ingresa en °C.</div>
                 <div style="display:flex;gap:8px;align-items:flex-end;">
                   <div class="field" style="flex:1;margin:0;"><label>Mínimo (°C)</label><input id="cfg-temp-min" type="number" step="0.5" placeholder="1"></div>
                   <div class="field" style="flex:1;margin:0;"><label>Máximo (°C)</label><input id="cfg-temp-max" type="number" step="0.5" placeholder="8"></div>
                 </div>
+                </div>
               </div>
               <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-                <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">📧 Notificaciones por correo (EmailJS)</div>
+                <div class="subcol-h" id="cfg-email-h" onclick="toggleBlock('cfg-email')" style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;"><span class="chev">▾</span> 📧 Notificaciones por correo (EmailJS)</div>
+                <div class="subcol-body" id="cfg-email">
                 <div style="font-size:10px;color:var(--t3);margin-bottom:10px;line-height:1.4;">Gratis (200/mes) en emailjs.com. Necesitas los 3 datos de tu cuenta. <a href="https://dashboard.emailjs.com" target="_blank" style="color:var(--green);">Abrir EmailJS ↗</a></div>
                 <div class="field"><label>Service ID</label><input id="cfg-email-service" placeholder="service_xxxxxxx"></div>
                 <div class="field"><label>Template ID</label><input id="cfg-email-template" placeholder="template_xxxxxxx"></div>
@@ -799,12 +841,13 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
                   <label style="font-size:11px;display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="checkbox" id="cfg-notify-usda" style="width:15px;height:15px;accent-color:var(--green);"> Avisar sobre retenciones USDA</label>
                 </div>
                 <button class="btn" onclick="sendTestEmail()" style="margin-top:8px;width:100%;">✉ Enviar correo de prueba</button>
+                </div>
               </div>
               <button class="btn pr" onclick="saveSettings()">Guardar configuración</button>
             </div>
           </div>
           <div class="ss">
-            <div class="ss-t">Almacenamiento de datos</div>
+            <div class="ss-t collapsible" onclick="toggleSS(this,event)">Almacenamiento de datos <span class="chev">▾</span></div>
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="font-size:12px;color:var(--t2);line-height:1.6;background:var(--lightgreen);border:1px solid var(--midgreen);border-radius:8px;padding:10px 12px;">
                 <strong style="color:var(--green);">☁ Tus datos viven en la nube (Supabase)</strong><br>
@@ -826,7 +869,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
             </div>
           </div>
           <div class="ss" style="grid-column:span 2;">
-            <div class="ss-t">Agencias guardadas</div>
+            <div class="ss-t collapsible" onclick="toggleSS(this,event)">Agencias guardadas <span class="chev">▾</span></div>
             <div id="set-agencies"><div style="font-size:12px;color:var(--t3);">Sin agencias aún.</div></div>
           </div>
         </div>
@@ -1099,7 +1142,7 @@ tr.dr:hover td{background:var(--lightgreen);cursor:pointer;}
 <!-- MODAL: DETAIL -->
 <div class="modal-bg" id="modal-detail">
   <div class="modal" style="max-width:640px;">
-    <div class="mh"><span class="mt" id="detail-title">Detalle Vuelo</span><button class="mc" onclick="closeModal('detail')">×</button></div>
+    <div class="mh"><span class="mt" id="detail-title" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px;">Detalle Vuelo</span><button class="mc" onclick="closeModal('detail')">×</button></div>
     <div class="mb" id="detail-body"></div>
     <div class="mf"><button class="btn danger" id="btn-del">Eliminar</button><button class="btn" onclick="closeModal('detail')">Cerrar</button><button class="btn pr" id="btn-edit">Editar</button></div>
   </div>
@@ -1168,6 +1211,7 @@ var dashFlt = 'all';
 var flsFlt = 'all';
 var flsGuia = 'all'; // filtro por tipo de guía (CONSOL / LINEA RELEASE / OWN GUIDE / 'none' = sin definir)
 var flsSort = { oi: null, dir: 1 }; // ordenamiento por clic en encabezado de la tabla de Vuelos
+var flsSearch = ''; // 28-sep-2026: texto del buscador — filtra la tabla en vivo (ver liveSearch)
 var chatHist = [];
 var DB = { flights: [], agencies: [] };
 var CFG = { groqKey: '', claudeKey: '', consignees: 'MAS Customs,Delivery Plus', emailServiceId: '', emailTemplateId: '', emailPublicKey: '', notifyEmails: '', notifyOnArrival: true, notifyOnDelay: true, notifyOnUsda: true, aiPrivacy: 'full', colOrder: {}, lastBackup: '', aeroKey: '', aviationKey: '', autoScanArrivals: true, scanHours: 2, tourSeen: false, theme: 'light', highSeasons: [{from:120,to:214,label:'San Valentín'},{from:415,to:511,label:'Día de la Madre'}], tempMin: 1, tempMax: 8 };
@@ -3440,6 +3484,40 @@ function dbSummary() {
 // ══ FUNCIÓN CENTRAL DE IA — usa Groq (gratis, rápido) ══
 // Obtén tu key gratis en console.groq.com (sin tarjeta de crédito)
 // ══ CENTRO DE INTELIGENCIA ══
+// 28-sep-2026: filtro de fechas único para toda esta pantalla (scorecard, gráficos de volumen,
+// histórico de negociación, tendencia y "preparar negociación") — reemplaza los presets fijos que
+// no le gustaban a Marco por un rango libre desde/hasta. Vacío = sin límite (todo el histórico).
+// Se filtra por ETD (fecha de vuelo); si un vuelo no tiene ETD, se usa createdAt/modifiedAt como
+// respaldo — igual que ya hacía buildReport() — y si tampoco eso se puede leer, el vuelo solo se
+// excluye cuando hay un rango activo (con "todo el histórico" seleccionado, se sigue mostrando).
+var _intelFrom = '', _intelTo = '';
+function intelInRange(f){
+  if (!_intelFrom && !_intelTo) return true;
+  var t = Date.parse(f.etd || f.createdAt || f.modifiedAt);
+  if (isNaN(t)) return false;
+  if (_intelFrom && t < new Date(_intelFrom+'T00:00:00').getTime()) return false;
+  if (_intelTo && t > new Date(_intelTo+'T23:59:59').getTime()) return false;
+  return true;
+}
+function intelFlights(){ return DB.flights.filter(intelInRange); }
+function setIntelDateRange(){
+  _intelFrom = (document.getElementById('intel-date-from')||{}).value || '';
+  _intelTo = (document.getElementById('intel-date-to')||{}).value || '';
+  renderIntel();
+}
+function clearIntelDateRange(){
+  _intelFrom = ''; _intelTo = '';
+  var a=document.getElementById('intel-date-from'), b=document.getElementById('intel-date-to');
+  if (a) a.value=''; if (b) b.value='';
+  renderIntel();
+}
+function updateIntelDateCount(){
+  var el = document.getElementById('intel-date-count');
+  if (!el) return;
+  var n = intelFlights().length, total = DB.flights.length;
+  el.textContent = (_intelFrom||_intelTo) ? (n+' de '+total+' vuelos en el rango elegido') : (total+' vuelos · todo el histórico');
+}
+
 // Scorecard: puntúa por AEROLÍNEA, CARGUERA (agencia) o TIPO DE GUÍA combinando precio y confiabilidad
 // dim = 'airline' | 'agency' | 'commodity'
 // routeFilter = 'all' o una ruta exacta ("UIO→MIA") — 22-sep-2026: el precio puede depender del
@@ -3448,7 +3526,7 @@ function dbSummary() {
 function buildCarrierScorecard(dim, routeFilter) {
   dim = dim || 'airline';
   var carriers = {};
-  DB.flights.forEach(function(f){
+  intelFlights().forEach(function(f){
     var rt = (f.origin||'?')+'→'+(f.dest||'?');
     if (routeFilter && routeFilter!=='all' && rt!==routeFilter) return;
     var a = dim === 'agency' ? (f.agName || 'Sin carguera') : dim === 'commodity' ? (f.commodity || 'Sin definir') : (f.airline || 'Sin aerolínea');
@@ -3640,7 +3718,7 @@ function renderScorecard() {
 // Histórico de negociación por ruta: piso, techo, promedio y tendencia
 function buildRouteHistory(pred) {
   var routes = {};
-  DB.flights.forEach(function(f){
+  intelFlights().forEach(function(f){
     if (pred && !pred(f)) return;
     var r = parseFloat(f.rate)||0;
     if (r<=0) return;
@@ -3770,6 +3848,7 @@ async function prepNegotiation() {
 }
 
 function renderIntel() {
+  updateIntelDateCount();
   renderScorecard();
   renderVolumeCharts();
   renderVolFactor();
@@ -3785,8 +3864,9 @@ var _volCharts = { boxes:null, fbe:null, kg:null, monthly:null };
 function renderVolumeCharts(){
   if (typeof Chart === 'undefined') return;
   var empty = document.getElementById('vol-empty');
+  var flights = intelFlights();
   var byPort = {};
-  DB.flights.forEach(function(f){
+  flights.forEach(function(f){
     var p = (f.origin||'').toUpperCase().trim();
     if (!p) return;
     if (!byPort[p]) byPort[p] = { boxes:0, fbe:0, kg:0 };
@@ -3835,31 +3915,57 @@ function renderVolumeCharts(){
       scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:txt}}, y:{grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
   });
 
-  var byMonth = {};
-  DB.flights.forEach(function(f){
+  // 28-sep-2026: reemplaza el bar chart apilado por mes (a Marco no le gustaba) por una LÍNEA
+  // de tendencia por puerto en el tiempo. Granularidad adaptativa según el rango elegido arriba
+  // (o el rango real de los datos si no hay filtro): día a día si es corto, semana si es mediano,
+  // mes si es largo — así se puede ver el día a día cuando se acota el rango, como pidió Marco.
+  var datesWithETD = flights.map(function(f){ return f.etd ? new Date(f.etd) : null; }).filter(function(d){ return d && !isNaN(d); });
+  var spanMs = null;
+  if (_intelFrom && _intelTo) spanMs = new Date(_intelTo).getTime() - new Date(_intelFrom).getTime();
+  else if (datesWithETD.length) spanMs = Math.max.apply(null, datesWithETD.map(function(d){return d.getTime();})) - Math.min.apply(null, datesWithETD.map(function(d){return d.getTime();}));
+  var spanDays = spanMs !== null ? spanMs / 86400000 : 0;
+  var gran = spanDays <= 62 ? 'day' : (spanDays <= 400 ? 'week' : 'month');
+  var granLabel = gran==='day' ? 'día a día' : (gran==='week' ? 'semana a semana' : 'mes a mes');
+  var subEl = document.getElementById('chart-vol-monthly-sub');
+  if (subEl) subEl.textContent = 'una línea por puerto, ' + granLabel + ' — ve de dónde crece tu carga';
+  function bucketKey(d){
+    if (gran==='day') return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (gran==='week') {
+      var monday = new Date(d); var dow = (monday.getDay()+6)%7; monday.setDate(monday.getDate()-dow); monday.setHours(0,0,0,0);
+      return monday.getFullYear()+'-'+String(monday.getMonth()+1).padStart(2,'0')+'-'+String(monday.getDate()).padStart(2,'0');
+    }
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  function bucketLabel(k){
+    var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var parts = k.split('-');
+    if (gran==='month') return mn[parseInt(parts[1])-1]+' '+parts[0].slice(2);
+    return parts[2]+' '+mn[parseInt(parts[1])-1];
+  }
+  var byBucket = {};
+  flights.forEach(function(f){
     var p = (f.origin||'').toUpperCase().trim();
     if (!p || !f.etd) return;
     var d = new Date(f.etd); if (isNaN(d)) return;
-    var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    if (!byMonth[key]) byMonth[key] = {};
-    byMonth[key][p] = (byMonth[key][p]||0) + (parseInt(f.bsent)||parseInt(f.boxes_conf)||0);
+    var key = bucketKey(d);
+    if (!byBucket[key]) byBucket[key] = {};
+    byBucket[key][p] = (byBucket[key][p]||0) + (parseInt(f.bsent)||parseInt(f.boxes_conf)||0);
   });
-  var months = Object.keys(byMonth).sort();
-  var monthLabels = months.map(function(m){
-    var parts = m.split('-'); var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    return mn[parseInt(parts[1])-1]+' '+parts[0].slice(2);
-  });
+  var buckets = Object.keys(byBucket).sort();
+  var bucketLabels = buckets.map(bucketLabel);
   var datasets = ports.map(function(p){
-    return { label:p, data:months.map(function(m){ return byMonth[m][p]||0; }),
-      backgroundColor:colorFor(p), borderRadius:3, stack:'vol' };
+    return { label:p, data:buckets.map(function(b){ return byBucket[b][p]||0; }),
+      borderColor:colorFor(p), backgroundColor:colorFor(p), tension:.25, borderWidth:2,
+      pointRadius:buckets.length>40?0:3, pointHoverRadius:5, fill:false };
   });
   _volCharts.monthly = new Chart(document.getElementById('chart-vol-monthly').getContext('2d'), {
-    type:'bar',
-    data:{ labels:monthLabels, datasets:datasets },
+    type:'line',
+    data:{ labels:bucketLabels, datasets:datasets },
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom',labels:{font:{size:11},color:txt,boxWidth:10,padding:10}} },
-      scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:txt}},
-               y:{stacked:true,grid:{color:grid},ticks:{font:{size:10},color:txt}} } }
+      plugins:{ legend:{position:'bottom',labels:{font:{size:11},color:txt,boxWidth:10,padding:10}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString('es-EC')+' cajas';}}} },
+      scales:{ x:{grid:{display:false},ticks:{font:{size:10},color:txt,maxRotation:0,autoSkip:true}},
+               y:{grid:{color:grid},ticks:{font:{size:10},color:txt},beginAtZero:true} } }
   });
 }
 
@@ -3911,6 +4017,9 @@ function trendBucket(f, mode){
     var s = flightSeason(f);
     return d.getFullYear() + ' ' + (s==='alta'?'Alta':'Baja');
   }
+  // 28-sep-2026: agrupar por día, para poder ver día a día cómo cambia (pedido de Marco) —
+  // sobre todo útil cuando el rango de fechas de arriba ya está acotado a pocas semanas.
+  if (mode==='day') return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   // mes: "2026-03"
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
@@ -3931,7 +4040,7 @@ function renderTrendChart(){
   // Agregación por selección: cada key produce sus buckets {periodo: acumulados}
   function bucketsFor(key){
     var b = {};
-    DB.flights.forEach(function(f){
+    intelFlights().forEach(function(f){
       var g = parseFloat(f.weight)||0, t = parseFloat(f.totalpaid)||0;
       if (g<=0 || t<=0) return;
       if (key !== 'all') {
@@ -3966,7 +4075,7 @@ function renderTrendChart(){
 
   if (_trendChart2){ _trendChart2.destroy(); _trendChart2 = null; }
   if (!labels.length){
-    if (empty){ empty.style.display='block'; empty.textContent='Sin envíos con peso y total para graficar en esta selección.'; }
+    if (empty){ empty.style.display='block'; empty.textContent='Sin envíos con peso y total pagado registrados para graficar en esta selección o rango de fechas. Este gráfico necesita ambos datos (no solo el ETD) para calcular $/kg — si el envío aún no tiene el total pagado cargado, no aparece aquí todavía.'; }
     canvas.style.display='none';
     return;
   }
@@ -4009,7 +4118,7 @@ function renderTrendChart(){
 // Factor = peso facturable ÷ peso bruto. Cuánto "infla" cada carguera el peso que cobra.
 function buildVolFactor() {
   var byAgency = {};
-  DB.flights.forEach(function(f){
+  intelFlights().forEach(function(f){
     var g = parseFloat(f.weight)||0;        // peso bruto
     var c = parseFloat(f.cweight)||0;       // peso facturable
     if (g<=0 || c<=0) return;
@@ -4072,7 +4181,7 @@ function renderVolFactor() {
 // ── BLOQUE 2: Comparador $/kg real, por ruta y temporada ──
 function buildCostCompare(routeFilter, seasonFilter) {
   var byAgency = {};
-  DB.flights.forEach(function(f){
+  intelFlights().forEach(function(f){
     if (routeFilter && routeFilter!=='all') {
       var rt = (f.origin||'')+'→'+(f.dest||'');
       if (rt !== routeFilter) return;
@@ -4975,8 +5084,9 @@ function renderCalendar(){
     h += '</div>';
   }
   h += '</div>';
-  // Leyenda
-  h += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;justify-content:center;">';
+  // Leyenda (28-sep-2026: plegable, a pedido de Marco)
+  h += '<div class="subcol-h'+(_collapseState['cal-legend']?' collapsed':'')+'" id="cal-legend-h" onclick="toggleBlock(\'cal-legend\')" style="justify-content:center;margin-top:10px;font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;"><span class="chev">▾</span> Leyenda</div>';
+  h += '<div class="subcol-body'+(_collapseState['cal-legend']?' collapsed':'')+'" id="cal-legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;justify-content:center;">';
   [['Programado','#F59E0B'],['En tránsito','#3B82F6'],['Arribado','#22A351'],['Demorado','#DC2626']].forEach(function(x){
     h += '<div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2);"><span style="width:8px;height:8px;border-radius:2px;background:'+x[1]+';"></span>'+x[0]+'</div>';
   });
@@ -4995,15 +5105,20 @@ function renderCalendar(){
 
 
 // ══ REPORTE DE PERÍODO (semanal/mensual) ══
-function buildReport(days) {
-  days = days || 7;
-  var since = new Date(); since.setDate(since.getDate() - days); since.setHours(0,0,0,0);
+// 28-sep-2026: reemplaza el preset de días (7/30/90/180) por un rango libre desde/hasta —
+// pedido de Marco. from/to son strings "yyyy-mm-dd" (del <input type="date">) o '' = sin límite.
+function buildReport(from, to) {
+  var since = from ? new Date(from+'T00:00:00') : null;
+  var until = to ? new Date(to+'T23:59:59') : null;
   var fl = DB.flights.filter(function(f){
     var d = new Date(f.etd || f.createdAt || f.modifiedAt);
-    return !isNaN(d) && d >= since;
+    if (isNaN(d)) return false;
+    if (since && d < since) return false;
+    if (until && d > until) return false;
+    return true;
   });
   var r = {
-    days: days, since: since, count: fl.length,
+    from: from||'', to: to||'', since: since, until: until, count: fl.length,
     sent:0, conf:0, fbe:0, damaged:0, lost:0, usda:0, usdaFreed:0,
     cost:0, rateSum:0, rateCount:0,
     claimAmount:0, claimRecovered:0, openClaims:0,
@@ -5038,13 +5153,19 @@ function buildReport(days) {
   return r;
 }
 
-function renderReport(days) {
-  var r = buildReport(days);
+function reportPeriodTxt(r) {
+  if (r.since && r.until) return 'del '+r.since.toLocaleDateString('es-EC')+' al '+r.until.toLocaleDateString('es-EC');
+  if (r.since) return 'desde '+r.since.toLocaleDateString('es-EC');
+  if (r.until) return 'hasta '+r.until.toLocaleDateString('es-EC');
+  return 'todo el histórico';
+}
+function renderReport(from, to) {
+  var r = buildReport(from, to);
   var body = document.getElementById('report-body');
   if (!body) return;
-  var periodTxt = days===7?'últimos 7 días':(days===30?'últimos 30 días':(days===90?'último trimestre':'últimos '+days+' días'));
+  var periodTxt = reportPeriodTxt(r);
   if (r.count === 0) {
-    body.innerHTML = '<div class="ai-bubble" style="font-size:12px;">No hay envíos registrados en los '+periodTxt+'. Registra vuelos con fecha ETD dentro del período para ver el reporte.</div>';
+    body.innerHTML = '<div class="ai-bubble" style="font-size:12px;">No hay envíos registrados en el período elegido ('+periodTxt+'). Registra vuelos con fecha ETD dentro del rango, o ajusta las fechas de arriba.</div>';
     return;
   }
   function card(label, value, sub, color) {
@@ -5053,7 +5174,7 @@ function renderReport(days) {
       + '<div style="font-size:20px;font-weight:800;color:'+(color||'var(--t1)')+';margin-top:2px;">'+value+'</div>'
       + (sub?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+sub+'</div>':'') + '</div>';
   }
-  var h = '<div style="font-size:12px;color:var(--t2);margin-bottom:12px;">Período: <strong>'+periodTxt+'</strong> (desde '+r.since.toLocaleDateString('es-EC')+') · Generado '+new Date().toLocaleString('es-EC')+'</div>';
+  var h = '<div style="font-size:12px;color:var(--t2);margin-bottom:12px;">Período: <strong>'+periodTxt+'</strong> · Generado '+new Date().toLocaleString('es-EC')+'</div>';
   // Tarjetas resumen
   h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">'
     + card('AWBs / Envíos', r.count, r.count+' guías')
@@ -5106,7 +5227,7 @@ function copyReport() {
   var r = window._lastReport;
   if (!r) { toast('Genera el reporte primero.', 'err'); return; }
   var t = 'REPORTE TRACKFLOW AIR — Jet Fresh Flowers Distributors\n';
-  t += 'Período: últimos ' + r.days + ' días (desde ' + r.since.toLocaleDateString('es-EC') + ')\n';
+  t += 'Período: ' + reportPeriodTxt(r) + '\n';
   t += 'Generado: ' + new Date().toLocaleString('es-EC') + '\n\n';
   t += 'RESUMEN\n';
   t += '• AWBs/Envíos: ' + r.count + '\n';
@@ -5142,7 +5263,7 @@ async function analyzeReport() {
   if (!r) { toast('Genera el reporte primero.', 'err'); return; }
   box.style.display = 'block';
   box.innerHTML = '<span class="dp"><span></span><span></span><span></span></span> Analizando el período…';
-  var summary = 'Período: ' + r.days + ' días. AWBs: ' + r.count + '. Cajas enviadas: ' + r.sent + ', confirmadas: ' + r.conf
+  var summary = 'Período: ' + reportPeriodTxt(r) + '. AWBs: ' + r.count + '. Cajas enviadas: ' + r.sent + ', confirmadas: ' + r.conf
     + ' (' + r.confRate.toFixed(1) + '%). Costo total: $' + r.cost.toFixed(2) + '. Tarifa promedio: $' + r.avgRate.toFixed(3) + '/kg. '
     + 'Incidencias: ' + r.damaged + ' dañadas, ' + r.lost + ' perdidas, ' + r.usda + ' en hold USDA. '
     + 'Vuelos demorados: ' + (r.byStatus.delayed||0) + '. '
@@ -5641,9 +5762,39 @@ function go(s) {
   // El buscador solo tiene sentido en Vuelos — se oculta en las demás pantallas
   var srch=document.querySelector('.srch');
   if(srch) srch.style.display = (s==='flights') ? '' : 'none';
-  closeSearchResults();
+  if (s!=='flights') clearFlightSearch(); // al salir de Vuelos, se olvida el filtro de búsqueda
   renderScreen(s);
   closeSidebar(); // en celular, navegar cierra el menú lateral
+}
+// 28-sep-2026: secciones plegables — pedido de Marco para no tener que scrollear tanto.
+// toggleCard: colapsa/expande el .card completo (todo excepto el encabezado .ch) — usado en
+// Dashboard, Centro de Inteligencia y Reporte de Período.
+function toggleCard(ch, ev){
+  if (ev) { var t=ev.target; if (t && t.closest && (t.closest('button')||t.closest('select')||t.closest('a')||t.closest('input'))) return; }
+  var card = ch.closest('.card');
+  if (card) card.classList.toggle('collapsed');
+}
+// toggleSS: igual, pero para los bloques .ss de Configuración.
+function toggleSS(t, ev){
+  if (ev) { var el=ev.target; if (el && el.closest && (el.closest('button')||el.closest('select')||el.closest('input')||el.closest('a'))) return; }
+  var ss = t.closest('.ss');
+  if (ss) ss.classList.toggle('collapsed');
+}
+// toggleBlock: colapsa/expande un trozo cualquiera de una pantalla (no un .card/.ss entero) —
+// usado para los filtros secundarios de Vuelos y la leyenda del Calendario. Se recuerda el estado
+// en _collapseState para que no se reabra solo cada vez que la pantalla se vuelve a renderizar
+// (ej. el Calendario se re-renderiza completo cada vez que cambias de mes).
+var _collapseState = {};
+function toggleBlock(id){
+  _collapseState[id] = !_collapseState[id];
+  applyBlockCollapse(id);
+}
+function applyBlockCollapse(id){
+  var body = document.getElementById(id);
+  var h = document.getElementById(id+'-h');
+  var collapsed = !!_collapseState[id];
+  if (body) body.classList.toggle('collapsed', collapsed);
+  if (h) h.classList.toggle('collapsed', collapsed);
 }
 function toggleSidebar(){
   var sb=document.querySelector('.sb'), bd=document.getElementById('sb-backdrop');
@@ -5655,7 +5806,18 @@ function closeSidebar(){
   if (sb) sb.classList.remove('open');
   if (bd) bd.classList.remove('show');
 }
-function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='reports'){renderReport(parseInt((document.getElementById('report-period')||{}).value||7));}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
+function ensureReportDefaultRange(){
+  var fromEl = document.getElementById('report-from'), toEl = document.getElementById('report-to');
+  if (fromEl && toEl && !fromEl.value && !toEl.value) {
+    var to = new Date(), from = new Date(); from.setDate(from.getDate()-30);
+    toEl.value = to.toISOString().slice(0,10);
+    fromEl.value = from.toISOString().slice(0,10);
+  }
+}
+function onReportRangeChange(){
+  renderReport((document.getElementById('report-from')||{}).value||'', (document.getElementById('report-to')||{}).value||'');
+}
+function renderScreen(s){if(s==='dashboard')renderDash();else if(s==='flights')renderFlights();else if(s==='agencies')renderAgencies();else if(s==='reports'){ensureReportDefaultRange();renderReport((document.getElementById('report-from')||{}).value||'', (document.getElementById('report-to')||{}).value||'');}else if(s==='intel')renderIntel();else if(s==='calendar')renderCalendar();else if(s==='audit')renderAudit();else if(s==='settings')renderSettingsPage();}
 
 var SL={transit:'En tránsito',delivered:'Entregado',pending:'Pendiente',delayed:'Demorado'};
 var CL={confirmed:'Confirmado',partial:'Parcial',unconfirmed:'Sin confirmar'};
@@ -6178,9 +6340,12 @@ function renderFlights(){
   initDragCols('tbl-flights');
   var filtered=flsFlt==='all'?DB.flights:DB.flights.filter(function(f){return f.status===flsFlt;});
   if (flsGuia !== 'all') { filtered = filtered.filter(function(f){ return flsGuia==='none' ? !f.commodity : f.commodity===flsGuia; }); }
+  // 28-sep-2026: el buscador de arriba ahora filtra esta misma tabla en vivo, en vez de abrir
+  // un vuelo directamente — ver liveSearch(). Mismo criterio de coincidencia que searchFlights().
+  if (flsSearch) { filtered = filtered.filter(function(f){ return flightMatchesQuery(f, flsSearch); }); }
   if (flsSort.oi !== null) { filtered = filtered.slice().sort(function(a,b){ return cmpFlights(a,b,flsSort.oi,flsSort.dir); }); }
   var tb=document.getElementById('flights-tbody');tb.innerHTML='';
-  if(!filtered.length){tb.innerHTML=erow(26,'Sin vuelos.');return;}
+  if(!filtered.length){tb.innerHTML=erow(26, flsSearch ? 'Sin vuelos que coincidan con "'+esc(flsSearch)+'".' : 'Sin vuelos.');return;}
   filtered.forEach(function(f){
     var pod=(f.podUrl?'<button type="button" class="btn xs pr" onclick="event.stopPropagation();viewPODByFlight(\''+f.id+'\')">📄 POD</button>':'')+(f.awbUrl?'<button type="button" class="btn xs pr" style="margin-left:4px;" onclick="event.stopPropagation();viewAWBByFlight(\''+f.id+'\')">📄 AWB</button>':'');
     if (!pod) pod = '—';
@@ -6368,7 +6533,13 @@ function renderSettingsPage(){
 // ══ DETAIL ══
 function openDetail(id){
   var f=DB.flights.find(function(x){return x.id===id;}); if(!f)return;
-  document.getElementById('detail-title').textContent=f.num+' — Detalle';
+  // 28-sep-2026: el título del detalle ahora incluye AWB y puerto de origen (además del vuelo #)
+  // para poder identificar el envío de un vistazo — pedido de Marco.
+  var titleParts=[];
+  if (f.num) titleParts.push(f.num);
+  if (f.awb) titleParts.push('AWB '+f.awb);
+  if (f.origin) titleParts.push(f.origin);
+  document.getElementById('detail-title').textContent=(titleParts.length?titleParts.join(' · '):'Vuelo')+' — Detalle';
   var R=function(k,v){return'<div class="drow"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';};
   var S=function(t){return'<div class="dsec">'+t+'</div>';};
   var b=S('VUELO')+R('Vuelo #','<span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:14px;">'+esc(f.num)+'</span>'+(f.departureDay?' <span style="font-size:10px;color:var(--t3);">(sale día '+f.departureDay+')</span>':''))+R('Aerolínea',esc(f.airline))+R('Ruta',esc(f.origin)+' → '+esc(f.dest))+R('ETD',fmtD(f.etd)+(f.etd?' <span style="font-size:10px;color:var(--t3);">('+fmtTimeInTZ(f.etd,originTZ(f).tz)+' '+originTZ(f).label+')</span>':''))+R('ETA',fmtD(f.eta)+(f.eta?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">🛬 '+arrivalBothZones(f.eta)+'</div>':''))+R('Estado','<span class="pill '+f.status+'">'+sl(f.status)+'</span>')+R('Prioridad',esc(f.priority))+R('Creado por',f.createdby?'<strong style="color:var(--green);">'+esc(f.createdby)+'</strong>':'—')+R('Modificado',esc(f.modifiedAt||'—'))+S('AGENCIA Y GUÍA AÉREA')+R('Agencia de carga','<strong>'+esc(f.agName||'—')+'</strong>')+R('Contacto',esc(f.agcontact||'—'))+R('Teléfono',esc(f.agphone||'—'))+R('Email',esc(f.agemail||'—'))+R('AWB #','<span style="font-family:var(--mono);color:var(--green);">'+esc(f.awb||'—')+'</span>')+R('PDF del AWB',f.awbUrl?'<a href="#" onclick="event.preventDefault();viewAWBByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.awbName||'AWB')+'</a>':'No guardado')+S('CONTEO DE CAJAS')+R('Cajas enviadas',f.bsent)+R('Cajas confirmadas','<strong style="color:var(--green2);">'+f.bconf+'</strong>')+R('Cajas faltantes/excedentes',fmtBoxDiff(f.bmiss))+R('Estado conf.','<span class="pill '+f.confst+'">'+cl(f.confst)+'</span>')+S('CARGA')+R('Peso bruto',f.weight?f.weight+' kg':'—')+R('Peso facturable',f.cweight?f.cweight+' kg':'—')+R('FBE (Full Boxes)',f.fbe>0?'<strong>'+f.fbe+'</strong> cajas equiv.':'—')+R('Tipo de carga',esc(f.ctype||'—'))+R('Manejo',esc(f.handling||'—'))+R('Tipo de guía',commodityCell(f))+R('Código HS',esc(f.hs||'—'))+tempDetailRows(f)+reprogDetailRows(f)+S('FINANCIEROS AWB')+R('Tarifa base/kg',f.rateBase?'$'+parseFloat(f.rateBase).toFixed(3):(f.rate?'$'+parseFloat(f.rate).toFixed(3):'—'))+R('MYC/kg',f.myc?'$'+parseFloat(f.myc).toFixed(3):'—')+R('ESC/kg',f.esc?'$'+parseFloat(f.esc).toFixed(3):'—')+R('<strong>Tarifa efectiva/kg (base+MYC+ESC)</strong>',f.rate?'<strong style="color:var(--green);">$'+parseFloat(f.rate).toFixed(3)+'</strong>':'—')+R('Tarifa esperada/kg',f.rateExp?'<span style="color:'+(f.rate&&Math.abs(parseFloat(f.rate)-parseFloat(f.rateExp))>0.001?'var(--red)':'var(--green)')+'">$'+parseFloat(f.rateExp).toFixed(3)+'</span>':'—')+R('Cargo peso',f.wcharge?'$'+parseFloat(f.wcharge).toFixed(2):'—')+R('MAA',f.maa?'$'+parseFloat(f.maa).toFixed(2):'—')+R('AWC',f.awc?'$'+parseFloat(f.awc).toFixed(2):'—')+R('Otros (agente)',f.ochagent?'$'+parseFloat(f.ochagent).toFixed(2):'—')+R('Otros (carrier)',f.ochcarrier?'$'+parseFloat(f.ochcarrier).toFixed(2):'—')+R('<strong>TOTAL PREPAGADO</strong>',f.totalpaid?'<strong style="color:var(--green2);font-size:15px;">$'+parseFloat(f.totalpaid).toFixed(2)+'</strong>':'—')+R('Total cobrar',f.totalcoll?'$'+parseFloat(f.totalcoll).toFixed(2):'$0.00')+S('REMITENTE Y CONSIGNATARIO')+R('Remitente',esc(f.sname||'Jet Fresh Flowers Distributors'))+R('Consignatario','<strong>'+esc(f.consignee||'—')+'</strong>')+S('CONFIRMACIÓN DE ESTADO')+R('Estado actual','<span class="pill '+f.status+'">'+sl(f.status)+'</span>'+(f.manualDelivered?' <span style="font-size:10px;color:var(--green);">✓ confirmado manualmente</span>':' <span style="font-size:10px;color:var(--t3);">(automático)</span>'))+R('Llegó a destino',f.arrived?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No confirmado</span>')+R('Proceso terminado',f.completed?'<strong style="color:var(--green);">✓ Sí</strong>':'<span style="color:var(--t3);">No</span>')+R('Hora llegada real',f.arrivedTime?fmtD(f.arrivedTime):'—')+R('Observaciones',f.statusNotes?esc(f.statusNotes):'—')+S('CONTROL DE CALIDAD Y USDA')+R('Cajas dañadas',f.bdamaged>0?'<strong style="color:var(--red);">'+f.bdamaged+'</strong>':'0')+R('Cajas perdidas (aerolínea)',f.blost>0?'<strong style="color:var(--red);">'+f.blost+'</strong>':'0')+R('Cajas en hold USDA',f.busda>0?'<strong style="color:#B45309;">'+f.busda+'</strong>':'0')+R('Cajas liberadas USDA',f.busdaReleased>0?'<strong style="color:var(--green);">'+f.busdaReleased+'</strong>':'0')+R('Estado USDA',f.usdaFreed?'<strong style="color:var(--green);">✅ Liberado</strong>':(f.usdaHold?'<strong style="color:#B45309;">🛃 En hold</strong>':'<span style="color:var(--t3);">Sin retención</span>'))+R('Hora liberación USDA',f.usdaFreedTime?fmtD(f.usdaFreedTime):'—')+R('Observaciones calidad',f.qcNotes?esc(f.qcNotes):'—')+S('RECLAMO A LA AEROLÍNEA')+R('Estado del reclamo',claimLabel(f.claimStatus))+R('Monto reclamado',f.claimAmount>0?'<strong>'+fmt$(f.claimAmount)+'</strong>':'—')+R('Monto recuperado',f.claimRecovered>0?'<strong style="color:var(--green);">'+fmt$(f.claimRecovered)+'</strong>':'—')+R('N° de reclamo',f.claimRef?esc(f.claimRef):'—')+R('Presentado',f.claimDate?esc(f.claimDate):'—')+R('Fecha límite',claimDeadlineTxt(f))+R('Notas del reclamo',f.claimNotes?esc(f.claimNotes):'—')+S('PRUEBA DE ENTREGA (POD)')+R('Documento POD',f.podUrl?'<a href="#" onclick="event.preventDefault();viewPODByFlight(\''+f.id+'\')" style="color:var(--green);font-weight:700;">📄 Ver/Descargar '+esc(f.podName||'POD')+'</a>':'Sin POD adjunto');
@@ -6440,59 +6611,38 @@ function toggleHelp(){
   panel.style.display='block';
 }
 
-function doSearch(){
-  var q=document.getElementById('srch-inp').value.toLowerCase(); if(!q)return;
-  var m=searchFlights(q);
-  if(m.length===1){ closeSearchResults(); openDetail(m[0].id); }
-  else if(m.length>1){ closeSearchResults(); go('flights'); }
+// 28-sep-2026: el buscador de Vuelos ahora filtra la tabla en vivo mientras escribes, en vez de
+// mostrar un desplegable de resultados que se abre directo al primer coincidente — a pedido de
+// Marco. flightMatchesQuery() es el mismo criterio de antes (vuelo #, AWB, agencia, origen,
+// destino, aerolínea, creador); searchFlights() se conserva para quien más adelante necesite la
+// lista de coincidencias (ej. otra función), pero ya no dispara ninguna apertura automática.
+function flightMatchesQuery(f, q){
+  q = (q||'').toLowerCase().trim();
+  if (!q) return true;
+  return (f.num&&f.num.toLowerCase().includes(q))
+    || (f.awb&&f.awb.toLowerCase().includes(q))
+    || (f.agName&&f.agName.toLowerCase().includes(q))
+    || (f.origin&&f.origin.toLowerCase().includes(q))
+    || (f.dest&&f.dest.toLowerCase().includes(q))
+    || (f.airline&&f.airline.toLowerCase().includes(q))
+    || (f.createdby&&f.createdby.toLowerCase().includes(q));
 }
-
-// Búsqueda: filtra por número de vuelo, AWB, agencia, origen, destino, creador
 function searchFlights(q){
   q = (q||'').toLowerCase().trim();
-  if(!q) return [];
-  return DB.flights.filter(function(f){
-    return (f.num&&f.num.toLowerCase().includes(q))
-      || (f.awb&&f.awb.toLowerCase().includes(q))
-      || (f.agName&&f.agName.toLowerCase().includes(q))
-      || (f.origin&&f.origin.toLowerCase().includes(q))
-      || (f.dest&&f.dest.toLowerCase().includes(q))
-      || (f.airline&&f.airline.toLowerCase().includes(q))
-      || (f.createdby&&f.createdby.toLowerCase().includes(q));
-  });
+  if (!q) return [];
+  return DB.flights.filter(function(f){ return flightMatchesQuery(f, q); });
 }
-
-// Búsqueda en vivo: muestra resultados al instante en el desplegable
+// Búsqueda en vivo: filtra la tabla de Vuelos en tiempo real (ver flsSearch en renderFlights).
 function liveSearch(q){
-  var box=document.getElementById('srch-results');
-  if(!box) return;
-  q=(q||'').trim();
-  if(!q){ closeSearchResults(); return; }
-  var m=searchFlights(q).slice(0,8);
-  if(!m.length){
-    box.style.display='block';
-    box.innerHTML='<div style="padding:14px;font-size:12px;color:var(--t3);text-align:center;">Sin resultados para "'+esc(q)+'"</div>';
-    return;
-  }
-  box.style.display='block';
-  box.innerHTML=m.map(function(f){
-    var estado = f.status==='delivered'?'Entregado':f.status==='transit'?'En tránsito':f.status==='delayed'?'Demorado':'Pendiente';
-    return '<div onclick="closeSearchResults();openDetail(\''+f.id+'\')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--lightgreen)\'" onmouseout="this.style.background=\'transparent\'">'
-      + '<div style="min-width:0;"><div style="font-family:var(--mono);font-size:12px;font-weight:800;color:var(--t1);">'+esc(f.awb||f.num||'—')+'</div>'
-      + '<div style="font-size:10px;color:var(--t3);">'+esc(f.origin||'?')+'→'+esc(f.dest||'?')+(f.agName?' · '+esc(f.agName):'')+'</div></div>'
-      + '<span style="font-size:9px;color:var(--t3);white-space:nowrap;">'+esc(estado)+'</span>'
-      + '</div>';
-  }).join('');
+  flsSearch = (q||'').trim();
+  renderFlights();
 }
-function closeSearchResults(){
-  var box=document.getElementById('srch-results');
-  if(box){ box.style.display='none'; box.innerHTML=''; }
+function clearFlightSearch(){
+  flsSearch = '';
+  var inp = document.getElementById('srch-inp');
+  if (inp) inp.value = '';
+  renderFlights();
 }
-// Cerrar resultados al hacer clic fuera
-document.addEventListener('click',function(e){
-  var s=document.querySelector('.srch');
-  if(s && !s.contains(e.target)) closeSearchResults();
-});
 
 // ══ FILTERS ══
 function dashF(el,v){document.querySelectorAll('#s-dashboard .ftab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');dashFlt=v;renderDash();}
